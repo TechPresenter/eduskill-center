@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { format as formatDateFns, isValid, parseISO, differenceInYears } from "date-fns";
+import { BASE_PATH, stripBasePath, withBasePath } from "@/lib/base-path";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -119,12 +120,35 @@ export function isUuid(v: string | undefined | null) {
   return !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
 
+/** Public origin of this deployment, including the sub-path when there is one, never trailing-slashed. */
 export function appUrl() {
-  return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 }
 
+/**
+ * App-absolute path → absolute URL, for sitemaps, canonical/openGraph metadata, certificate QR
+ * codes and e-mail bodies.
+ *
+ * Joins by PREFIXING rather than with `new URL(path, base)`: relative resolution throws away
+ * everything after the origin, so with APP_URL="https://eduskillindia.org/center" the old code
+ * turned "/sitemap.xml" into "https://eduskillindia.org/sitemap.xml" — the existing, unrelated site.
+ *
+ *   BASE_PATH=""       APP_URL="http://localhost:3000"
+ *     absoluteUrl("/about")            → "http://localhost:3000/about"
+ *     absoluteUrl("/")                 → "http://localhost:3000/"
+ *   BASE_PATH="/center" APP_URL="https://eduskillindia.org/center"
+ *     absoluteUrl("/about")            → "https://eduskillindia.org/center/about"
+ *     absoluteUrl("/center/api/files/x") → "https://eduskillindia.org/center/api/files/x"  (no double prefix)
+ *   Values that are already URLs ("https://cdn/x", "data:…") are returned untouched.
+ */
 export function absoluteUrl(path: string) {
-  return new URL(path, appUrl() + "/").toString();
+  if (!path) return appUrl() + "/";
+  if (path.startsWith("//") || /^[a-zA-Z][a-zA-Z0-9+.\-]*:/.test(path)) return path;
+  const base = appUrl();
+  const rel = path.startsWith("/") ? path : `/${path}`;
+  // APP_URL normally already carries the sub-path; if it does not, add it here so the URL is still right.
+  const suffix = BASE_PATH && base.endsWith(BASE_PATH) ? stripBasePath(rel) : withBasePath(rel);
+  return `${base}${suffix}`;
 }
 
 export function maskMobile(mobile: string | null | undefined) {

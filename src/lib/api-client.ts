@@ -1,5 +1,7 @@
 "use client";
 
+import { withBasePath } from "@/lib/base-path";
+
 /** Small fetch wrapper for client components talking to the internal JSON API. */
 
 export class ApiClientError extends Error {
@@ -26,7 +28,11 @@ export interface ApiEnvelope<T> {
 
 async function request<T>(method: string, url: string, body?: unknown, init?: RequestInit): Promise<T> {
   const isForm = typeof FormData !== "undefined" && body instanceof FormData;
-  const res = await fetch(url, {
+  // Call sites pass app-absolute paths ("/api/admin/centers"); under a sub-path deployment the
+  // browser has to hit "/center/api/admin/centers". `withBasePath` is the identity function without
+  // a base path, leaves absolute/scheme/relative URLs alone, and is idempotent — so a caller that
+  // already holds a prefixed URL (a stored "/center/api/files/…") is never prefixed twice.
+  const res = await fetch(withBasePath(url), {
     method,
     headers: isForm ? undefined : body !== undefined ? { "Content-Type": "application/json" } : undefined,
     body: isForm ? (body as FormData) : body !== undefined ? JSON.stringify(body) : undefined,

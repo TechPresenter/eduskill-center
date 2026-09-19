@@ -8,6 +8,14 @@ const AUTH_PAGES = ["/login", "/register", "/forgot-password", "/reset-password"
  * Lightweight edge guard: users without a session cookie are sent to the login page
  * before any portal page renders. Full session validation and role/permission checks
  * happen server-side in layouts and API handlers.
+ *
+ * SUB-PATH DEPLOYMENT: every path here is base-path-FREE and must stay that way.
+ * Next strips `basePath` before matching `config.matcher` and before populating
+ * `req.nextUrl.pathname`, and `req.nextUrl.clone()` returns a NextURL that carries the base
+ * path again when it is serialised — so `/center/admin` arrives as `/admin` and the redirect
+ * below leaves as `/center/login`. Never prefix by hand; that yields `/center/center/login`.
+ * The `next` query parameter is therefore also base-path-free, which is what the login page
+ * and the client router expect.
  */
 export default function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;

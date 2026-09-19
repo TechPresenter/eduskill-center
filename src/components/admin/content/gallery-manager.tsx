@@ -12,6 +12,7 @@ import { Alert, EmptyState } from "@/components/ui/feedback";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { api, ApiClientError } from "@/lib/api-client";
+import { withBasePath } from "@/lib/base-path";
 import { cn } from "@/lib/utils";
 import { FormFields, type FieldDef, type FormValues } from "@/components/admin/content/fields";
 
@@ -68,7 +69,9 @@ export function GalleryManager({ items, categories, centers, canEdit }: { items:
         fd.append("preset", "image");
         fd.append("folder", "gallery");
         fd.append("visibility", "public");
-        const res = await fetch("/api/admin/uploads", { method: "POST", body: fd });
+        // Raw fetch (not the api client) so the per-file error message survives; the path still
+        // needs the deployment sub-path, which `fetch` would otherwise resolve against the origin.
+        const res = await fetch(withBasePath("/api/admin/uploads"), { method: "POST", body: fd });
         const json = await res.json();
         if (!res.ok || !json.success) throw new Error(json?.error?.message ?? "Upload failed");
         setFiles((prev) => [...prev, { url: json.data.url as string, name: f.name }]);

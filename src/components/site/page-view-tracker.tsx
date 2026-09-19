@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
+import { withBasePath } from "@/lib/base-path";
 
 /** Posts a PAGE_VIEW event on every client-side navigation when internal visitor tracking is enabled. */
 export function PageViewTracker({ enabled }: { enabled: boolean }) {
@@ -12,13 +13,16 @@ export function PageViewTracker({ enabled }: { enabled: boolean }) {
     if (!enabled || !pathname) return;
     if (last.current === pathname) return;
     last.current = pathname;
+    // `usePathname()` already strips the deployment sub-path, so the recorded `path` stays the same
+    // in both deployments; only the endpoint the browser hits needs the prefix.
+    const endpoint = withBasePath("/api/public/analytics");
     const payload = JSON.stringify({ type: "PAGE_VIEW", path: pathname });
     try {
       if (navigator.sendBeacon) {
         const blob = new Blob([payload], { type: "application/json" });
-        if (navigator.sendBeacon("/api/public/analytics", blob)) return;
+        if (navigator.sendBeacon(endpoint, blob)) return;
       }
-      void fetch("/api/public/analytics", { method: "POST", headers: { "Content-Type": "application/json" }, body: payload, keepalive: true, credentials: "same-origin" }).catch(() => undefined);
+      void fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload, keepalive: true, credentials: "same-origin" }).catch(() => undefined);
     } catch {
       /* tracking must never break the page */
     }

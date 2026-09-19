@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { BASE_PATH } from "@/lib/base-path";
 
 /** Asks the service worker to drop every cached page/API response (called on logout). */
 export function purgeOfflineCaches() {
@@ -13,9 +14,13 @@ export function RegisterSW() {
   useEffect(() => {
     if (process.env.NODE_ENV !== "production") return;
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    // A worker can only claim a scope at or below its own path, so both the script and the scope
+    // live at the deployment root: "/sw.js" + "/" at the domain root, "/center/sw.js" + "/center/"
+    // under a sub-path. Scoping it this way is also what keeps the worker from ever intercepting
+    // another site hosted at the same domain root.
     const register = () =>
       navigator.serviceWorker
-        .register("/sw.js", { scope: "/" })
+        .register(`${BASE_PATH}/sw.js`, { scope: `${BASE_PATH}/` })
         .then((reg) => {
           // Activate updated workers promptly so users get new assets after a deploy.
           reg.addEventListener("updatefound", () => {

@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import { createHash, randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
+import { BASE_PATH } from "@/lib/base-path";
 import type { UserRole, TrainerStatus, TrainerLevel } from "@/generated/prisma/enums";
 
 export const SESSION_COOKIE = "esk_session";
@@ -47,12 +48,20 @@ export async function createSession(
   return { token, expiresAt };
 }
 
+/**
+ * Options for the session cookie. Every set AND clear goes through here (the three
+ * /api/auth routes plus the helpers below), so the path stays identical and logout really
+ * deletes the cookie — a Set-Cookie with a different path creates a second cookie instead.
+ *
+ * Scoped to the deployment sub-path when there is one, so the cookie is never sent to the
+ * unrelated website living at the same domain's root.
+ */
 export function sessionCookieOptions(expiresAt: Date) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
-    path: "/",
+    path: BASE_PATH || "/",
     expires: expiresAt,
   };
 }
@@ -154,6 +163,11 @@ export async function revokeAllSessions(userId: string, exceptSessionId?: string
   });
 }
 
+/**
+ * Landing route for a role. App-relative and base-path-FREE on purpose: the value is handed to
+ * `<Link>`, the `next/navigation` router or `redirect()`, all of which apply the base path
+ * themselves. Prefixing it here would produce /center/center/admin/dashboard.
+ */
 export function portalHome(role: UserRole): string {
   switch (role) {
     case "SUPER_ADMIN":

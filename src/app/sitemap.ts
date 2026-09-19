@@ -6,7 +6,13 @@ import { listAllCenterUrls } from "@/server/public";
 type Entry = MetadataRoute.Sitemap[number];
 type Freq = NonNullable<Entry["changeFrequency"]>;
 
-/** Always-present public pages. Login/register/portals are excluded (see robots.ts). */
+/**
+ * Always-present public pages. Login/register/portals are excluded (see robots.ts).
+ *
+ * All paths here are app-relative and base-path-FREE: `absoluteUrl()` joins them onto APP_URL,
+ * which carries the deployment sub-path ("https://eduskillindia.org/center"), so the emitted
+ * `<loc>` values come out as https://eduskillindia.org/center/courses/… . Do not prefix by hand.
+ */
 const STATIC_PAGES: { path: string; priority: number; changeFrequency: Freq }[] = [
   { path: "/", priority: 1, changeFrequency: "daily" },
   { path: "/about", priority: 0.8, changeFrequency: "monthly" },

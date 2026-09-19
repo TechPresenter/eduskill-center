@@ -2,6 +2,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { Errors } from "@/lib/api/errors";
+import { stripBasePath, withBasePath } from "@/lib/base-path";
 
 export type Visibility = "public" | "private";
 
@@ -63,8 +64,14 @@ export function isPrivateKey(key: string): boolean {
   return key.startsWith("private/");
 }
 
+/**
+ * Browser-usable URL for a stored key, carrying the deployment sub-path when there is one
+ * (`/api/files/<key>` at the root, `/center/api/files/<key>` under /center). These strings end up
+ * in `<img src>`, `<a href>` and API payloads as raw text, and Next never prefixes raw strings —
+ * so the prefix has to be baked in here rather than at each of the ~80 render sites.
+ */
 export function fileUrl(key: string): string {
-  return `/api/files/${key}`;
+  return withBasePath(`/api/files/${key}`);
 }
 
 // ───────────── Local driver ─────────────
@@ -242,9 +249,38 @@ export async function deleteStoredFile(key: string): Promise<void> {
   await getDriver().delete(sanitizeKey(key));
 }
 
-/** Extracts the storage key from a stored URL (`/api/files/<key>`), or returns null. */
+/**
+ * Extracts the storage key from a stored URL, or returns null.
+ *
+ * Tolerant on purpose: rows written before the sub-path deployment hold `/api/files/<key>` while
+ * new rows hold `/center/api/files/<key>`, and some rows hold a fully absolute URL. All three
+ * resolve to the same key, so no data migration is needed and a deployment can move between the
+ * root and a sub-path without orphaning files.
+ */
 export function keyFromUrl(url: string | null | undefined): string | null {
   if (!url) return null;
-  const m = url.match(/^\/api\/files\/(.+)$/);
-  return m ? m[1]! : null;
+  let pathname = url;
+  if (/^[a-zA-Z][a-zA-Z0-9+.\-]*:\/\//.test(pathname)) {
+    try {
+      pathname = new URL(pathname).pathname;
+    } catch {
+      return null;
+    }
+  }
+  const m = stripBasePath(pathname).match(/^\/api\/files\/(.+)$/);
+  if (!m) return null;
+  const key = m[1]!;
+  // Defence in depth: a traversal key could otherwise satisfy an `isFileUrlUnder` ownership check
+  // before `sanitizeKey` rejects it further down.
+  return key.includes("..") || key.includes("\0") ? null : key;
+}
+
+/**
+ * True when `url` is a stored-file URL whose key sits under `keyPrefix` (e.g.
+ * `private/students/<id>/`). Use this instead of `url.startsWith("/api/files/…")` in ownership
+ * checks: the raw string carries the deployment sub-path, this does not.
+ */
+export function isFileUrlUnder(url: string | null | undefined, keyPrefix: string): boolean {
+  const key = keyFromUrl(url);
+  return !!key && key.startsWith(keyPrefix.replace(/^\/+/, ""));
 }

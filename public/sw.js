@@ -1,16 +1,30 @@
 /* EduSkill India Foundation – offline shell service worker (hand-written, no build step).
  *
- * Rules:
- *  - cache-first: /_next/static/*, /icons/*, manifest, brand images (immutable/static)
- *  - network-first with cache fallback: public HTML pages and GET /api/public/*
- *  - network-only with /~offline fallback: HTML under /admin, /student, /trainer, /login, /register
- *  - never cached: /api/* (except GET /api/public/*), /api/files/*, non-GET requests
- *  - all caches are purged when the app logs out (POST /api/auth/logout) or on a PURGE message
+ * Rules (paths below are relative to BASE, the deployment root — "" at the domain root,
+ * "/center" when the app is mounted under a sub-path):
+ *  - cache-first: BASE/_next/static/*, BASE/icons/*, manifest, brand images (immutable/static)
+ *  - network-first with cache fallback: public HTML pages and GET BASE/api/public/*
+ *  - network-only with BASE/~offline fallback: HTML under /admin, /student, /trainer, /login, /register
+ *  - never cached: BASE/api/* (except GET BASE/api/public/*), BASE/api/files/*, non-GET requests
+ *  - never touched at all: anything outside BASE (another site sharing the domain)
+ *  - all caches are purged when the app logs out (POST BASE/api/auth/logout) or on a PURGE message
+ *
+ * This file is static — it cannot read Next's env — so the deployment root is derived at runtime
+ * from the registration scope that src/components/pwa/register-sw.tsx asked for.
  */
-const VERSION = "eduskill-v2";
-const OFFLINE_URL = "/~offline";
-const PRECACHE = [OFFLINE_URL, "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-192-maskable.png", "/icons/icon-512-maskable.png", "/logo-mark.svg"];
-const PRIVATE_PREFIXES = ["/admin", "/student", "/trainer", "/login", "/register", "/forgot-password", "/reset-password"];
+
+/** "" at the domain root, "/center" when registered with scope "/center/". */
+const BASE = new URL(self.registration.scope).pathname.replace(/\/+$/, "");
+/** Builds an app path for this deployment: p("/icons") → "/icons" or "/center/icons". */
+const p = (path) => BASE + path;
+
+// Cache names are per-ORIGIN, not per-scope: namespacing by BASE keeps two deployments on the same
+// domain apart, and the shared prefix is what lets us purge only our own caches (below).
+const CACHE_PREFIX = "eduskill-";
+const VERSION = `${CACHE_PREFIX}v2${BASE.replace(/\//g, "-")}`;
+const OFFLINE_URL = p("/~offline");
+const PRECACHE = [OFFLINE_URL, p("/manifest.webmanifest"), p("/icons/icon-192.png"), p("/icons/icon-512.png"), p("/icons/icon-192-maskable.png"), p("/icons/icon-512-maskable.png"), p("/logo-mark.svg")];
+const PRIVATE_PREFIXES = ["/admin", "/student", "/trainer", "/login", "/register", "/forgot-password", "/reset-password"].map(p);
 const MAX_PAGE_ENTRIES = 40;
 
 self.addEventListener("install", (event) => {
@@ -26,7 +40,8 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      // Only ever delete our own caches — a different app sharing this origin keeps its storage.
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith(CACHE_PREFIX) && k !== VERSION).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -38,13 +53,18 @@ self.addEventListener("message", (event) => {
 
 async function purgeAll() {
   const keys = await caches.keys();
-  await Promise.all(keys.map((k) => caches.delete(k)));
+  await Promise.all(keys.filter((k) => k.startsWith(CACHE_PREFIX)).map((k) => caches.delete(k)));
   const cache = await caches.open(VERSION);
   await cache.addAll(PRECACHE).catch(() => undefined);
 }
 
+/** True when the path belongs to this deployment (always true at the domain root). */
+function inScope(pathname) {
+  return !BASE || pathname === BASE || pathname.startsWith(`${BASE}/`);
+}
+
 function isPrivatePath(pathname) {
-  return PRIVATE_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  return PRIVATE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"));
 }
 
 async function trimCache(cache) {
@@ -58,16 +78,18 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
 
   // Logging out clears every cached page/API response so nothing personal survives on the device.
-  if (req.method === "POST" && url.pathname === "/api/auth/logout") {
+  if (req.method === "POST" && url.pathname === p("/api/auth/logout")) {
     event.waitUntil(purgeAll());
     return;
   }
   if (req.method !== "GET" || url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/api/files/")) return;
-  if (url.pathname.startsWith("/api/") && !url.pathname.startsWith("/api/public/")) return;
+  // Requests to another app on the same domain go straight to the network, untouched and uncached.
+  if (!inScope(url.pathname)) return;
+  if (url.pathname.startsWith(p("/api/files/"))) return;
+  if (url.pathname.startsWith(p("/api/")) && !url.pathname.startsWith(p("/api/public/"))) return;
 
   // Immutable static assets: cache-first.
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/") || url.pathname === "/manifest.webmanifest" || url.pathname === "/logo-mark.svg" || url.pathname === "/logo-mark.png") {
+  if (url.pathname.startsWith(p("/_next/static/")) || url.pathname.startsWith(p("/icons/")) || url.pathname === p("/manifest.webmanifest") || url.pathname === p("/logo-mark.svg") || url.pathname === p("/logo-mark.png")) {
     event.respondWith(
       caches.open(VERSION).then(async (cache) => {
         const cached = await cache.match(req);
@@ -81,7 +103,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Public read-only API: network-first, fall back to the last good copy.
-  if (url.pathname.startsWith("/api/public/")) {
+  if (url.pathname.startsWith(p("/api/public/"))) {
     event.respondWith(
       fetch(req)
         .then(async (res) => {

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Camera, Eye, FileText, FolderOpen, Image as ImageIcon, Images, Loader2, RefreshCw, Trash2, UploadCloud, X } from "lucide-react";
 import { cn, formatBytes } from "@/lib/utils";
+import { withBasePath } from "@/lib/base-path";
 import { useIsCoarsePointer } from "@/lib/hooks";
 import { toast } from "@/components/ui/toast";
 import { IconButton, iconButtonClasses } from "@/components/ui/button";
@@ -87,7 +88,9 @@ function uploadWithProgress(endpoint: string, body: FormData, onProgress: (pct: 
     };
     xhr.onerror = () => reject(new Error("Network error while uploading. Check your connection and try again."));
     xhr.onabort = () => reject(new UploadAbortedError());
-    xhr.open("POST", endpoint);
+    // Callers pass an app-absolute path ("/api/admin/uploads"); XHR resolves it against the origin,
+    // so the deployment sub-path has to be added here the same way api-client.ts does it for fetch.
+    xhr.open("POST", withBasePath(endpoint));
     xhr.send(body);
   });
   return { promise, abort: () => xhr.abort() };

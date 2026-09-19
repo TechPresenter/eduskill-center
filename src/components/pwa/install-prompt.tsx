@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Download, X } from "lucide-react";
+import { withBasePath } from "@/lib/base-path";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -62,7 +63,7 @@ export function InstallPrompt({ appName = "EduSkill" }: { appName?: string }) {
     <div className="fixed inset-x-3 z-[60] rounded-2xl border border-line bg-white p-3 shadow-float animate-slide-up lg:left-auto lg:right-6 lg:w-96" style={{ bottom: "calc(4.75rem + env(safe-area-inset-bottom, 0px))" }} role="dialog" aria-label="Install app">
       <div className="flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/icons/icon-192.png" alt="" className="h-11 w-11 rounded-xl" />
+        <img src={withBasePath("/icons/icon-192.png")} alt="" className="h-11 w-11 rounded-xl" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-navy">Install the {appName} app</p>
           <p className="text-xs text-muted">Faster access, full-screen and works from your home screen.</p>

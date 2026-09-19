@@ -9,6 +9,7 @@ import { Alert } from "@/components/ui/feedback";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/api-client";
+import { withBasePath } from "@/lib/base-path";
 import { cn } from "@/lib/utils";
 import type { ImportReport, ImportRowResult } from "@/server/locations";
 
@@ -18,7 +19,7 @@ async function postImport(file: File, commit: boolean): Promise<ImportReport> {
   const fd = new FormData();
   fd.append("file", file);
   fd.append("commit", commit ? "true" : "false");
-  const res = await fetch("/api/admin/locations/import", { method: "POST", body: fd, credentials: "same-origin" });
+  const res = await fetch(withBasePath("/api/admin/locations/import"), { method: "POST", body: fd, credentials: "same-origin" });
   const json = await res.json().catch(() => null);
   if (!res.ok || !json?.success) throw new Error(json?.error?.message ?? `Import failed (${res.status})`);
   return json.data as ImportReport;
