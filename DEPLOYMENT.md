@@ -36,6 +36,7 @@ https://eduskillindia.org/center
 | 14 | Rollback |
 | 15 | Troubleshooting |
 | 16 | विकल्प: subdomain |
+| 17 | AI सहायक (चैटबॉट) चालू करना |
 
 ---
 
@@ -471,6 +472,106 @@ step 8 और 9 दोहरा दें। (पूरी तरह मिट�
 
 यह सिर्फ़ एक विकल्प है — आपने `/center` चुना है और यह guide उसी के लिए है, जो पूरी तरह
 काम करता है और जिसमें नया certificate या DNS बदलाव बिल्कुल नहीं चाहिए।
+
+---
+
+## 17. AI सहायक (चैटबॉट) चालू करना
+
+Public website के नीचे दाईं ओर एक chat button दिखता है — यह **AI सहायक** है। यह हिंदी और
+अंग्रेज़ी, दोनों में जवाब देता है और जवाब इसी platform के database से बनाता है: कोर्स, फ़ीस,
+ट्रेनिंग सेंटर, admission की प्रक्रिया, scholarship और Foundation के संपर्क विवरण।
+
+यह हिस्सा पूरी तरह **वैकल्पिक** है। बिना key के भी साइट बिल्कुल पहले जैसी चलती है — सहायक
+सिर्फ़ खुद को छिपा लेता है, कहीं कोई error या टूटा हुआ button नहीं दिखता।
+
+### 17.1 Key कहाँ डालें
+
+Key उसी production `.env` में जाती है जिसमें बाकी सब है (step 5 वाली file):
+
+```bash
+cd /var/www/center
+sudo -u eduskill nano .env
+```
+
+| Variable | Value |
+|---|---|
+| `OPENAI_API_KEY` | OpenAI dashboard से बनाई गई key (`sk-…` से शुरू होती है) |
+
+```bash
+# बदलने के बाद सिर्फ़ इतना — दोबारा build की ज़रूरत नहीं
+sudo systemctl restart eduskill-center
+sudo systemctl status eduskill-center --no-pager | head -5
+```
+
+> **यह build-time value नहीं है।** `BASE_PATH` के उलट, इसे बदलने पर `npm run build` दोबारा
+> चलाने की ज़रूरत नहीं — service restart करते ही नई key लग जाती है।
+>
+> यह **server-only** secret है। इसे कभी `NEXT_PUBLIC_OPENAI_API_KEY` मत लिखिए, वरना यह
+> browser के bundle में चली जाएगी और हर visitor को दिख जाएगी। App में यह key सिर्फ़
+> `src/server/chatbot.ts` के अंदर पढ़ी जाती है — किसी response, किसी log line में नहीं जाती।
+>
+> `.env` की permission 600 ही रहने दें (step 5 में सेट की थी)।
+
+Restart के बाद जाँच:
+
+```bash
+curl -s https://eduskillindia.org/center/api/public/chat
+```
+
+`"enabled":true` आना चाहिए। `"enabled":false` का मतलब है key नहीं मिली (या admin में switch
+बंद है) — और उस हालत में widget दिखता ही नहीं।
+
+### 17.2 Admin से क्या-क्या बदलता है
+
+**Admin → Settings → AI Assistant**
+(`https://eduskillindia.org/center/admin/settings/chatbot`). ये सब database में रहते हैं,
+इसलिए बदलने पर न build चाहिए, न restart — Save करते ही लागू हो जाते हैं:
+
+| Setting | क्या करता है |
+|---|---|
+| AI assistant enabled | सहायक चालू/बंद। बंद करते ही widget साइट से हट जाता है |
+| OpenAI model | कौन सा model जवाब बनाएगा (default `gpt-4o-mini`) — खर्च मुख्य रूप से इसी से तय होता है |
+| Greeting (English) / Greeting (Hindi) | पहला message, जो panel खोलते ही visitor को दिखता है |
+| Quick questions | tappable chips। हर line इस रूप में: `English question \| हिंदी प्रश्न` |
+| Let visitors hear answers read aloud | जवाब को आवाज़ में सुनने वाला बटन (visitor के अपने device की आवाज़, कोई paid service नहीं) |
+| Maximum messages per visitor per hour | एक IP से एक घंटे में अधिकतम कितने message (default 40, सीमा 1–500) |
+| Extra instructions for the assistant | सहायक को दी जाने वाली अतिरिक्त हिदायत, जैसे admission की तारीख़ या कोई बात जो हर बार बतानी है |
+
+> Key admin से नहीं बदली जा सकती — यह जानबूझकर है। अगर `.env` में key नहीं है, तो
+> "AI assistant enabled" पर tick होने के बावजूद सहायक नहीं दिखेगा।
+
+### 17.3 खर्च कितना आएगा
+
+हर जवाब का बिल OpenAI आपके account पर लगाता है। खर्च तीन बातों पर निर्भर करता है:
+
+- **Input** — हर सवाल के साथ सहायक की instructions + platform का knowledge snapshot (कोर्स,
+  सेंटर, फ़ीस वग़ैरह का सारांश, जो 10 मिनट तक cache रहता है) + उसी बातचीत के पिछले message
+  भेजे जाते हैं। यानी बातचीत जितनी लंबी चलेगी, उसका हर अगला सवाल उतना ही भारी होगा।
+- **Output** — एक जवाब अधिकतम 700 tokens का होता है (यह code में तय है), इसलिए कोई एक जवाब
+  बेतहाशा लंबा और महँगा नहीं हो सकता।
+- **Model** — default `gpt-4o-mini` सबसे सस्ते विकल्पों में है। `gpt-4o` जैसे बड़े model का
+  per-token rate कई गुना ज़्यादा होता है, यानी सिर्फ़ model बदल देने से बिल कई गुना हो सकता है।
+
+per-token rate OpenAI समय-समय पर बदलता रहता है, इसलिए यह guide कोई आँकड़ा नहीं देती — असली
+rate <https://openai.com/api/pricing> पर देखें और पहले महीने OpenAI dashboard → Usage पर नज़र
+रखें। सबसे पक्की सुरक्षा यह है कि OpenAI account में ही **monthly budget limit** लगा दें।
+
+**Abuse की सीमा:** हर message भेजने से *पहले* उस visitor के IP की hourly limit जाँची जाती है।
+Limit पार होते ही server सीधे **429** लौटा देता है और OpenAI को कुछ भेजा ही नहीं जाता — उस
+request का खर्च शून्य। इसका मतलब है कि एक घंटे में किसी एक IP से उतने ही message जा सकते हैं
+जितने आपने सेट किए हैं। Limit कम रखेंगे तो खर्च की छत नीची रहेगी, पर एक ही office या college
+के NAT IP से आने वाले सच्चे visitor भी जल्दी रुक सकते हैं।
+
+### 17.4 Troubleshooting
+
+| लक्षण | असली वजह | समाधान |
+|---|---|---|
+| **Widget दिखता ही नहीं** | `.env` में `OPENAI_API_KEY` खाली है, restart नहीं हुआ, या admin में switch बंद है | `curl -s https://eduskillindia.org/center/api/public/chat` — `"enabled":false` आए तो key भरें, `sudo systemctl restart eduskill-center`, फिर Admin → Settings → AI Assistant में tick जाँचें |
+| **Widget है, पर हर सवाल पर "कुछ गड़बड़ हो गई"** | Key गलत या रद्द है, account में credit नहीं है, या settings में लिखा model उस account को नहीं मिलता | `journalctl -u eduskill-center -n 50 --no-pager`; OpenAI dashboard में key और billing देखें; model वापस `gpt-4o-mini` कर दें |
+| **"बहुत ज़्यादा message" / 429** | उस IP की hourly limit पूरी हो गई (एक ही NAT IP से कई लोग हों तो जल्दी होता है) | एक घंटे बाद अपने आप खुल जाता है। बार-बार हो तो Admin → Settings → AI Assistant में "Maximum messages per visitor per hour" बढ़ाएँ |
+| **जवाब टाइप होते हुए नहीं आते, एक साथ आख़िर में आते हैं** | Proxy streaming response को buffer कर रहा है | App खुद `X-Accel-Buffering: no` भेजता है; nginx block में `proxy_buffering off;` होना चाहिए (`deploy/nginx-center.conf` में पहले से है — अपना block हाथ से लिखा हो तो जोड़ें) |
+| **iPhone या Firefox पर माइक/आवाज़ का बटन नहीं दिखता** | ये feature browser के अपने Web Speech API से चलते हैं। Firefox और अधिकांश iOS browsers में voice input है ही नहीं, इसलिए बटन जानबूझकर नहीं दिखाया जाता | यह bug नहीं है। Android Chrome और desktop Chrome/Edge में दोनों चलते हैं; बाकी जगह visitor type करके पूछ सकता है |
+| **हिंदी जवाब अजीब उच्चारण में पढ़ा जाता है** | Device में हिंदी voice installed नहीं है | Android: Settings → Text-to-speech → हिंदी voice download करें। वरना engine अंग्रेज़ी voice से पढ़ देगा |
 
 ---
 

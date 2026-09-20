@@ -19,6 +19,7 @@ There are no state, district, block or center administrators: every approval and
 | Payments | Gateway abstraction: manual/offline verification or Razorpay (orders, checkout signature and webhook verification) |
 | Documents | PDF certificates with verification QR, receipts/invoices, CSV/Excel/PDF report exports |
 | Maps | Leaflet + marker clustering for the Pan-India training center map |
+| AI assistant | Optional bilingual (Hindi/English) chat assistant on the public website. It answers from a cached snapshot of live platform data (courses, fees, training centers, admission steps, contact details) instead of inventing figures, streams its replies, and can read them aloud through the visitor's own browser voice. Greeting, quick questions, model and the per-visitor hourly limit are edited in **Admin → Settings → AI Assistant**; the widget hides itself entirely when `OPENAI_API_KEY` is not set. |
 | Tests | Vitest (DB-backed workflow tests against an isolated `_test` database) |
 
 ## Quick start (local development)
@@ -75,6 +76,7 @@ See `.env.example`. Key settings:
 - `STORAGE_DRIVER=local|s3` (+ `STORAGE_LOCAL_DIR` or `S3_*`).
 - `SMTP_*` – email delivery (can also be configured from Admin → Settings → Communication).
 - `PAYMENT_GATEWAY=manual|razorpay`, `RAZORPAY_*` (can also be configured from Admin → Settings → Payments).
+- `OPENAI_API_KEY` – **optional**, server-only. Enables the AI assistant on the public website; leave it empty and the assistant hides itself. Never prefix it with `NEXT_PUBLIC_`. Changing it needs a restart, not a rebuild; everything else about the assistant lives in Admin → Settings → AI Assistant.
 
 Almost everything else (branding/logos, contact, ID formats, admissions switches, gateway, SMS/WhatsApp providers, certificate signatory, SEO) is editable at runtime from **Admin → Settings**; no redeploy required.
 

@@ -4,6 +4,7 @@ import { getSessionUser, portalHome } from "@/lib/auth/session";
 import { SiteHeader } from "@/components/site/header";
 import { SiteFooter } from "@/components/site/footer";
 import { PageViewTracker } from "@/components/site/page-view-tracker";
+import { ChatWidget } from "@/components/site/chatbot";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const [branding, user, footer, trackVisitors, registrationOpen] = await Promise.all([
@@ -28,6 +29,12 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       </main>
       <SiteFooter branding={branding} footer={footer} />
       <PageViewTracker enabled={trackVisitors === true} />
+      {/*
+        Public-site assistant only: the portals mount their own shells, so it never appears inside
+        /student, /trainer or /admin. It hides itself when the API reports it disabled, and its name
+        comes from DB branding rather than a hard-coded product name.
+      */}
+      <ChatWidget name={branding.shortName || branding.siteName} />
     </>
   );
 }

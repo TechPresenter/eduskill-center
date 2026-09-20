@@ -122,6 +122,82 @@ export const SETTING_DEFAULTS: Record<string, SettingDef> = {
   "comms.whatsappPhoneNumberId": { group: "comms", label: "WhatsApp phone number ID (Meta)", value: "", isPublic: false },
   "comms.whatsappWebhookUrl": { group: "comms", label: "WhatsApp webhook URL", value: "", isPublic: false },
 
+  // AI assistant (public website chatbot)
+  // Nothing here is `isPublic`: the widget reads everything it needs from GET /api/public/chat,
+  // so the model id, the rate limit and the extra prompt never reach the browser bundle.
+  // The OpenAI key is deliberately NOT a setting — it stays in OPENAI_API_KEY on the server.
+  "chatbot.enabled": {
+    group: "chatbot",
+    label: "AI assistant enabled",
+    value: true,
+    isPublic: false,
+    type: "boolean",
+    help: "Shows the bilingual assistant on the public website. It stays hidden until OPENAI_API_KEY is set on the server.",
+  },
+  "chatbot.model": {
+    group: "chatbot",
+    label: "OpenAI model",
+    value: "gpt-4o-mini",
+    isPublic: false,
+    help: 'An OpenAI model id, e.g. "gpt-4o-mini" (fast and inexpensive) or "gpt-4o". Must be a model your OpenAI account can access.',
+  },
+  "chatbot.greetingEn": {
+    group: "chatbot",
+    label: "Greeting (English)",
+    value:
+      "Namaste! I am the EduSkill India Foundation assistant. Ask me about our courses, training centres, admissions, scholarships or volunteering — in English or Hindi.",
+    isPublic: false,
+    type: "textarea",
+  },
+  "chatbot.greetingHi": {
+    group: "chatbot",
+    label: "Greeting (Hindi)",
+    value:
+      "नमस्ते! मैं एडुस्किल इंडिया फ़ाउंडेशन का सहायक हूँ। कोर्स, ट्रेनिंग सेंटर, एडमिशन, स्कॉलरशिप या वॉलंटियर बनने के बारे में कुछ भी पूछिए — हिंदी या अंग्रेज़ी में।",
+    isPublic: false,
+    type: "textarea",
+  },
+  "chatbot.suggestions": {
+    group: "chatbot",
+    label: "Quick questions",
+    value: [
+      "What courses does the Foundation offer? | फाउंडेशन कौन-कौन से कोर्स कराता है?",
+      "Is there a training centre near me? | क्या मेरे आस-पास कोई ट्रेनिंग सेंटर है?",
+      "How do I apply for admission? | एडमिशन के लिए आवेदन कैसे करें?",
+      "Can I get a scholarship or a fee waiver? | क्या मुझे स्कॉलरशिप या फीस में छूट मिल सकती है?",
+      "How do I become a volunteer trainer? | वॉलंटियर ट्रेनर कैसे बनें?",
+      "How can I open a training centre in my area? | अपने क्षेत्र में ट्रेनिंग सेंटर कैसे खोलें?",
+      "How do I contact the Foundation? | फाउंडेशन से संपर्क कैसे करें?",
+    ].join("\n"),
+    isPublic: false,
+    type: "textarea",
+    help: 'One question per line as "English question | हिंदी प्रश्न". The visitor sees them as tappable chips in their own language.',
+  },
+  "chatbot.voiceEnabled": {
+    group: "chatbot",
+    label: "Let visitors hear answers read aloud",
+    value: true,
+    isPublic: false,
+    type: "boolean",
+    help: "Uses the visitor's own device voice. No audio is sent anywhere.",
+  },
+  "chatbot.maxMessagesPerHour": {
+    group: "chatbot",
+    label: "Maximum messages per visitor per hour",
+    value: 40,
+    isPublic: false,
+    type: "number",
+    help: "Per IP address. Keeps the OpenAI bill predictable; 1–500.",
+  },
+  "chatbot.systemPromptExtra": {
+    group: "chatbot",
+    label: "Extra instructions for the assistant",
+    value: "",
+    isPublic: false,
+    type: "textarea",
+    help: "Appended to the assistant's instructions, e.g. a seasonal admission notice or a phrase to always mention. Leave empty for the default behaviour.",
+  },
+
   // Certificates
   "certificate.signatoryName": { group: "certificate", label: "Authorised signatory name", value: "Authorised Signatory", isPublic: false },
   "certificate.signatoryTitle": { group: "certificate", label: "Authorised signatory title", value: "EduSkill India Foundation", isPublic: false },
@@ -146,6 +222,7 @@ export const SETTING_GROUPS: { key: string; label: string; description: string }
   { key: "admissions", label: "Admissions", description: "Control registrations, applications and uploads." },
   { key: "payments", label: "Payments", description: "Payment gateway and offline payment configuration." },
   { key: "comms", label: "Communication", description: "Email, SMS and WhatsApp providers." },
+  { key: "chatbot", label: "AI Assistant", description: "The bilingual assistant on the public website: greeting, quick questions, model and limits." },
   { key: "legal", label: "Legal & Registration", description: "Registration, licence and tax numbers for the Foundation. Stored only in the database, never in the code." },
   { key: "certificate", label: "Certificates", description: "Signatory and certificate options." },
   { key: "seo", label: "SEO", description: "Default metadata for search engines and social sharing." },

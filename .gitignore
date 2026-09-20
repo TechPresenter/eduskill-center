@@ -52,3 +52,6 @@ next-env.d.ts
 # local agent / editor settings (machine-specific paths, permission allowlists)
 /.claude
 *.log
+
+# MCP server config can hold API keys - never commit it to a public repo
+.mcp.json
