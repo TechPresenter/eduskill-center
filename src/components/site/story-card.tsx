@@ -18,7 +18,7 @@ export function StoryCard({ story, full }: { story: StoryCardData; full?: boolea
   return (
     <article className="card card-hover relative flex h-full flex-col p-6">
       <Quote className="absolute top-5 right-5 h-8 w-8 text-lavender" aria-hidden />
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 pr-9">
         <Avatar name={story.studentName} src={story.photoUrl} size={56} className="ring-4 ring-lavender" />
         <div className="min-w-0">
           <h3 className="truncate text-base font-bold text-navy">{story.studentName}</h3>
@@ -32,8 +32,8 @@ export function StoryCard({ story, full }: { story: StoryCardData; full?: boolea
         </p>
       )}
       {story.achievement && (
-        <Badge tone="success" className="mt-3 self-start">
-          <Award className="h-3.5 w-3.5" aria-hidden /> {story.achievement}
+        <Badge tone="success" className="mt-3 max-w-full items-start self-start text-left whitespace-normal">
+          <Award className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /><span className="min-w-0">{story.achievement}</span>
         </Badge>
       )}
       <p className="mt-4 flex-1 text-sm leading-relaxed text-ink/90">{full ? story.story : truncate(story.story, 220)}</p>

@@ -1,5 +1,6 @@
 import { GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { withBasePath } from "@/lib/base-path";
 import type { Branding } from "@/lib/settings";
 
 /**
@@ -27,8 +28,10 @@ export function BrandMark({
           : branding.logoUrl;
 
   if (logo) {
+    // A raw <img> does not get the deployment sub-path that next/link and next/image apply, so an
+    // uploaded logo would 404 under /center without this.
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={logo} alt={branding.siteName} className={cn("h-10 w-auto object-contain", className)} />;
+    return <img src={withBasePath(logo)} alt={branding.siteName} className={cn("h-10 w-auto object-contain", className)} />;
   }
 
   return (
@@ -40,7 +43,17 @@ export function BrandMark({
         <span className={cn("font-heading text-[17px] font-extrabold tracking-tight", light ? "text-white" : "text-navy")}>
           EDU<span className="text-orange">SKILL</span>
         </span>
-        <span className={cn("mt-0.5 text-[9.5px] font-bold tracking-[0.2em] uppercase", light ? "text-white/70" : "text-muted")}>India Foundation</span>
+        {/* 12px is the project's minimum readable size, so this line is hidden rather than shrunk
+            on the narrowest phones — at 360px the full lockup pushes the header actions past the
+            viewport edge. The EDUSKILL wordmark above still carries the brand. */}
+        <span
+          className={cn(
+            "mt-0.5 hidden text-[12px] leading-none font-bold tracking-[0.12em] uppercase min-[381px]:block",
+            light ? "text-white/70" : "text-muted",
+          )}
+        >
+          India Foundation
+        </span>
       </span>
     </span>
   );

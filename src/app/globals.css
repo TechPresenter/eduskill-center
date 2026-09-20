@@ -441,3 +441,48 @@
     }
   }
 }
+
+/* ───────────── Carousel (src/components/ui/carousel.tsx) ───────────── */
+/*
+ * Responsive slides-per-view for the scroll-snap carousel. carouselTrackStyle() writes one custom
+ * property per breakpoint on the track (forward-filled, so every step has a real value); these
+ * media queries pick the right one into --cr-n, which each slide divides the track width by:
+ *   flex: 0 0 calc((100% - (var(--cr-n) - 1) * var(--cr-gap)) / var(--cr-n));
+ * Doing the breakpoint work in CSS (not JS) means the slide widths are already correct in the server
+ * render, so the carousel never reflows after hydration. Values match Tailwind sm/md/lg/xl.
+ * Unlayered on purpose: it must outrank the @utility layer that sets nothing here.
+ */
+[data-carousel-track] {
+  --cr-n: var(--cr-b, 1);
+}
+@media (width >= 40rem) {
+  [data-carousel-track] {
+    --cr-n: var(--cr-sm);
+  }
+}
+@media (width >= 48rem) {
+  [data-carousel-track] {
+    --cr-n: var(--cr-md);
+  }
+}
+@media (width >= 64rem) {
+  [data-carousel-track] {
+    --cr-n: var(--cr-lg);
+  }
+}
+@media (width >= 80rem) {
+  [data-carousel-track] {
+    --cr-n: var(--cr-xl);
+  }
+}
+
+/* Autoplay progress bar. Its duration IS the autoplay interval, so it is exempt from the 300ms motion
+ * budget; it only ever renders when autoplay is running, which prefers-reduced-motion disables. */
+@keyframes cr-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

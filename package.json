@@ -20,6 +20,7 @@
     "postinstall": "prisma generate",
     "brand:assets": "tsx scripts/generate-brand-assets.ts",
     "media:demo": "tsx scripts/generate-demo-media.ts",
+    "media:ai": "tsx scripts/generate-ai-media.ts",
     "content:shiksha": "tsx scripts/apply-shiksha-mission.ts"
   },
   "dependencies": {

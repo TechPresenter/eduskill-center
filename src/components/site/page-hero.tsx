@@ -1,5 +1,6 @@
 import { Highlight } from "@/components/ui/highlight";
 import { Breadcrumbs } from "@/components/ui/misc";
+import { SectionBg } from "@/components/site/decor";
 import { cn } from "@/lib/utils";
 
 /** Navy hero band used at the top of inner pages. */
@@ -23,9 +24,12 @@ export function PageHero({
   className?: string;
 }) {
   return (
-    <section className={cn("relative overflow-hidden bg-linear-to-br from-navy to-navy-dark text-white", className)}>
+    // `isolate` keeps the decorative layers in their own stacking context, and `overflow-hidden`
+    // clips them — a hero decoration must never be able to widen the document.
+    <section className={cn("relative isolate overflow-hidden bg-linear-to-br from-navy to-navy-dark text-white", className)}>
+      <SectionBg variant="mesh" tone="navy" className="opacity-80" />
       <HeroPattern />
-      <div className={cn("container-x relative", compact ? "py-12 sm:py-16" : "py-16 sm:py-20 lg:py-24", align === "center" && "text-center")}>
+      <div className={cn("container-x relative z-10", compact ? "py-12 sm:py-16" : "py-16 sm:py-20 lg:py-24", align === "center" && "text-center")}>
         {breadcrumbs && (
           <Breadcrumbs
             items={breadcrumbs}
@@ -43,10 +47,16 @@ export function PageHero({
   );
 }
 
-/** Subtle dot-grid + glow decoration for navy sections. */
+/**
+ * Subtle dot-grid + glow decoration for navy sections.
+ *
+ * The two glows are deliberately larger than their anchor corner (`-top-32 -right-24 h-96 w-96`), so
+ * the layer clips ITSELF: hosts must not have to remember `overflow-hidden` to avoid a 96px-wide
+ * strip of horizontal page scroll on a 360px phone.
+ */
 export function HeroPattern({ className }: { className?: string }) {
   return (
-    <div aria-hidden className={cn("pointer-events-none absolute inset-0", className)}>
+    <div aria-hidden className={cn("pointer-events-none absolute inset-0 overflow-hidden", className)}>
       <svg className="absolute inset-0 h-full w-full opacity-[0.12]" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <pattern id="esk-dots" width="28" height="28" patternUnits="userSpaceOnUse">

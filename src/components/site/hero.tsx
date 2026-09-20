@@ -4,6 +4,7 @@ import { Highlight } from "@/components/ui/highlight";
 import { HeroPattern } from "@/components/site/page-hero";
 import { HeroIllustration } from "@/components/site/hero-illustration";
 import { HeroFinderCard } from "@/components/site/hero-finder-card";
+import { HeroSlider, type HeroSlideData } from "@/components/site/hero-slider";
 import { SafeImage } from "@/components/site/safe-image";
 import { CountUp } from "@/components/site/count-up";
 import type { ImpactStatValue } from "@/server/public";
@@ -23,10 +24,57 @@ export interface HeroSection {
   badgeLabel?: string;
   badgeValueKey?: string;
   cardTitle?: string;
+  /** Extra slides added in Admin → CMS. Empty means the hero renders as a single static banner. */
+  slides?: HeroSlideData[];
 }
 
 export function Hero({ section, impact }: { section: HeroSection; impact: ImpactStatValue[] }) {
   const badgeStat = section.badgeValueKey ? impact.find((s) => s.key === section.badgeValueKey) : undefined;
+
+  const badge =
+    badgeStat && section.badgeLabel ? (
+      <div className="animate-fade-up absolute top-6 left-0 flex items-center gap-3 rounded-2xl bg-white p-3 pr-5 text-navy shadow-float sm:-left-4" style={{ animationDelay: "250ms" }}>
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-light text-orange">
+          <TrendingUp className="h-5 w-5" aria-hidden />
+        </span>
+        <span className="leading-tight">
+          <span className="block font-heading text-xl font-extrabold text-navy">
+            <CountUp value={badgeStat.value} suffix={badgeStat.suffix} />
+          </span>
+          <span className="block text-xs font-semibold text-muted">{section.badgeLabel}</span>
+        </span>
+      </div>
+    ) : null;
+
+  // The first slide is the section's own fields, so existing CMS content keeps rendering exactly as
+  // before and the slider only appears once the Foundation adds a second slide in Admin → CMS.
+  const extra = (section.slides ?? []).filter((s) => s && s.title?.trim());
+  if (extra.length > 0) {
+    const slides: HeroSlideData[] = [
+      {
+        eyebrow: section.eyebrow,
+        title: section.title,
+        subtitle: section.subtitle,
+        primaryLabel: section.primaryLabel,
+        primaryHref: section.primaryHref,
+        secondaryLabel: section.secondaryLabel,
+        secondaryHref: section.secondaryHref,
+        tertiaryLabel: section.tertiaryLabel,
+        tertiaryHref: section.tertiaryHref,
+        imageUrl: section.imageUrl,
+        imageAlt: section.imageAlt,
+      },
+      ...extra,
+    ];
+    return (
+      <section className="relative overflow-hidden bg-linear-to-br from-navy via-navy to-navy-dark text-white">
+        <HeroPattern />
+        <HeroSlider slides={slides} badge={badge} finderCard={<HeroFinderCard title={section.cardTitle || "Find a Training Center"} />} />
+        <div className="h-8 lg:h-16" aria-hidden />
+      </section>
+    );
+  }
+
   return (
     <section className="relative overflow-hidden bg-linear-to-br from-navy via-navy to-navy-dark text-white">
       <HeroPattern />

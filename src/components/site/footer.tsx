@@ -1,6 +1,9 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Clock, Mail, MapPin, Phone } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Clock, Compass, Mail, MapPin, Phone, type LucideIcon } from "lucide-react";
 import { BrandMark } from "@/components/brand";
+import { IconTile, SectionBg } from "@/components/site/decor";
+import { Reveal } from "@/components/site/reveal";
 import type { Branding } from "@/lib/settings";
 
 const SOCIAL_ICONS: Record<string, { label: string; path: string }> = {
@@ -14,8 +17,9 @@ const SOCIAL_ICONS: Record<string, { label: string; path: string }> = {
   youtube: { label: "YouTube", path: "M21.6 7.2a2.5 2.5 0 0 0-1.7-1.8C18.3 5 12 5 12 5s-6.3 0-7.9.4A2.5 2.5 0 0 0 2.4 7.2 26 26 0 0 0 2 12a26 26 0 0 0 .4 4.8 2.5 2.5 0 0 0 1.7 1.8c1.6.4 7.9.4 7.9.4s6.3 0 7.9-.4a2.5 2.5 0 0 0 1.7-1.8A26 26 0 0 0 22 12a26 26 0 0 0-.4-4.8ZM10 15V9l5.2 3L10 15Z" },
 };
 
-const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
+const COLUMNS: { id: string; title: string; links: { label: string; href: string }[] }[] = [
   {
+    id: "explore",
     title: "Explore",
     links: [
       { label: "About Us", href: "/about" },
@@ -27,6 +31,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     ],
   },
   {
+    id: "students",
     title: "Students",
     links: [
       { label: "Register", href: "/register" },
@@ -38,6 +43,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     ],
   },
   {
+    id: "volunteer",
     title: "Volunteer & Support",
     links: [
       { label: "Become a Trainer", href: "/become-a-trainer" },
@@ -51,6 +57,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     ],
   },
   {
+    id: "resources",
     title: "Resources",
     links: [
       { label: "Scholarship", href: "/scholarship" },
@@ -69,155 +76,232 @@ const LEGAL: { label: string; href: string }[] = [
   { label: "Disclaimer", href: "/disclaimer" },
 ];
 
+/**
+ * One footer link column.
+ *
+ * Phones get a disclosure, so the footer reads as four headings instead of 33 stacked links; from
+ * `md` up the toggle disappears and the list is simply always visible. It is CSS-only — a visually
+ * hidden checkbox read through `group-has-[:checked]` — so the footer stays a server component and
+ * ships no JavaScript for this. `<details>` is deliberately NOT used: re-opening a `details` at
+ * `md+` needs `::details-content`, which would hide the columns outright on older browsers.
+ */
+function FooterColumn({ id, title, links }: { id: string; title: string; links: { label: string; href: string }[] }) {
+  const toggleId = `footer-${id}-toggle`;
+  const listId = `footer-${id}-links`;
+  return (
+    <div className="group max-md:border-t max-md:border-white/10">
+      <input id={toggleId} type="checkbox" className="peer sr-only md:hidden" aria-controls={listId} />
+      <h3 className="rounded-lg font-heading text-[13px] font-bold tracking-[0.14em] text-white uppercase peer-focus-visible:ring-2 peer-focus-visible:ring-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-navy-dark">
+        <label htmlFor={toggleId} className="flex min-h-12 cursor-pointer items-center justify-between gap-3 select-none md:pointer-events-none md:min-h-0 md:cursor-default">
+          <span>{title}</span>
+          <ChevronDown
+            className="h-[18px] w-[18px] shrink-0 text-white/70 transition-transform duration-200 group-has-[:checked]:-rotate-180 motion-reduce:transition-none md:hidden"
+            aria-hidden
+          />
+        </label>
+      </h3>
+      <span className="mt-3 hidden h-0.5 w-7 rounded-full bg-orange md:block" aria-hidden />
+      <ul id={listId} className="max-md:hidden max-md:pb-3 max-md:group-has-[:checked]:block md:mt-3.5">
+        {links.map((l) => (
+          <li key={l.href + l.label}>
+            <Link href={l.href} className="group/link flex min-h-11 items-center gap-2.5 text-[15px] leading-snug text-white/75 transition-colors hover:text-white motion-reduce:transition-none md:min-h-8">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange transition-transform duration-200 group-hover/link:translate-x-1 motion-reduce:transition-none" aria-hidden />
+              <span>{l.label}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Icon + label + value row for the contact block in the brand column. */
+function ContactRow({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-orange ring-1 ring-inset ring-white/15" aria-hidden>
+        <Icon className="h-[18px] w-[18px]" />
+      </span>
+      <div className="min-w-0 pt-0.5">
+        <dt className="text-[12px] font-bold tracking-[0.12em] text-white/70 uppercase">{label}</dt>
+        <dd className="mt-1 text-[15px] leading-snug text-white/85">{children}</dd>
+      </div>
+    </div>
+  );
+}
+
 export function SiteFooter({ branding, footer }: { branding: Branding; footer: { description?: string; legalLine?: string } }) {
   const year = new Date().getFullYear();
   const socials = Object.entries(branding.social).filter(([, url]) => !!url && /^https?:\/\//i.test(url));
   const whatsappDigits = branding.contact.whatsapp.replace(/\D/g, "");
   const waHref = whatsappDigits ? `https://wa.me/${whatsappDigits.length === 10 ? `91${whatsappDigits}` : whatsappDigits}` : null;
   const phoneHref = branding.contact.phone ? `tel:${branding.contact.phone.replace(/[^\d+]/g, "")}` : null;
+  const hasContact = !!(branding.contact.email || branding.contact.phone || branding.contact.address || branding.contact.hours);
+  const legalLine = [footer.legalLine, branding.registrationInfo].filter(Boolean).join(" · ");
 
   return (
-    <footer className="relative bg-navy-dark text-white pb-safe" aria-labelledby="site-footer-heading">
-      <div className="h-1 bg-orange" aria-hidden />
-      <h2 id="site-footer-heading" className="sr-only">
-        Footer
-      </h2>
+    <footer className="relative isolate overflow-hidden bg-navy-dark text-white pb-safe" aria-labelledby="site-footer-heading">
+      {/* Depth on the flat navy: a soft brand wash plus a faint edge-faded grid. Both are clipped by
+          this element's own overflow-hidden, so neither can ever widen the page. The dot variant is
+          avoided here on purpose — the closing CtaBand above the footer already uses a dot field. */}
+      <SectionBg tone="navy" variant="mesh" />
+      <SectionBg tone="navy" variant="grid" className="opacity-50" />
 
-      <div className="container-x py-12 lg:py-16">
-        <div className="grid gap-10 lg:grid-cols-12 lg:gap-8">
-          {/* Brand + contact */}
-          <div className="lg:col-span-4">
-            <Link href="/" aria-label={`${branding.siteName} – home`} className="inline-block rounded-lg">
-              <BrandMark branding={branding} variant="footer" light />
-            </Link>
-            {branding.tagline && <p className="mt-5 text-[13px] font-bold tracking-[0.12em] text-orange uppercase">{branding.tagline}</p>}
-            {footer.description && <p className="mt-3 max-w-md text-[15px] leading-relaxed text-white/75">{footer.description}</p>}
+      <div className="relative z-10">
+        <div className="h-1 bg-linear-to-r from-orange via-orange to-navy-light" aria-hidden />
+        <h2 id="site-footer-heading" className="sr-only">
+          Footer
+        </h2>
 
-            <ul className="mt-6 space-y-3 text-sm">
-              {branding.contact.email && (
-                <li>
-                  <a href={`mailto:${branding.contact.email}`} className="group inline-flex items-start gap-3 text-white/85 hover:text-white">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-orange group-hover:bg-orange group-hover:text-white">
-                      <Mail className="h-4 w-4" aria-hidden />
-                    </span>
-                    <span className="break-all pt-2">{branding.contact.email}</span>
-                  </a>
-                </li>
+        <div className="container-x py-12 lg:py-16">
+          <div className="grid gap-10 lg:grid-cols-12 lg:gap-10">
+            {/* Brand lockup, tagline, contact, social */}
+            <div className="lg:col-span-4">
+              <Link href="/" aria-label={`${branding.siteName} – home`} className="inline-flex rounded-xl">
+                <BrandMark branding={branding} variant="footer" light />
+              </Link>
+
+              {branding.tagline && (
+                <p className="mt-6 flex items-start gap-3">
+                  <span className="mt-1 h-4 w-1 shrink-0 rounded-full bg-orange" aria-hidden />
+                  <span className="font-heading text-[13px] font-bold tracking-[0.12em] text-white uppercase">{branding.tagline}</span>
+                </p>
               )}
-              {branding.contact.phone && (
-                <li className="flex items-start gap-3 text-white/85">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-orange">
-                    <Phone className="h-4 w-4" aria-hidden />
-                  </span>
-                  <span className="pt-2">
-                    {phoneHref ? (
-                      <a href={phoneHref} className="hover:text-white">
-                        {branding.contact.phone}
+              {footer.description && <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/80">{footer.description}</p>}
+
+              {hasContact && (
+                <dl className="mt-7 grid gap-4 rounded-2xl bg-white/5 p-4 ring-1 ring-inset ring-white/10 sm:p-5">
+                  {branding.contact.email && (
+                    <ContactRow icon={Mail} label="Email">
+                      <a href={`mailto:${branding.contact.email}`} className="break-all transition-colors hover:text-white motion-reduce:transition-none">
+                        {branding.contact.email}
                       </a>
-                    ) : (
-                      branding.contact.phone
-                    )}
-                    {waHref && (
-                      <>
-                        {" · "}
-                        <a href={waHref} target="_blank" rel="noopener noreferrer" className="text-orange underline-offset-2 hover:underline">
+                    </ContactRow>
+                  )}
+                  {branding.contact.phone && (
+                    <ContactRow icon={Phone} label="Phone">
+                      {phoneHref ? (
+                        <a href={phoneHref} className="transition-colors hover:text-white motion-reduce:transition-none">
+                          {branding.contact.phone}
+                        </a>
+                      ) : (
+                        branding.contact.phone
+                      )}
+                      {waHref && (
+                        <a
+                          href={waHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 flex min-h-9 w-fit items-center text-[13px] font-semibold text-white underline decoration-orange decoration-2 underline-offset-4"
+                        >
                           WhatsApp
                         </a>
-                      </>
-                    )}
-                  </span>
-                </li>
+                      )}
+                    </ContactRow>
+                  )}
+                  {branding.contact.address && (
+                    <ContactRow icon={MapPin} label="Address">
+                      <span className="whitespace-pre-line">{branding.contact.address}</span>
+                    </ContactRow>
+                  )}
+                  {branding.contact.hours && (
+                    <ContactRow icon={Clock} label="Office Hours">
+                      {branding.contact.hours}
+                    </ContactRow>
+                  )}
+                </dl>
               )}
-              {branding.contact.address && (
-                <li className="flex items-start gap-3 text-white/85">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-orange">
-                    <MapPin className="h-4 w-4" aria-hidden />
-                  </span>
-                  <span className="pt-2 whitespace-pre-line">{branding.contact.address}</span>
-                </li>
-              )}
-              {branding.contact.hours && (
-                <li className="flex items-start gap-3 text-white/85">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-orange">
-                    <Clock className="h-4 w-4" aria-hidden />
-                  </span>
-                  <span className="pt-2">{branding.contact.hours}</span>
-                </li>
-              )}
-            </ul>
 
-            {socials.length > 0 && (
-              <ul className="mt-6 flex flex-wrap gap-2" aria-label="Social media">
-                {socials.map(([key, url]) => {
-                  const icon = SOCIAL_ICONS[key];
-                  if (!icon) return null;
-                  return (
-                    <li key={key}>
-                      <a href={url} target="_blank" rel="noopener noreferrer" aria-label={icon.label} className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-orange">
-                        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
-                          <path d={icon.path} />
-                        </svg>
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
+              {socials.length > 0 && (
+                <div className="mt-7">
+                  <h3 className="text-[12px] font-bold tracking-[0.14em] text-white/70 uppercase">Follow Us</h3>
+                  <ul className="mt-3 flex flex-wrap gap-2.5">
+                    {socials.map(([key, url]) => {
+                      const icon = SOCIAL_ICONS[key];
+                      if (!icon) return null;
+                      return (
+                        <li key={key}>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={icon.label}
+                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-inset ring-white/20 transition duration-200 hover:bg-orange hover:ring-orange motion-reduce:transition-none"
+                          >
+                            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
+                              <path d={icon.path} />
+                            </svg>
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
 
-          {/* Link columns */}
-          <nav className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4 lg:col-span-8 lg:gap-x-8" aria-label="Footer">
-            {COLUMNS.map((col) => (
-              <div key={col.title}>
-                <h3 className="text-[13px] font-bold tracking-[0.12em] text-white uppercase">{col.title}</h3>
-                <ul className="mt-4 space-y-1">
-                  {col.links.map((l) => (
-                    <li key={l.href + l.label}>
-                      <Link href={l.href} className="group inline-flex min-h-9 items-center gap-1.5 text-[15px] text-white/70 transition-colors hover:text-white">
-                        <span className="h-1 w-1 rounded-full bg-orange/70 transition-all group-hover:w-2.5" aria-hidden />
-                        {l.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+            {/* Link columns — accordions on phones, four open columns from md up */}
+            <nav className="lg:col-span-8" aria-label="Footer">
+              <div className="grid max-md:border-b max-md:border-white/10 md:grid-cols-4 md:gap-x-6 lg:gap-x-8">
+                {COLUMNS.map((col) => (
+                  <FooterColumn key={col.id} id={col.id} title={col.title} links={col.links} />
+                ))}
               </div>
-            ))}
-          </nav>
+            </nav>
+          </div>
+
+          {/* Closing prompt. Deliberately a quiet utility strip rather than a second hero CTA: pages
+              can already end with a full CtaBand, and two of those in a row read as a mistake. */}
+          <Reveal className="mt-12 lg:mt-16">
+            <div className="relative overflow-hidden rounded-2xl bg-white/5 ring-1 ring-inset ring-white/10">
+              <span className="absolute inset-y-0 left-0 w-1 bg-orange" aria-hidden />
+              <div className="flex flex-col gap-5 p-5 pl-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:py-4">
+                <div className="flex items-start gap-3.5">
+                  <IconTile icon={Compass} tone="white" size="sm" className="max-sm:hidden" />
+                  <div>
+                    <p className="font-heading text-base font-extrabold text-white sm:text-[17px]">Ready to start learning or teaching?</p>
+                    <p className="mt-1 text-[13px] leading-relaxed text-white/75 sm:text-sm">Find a training center near you, apply for a course, or volunteer as a trainer.</p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-col gap-2.5 sm:flex-row">
+                  <Link
+                    href="/training-centers"
+                    className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white/10 px-5 text-[15px] font-semibold text-white ring-1 ring-inset ring-white/20 transition-colors hover:bg-white/20 motion-reduce:transition-none sm:h-11 sm:text-sm"
+                  >
+                    Find a Center
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="group/cta inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-orange px-5 text-[15px] font-semibold text-white transition-colors hover:bg-orange-hover motion-reduce:transition-none sm:h-11 sm:text-sm"
+                  >
+                    Apply Now
+                    <ArrowUpRight className="h-4 w-4 transition-transform duration-200 group-hover/cta:-translate-y-0.5 group-hover/cta:translate-x-0.5 motion-reduce:transition-none" aria-hidden />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </Reveal>
         </div>
 
-        {/* Call to action strip */}
-        <div className="mt-12 flex flex-col gap-4 rounded-2xl bg-white/5 p-5 ring-1 ring-white/10 sm:flex-row sm:items-center sm:justify-between lg:mt-16">
-          <div>
-            <p className="font-heading text-lg font-extrabold text-white">Ready to start learning or teaching?</p>
-            <p className="text-sm text-white/70">Find a training center near you, apply for a course, or volunteer as a trainer.</p>
+        {/* Legal / bottom bar */}
+        <div className="border-t border-white/10 bg-navy-dark/60">
+          <div className="container-x flex flex-col gap-3 py-5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+            <div className="text-[13px] leading-relaxed text-white/70">
+              <p>
+                © {year} {branding.siteName}. All Rights Reserved.
+              </p>
+              {legalLine && <p className="mt-1">{legalLine}</p>}
+            </div>
+            <ul className="-mx-2.5 flex flex-wrap items-center lg:justify-end" aria-label="Legal">
+              {LEGAL.map((l) => (
+                <li key={l.href}>
+                  <Link href={l.href} className="flex min-h-11 items-center rounded-lg px-2.5 text-[13px] text-white/70 transition-colors hover:text-white motion-reduce:transition-none lg:min-h-9">
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Link href="/training-centers" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white/10 px-5 text-sm font-semibold text-white ring-1 ring-white/15 hover:bg-white/15">
-              Find a Center
-            </Link>
-            <Link href="/register" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-orange px-5 text-sm font-semibold text-white hover:bg-orange-hover">
-              Apply Now <ArrowUpRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom bar */}
-      <div className="border-t border-white/10">
-        <div className="container-x flex flex-col gap-3 py-5 text-xs text-white/60 lg:flex-row lg:items-center lg:justify-between">
-          <p>
-            © {year} {branding.siteName}. All Rights Reserved.
-            {(footer.legalLine || branding.registrationInfo) && <span className="block sm:inline sm:before:mx-2 sm:before:content-['·']">{[footer.legalLine, branding.registrationInfo].filter(Boolean).join(" · ")}</span>}
-          </p>
-          <ul className="flex flex-wrap gap-x-5 gap-y-1" aria-label="Legal">
-            {LEGAL.map((l) => (
-              <li key={l.href}>
-                <Link href={l.href} className="inline-flex min-h-8 items-center hover:text-white">
-                  {l.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
     </footer>

@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Building2, GraduationCap, Landmark, Map, MapPin, Users } from "lucide-react";
+import { ArrowRight, Building2, ClipboardList, Compass, GraduationCap, Landmark, Map, MapPin, Users, type LucideProps } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
-import { DynamicIcon } from "@/components/ui/icon";
-import { Highlight } from "@/components/ui/highlight";
+import { Highlight, stripHighlight } from "@/components/ui/highlight";
+import { Carousel, CarouselSlide } from "@/components/ui/carousel";
 import { getBranding, getPublicSettings } from "@/lib/settings";
 import { getSessionUser } from "@/lib/auth/session";
-import { absoluteUrl, formatINR } from "@/lib/utils";
+import { absoluteUrl, cn, formatINR } from "@/lib/utils";
 import { getHomepageData } from "@/server/public";
 import { Hero, type HeroSection } from "@/components/site/hero";
 import { TrustStrip } from "@/components/site/trust-strip";
 import { SectionHeading } from "@/components/site/section-heading";
+import { IconTile, SectionBg, SectionDivider } from "@/components/site/decor";
 import { Reveal } from "@/components/site/reveal";
 import { ProgramCard } from "@/components/site/program-card";
 import { CourseCard } from "@/components/site/course-card";
@@ -51,6 +52,29 @@ interface CtaSection {
   primaryHref?: string;
   secondaryLabel?: string;
   secondaryHref?: string;
+}
+
+/**
+ * Marks for the admission-process steps. CMS steps carry no icon field, so these are positional and
+ * deliberately generic — discover, locate, apply, begin — which is the shape of the flow whatever an
+ * editor renames the steps to. Meaning always stays in the step title: the tile is decorative and the
+ * ordinal is already carried by the <ol>.
+ */
+const PROCESS_ICONS: React.ComponentType<LucideProps>[] = [Compass, MapPin, ClipboardList, GraduationCap];
+
+/**
+ * Eyebrow label with a single decorative emoji. The emoji is `aria-hidden`, so assistive tech reads the
+ * label text only and the emoji never carries meaning of its own.
+ */
+function Eyebrow({ emoji, center, children }: { emoji: string; center?: boolean; children: string }) {
+  return (
+    <p className={cn("eyebrow mb-3", center && "justify-center")}>
+      <span aria-hidden="true" className="text-[15px] leading-none">
+        {emoji}
+      </span>
+      {children}
+    </p>
+  );
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -112,9 +136,10 @@ export default async function HomePage() {
 
       <TrustStrip section={trust} partners={data.partners} />
 
-      {/* About */}
-      <section className="bg-white py-16 sm:py-20 lg:py-24" aria-labelledby="home-about-title">
-        <div className="container-x grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+      {/* About — soft brand wash, then a wave into the lavender programmes band. */}
+      <section className="relative overflow-hidden bg-white py-16 sm:py-20 lg:py-24" aria-labelledby="home-about-title">
+        <SectionBg variant="mesh" className="opacity-70" />
+        <div className="relative z-10 container-x grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <Reveal>
             {about.label && <p className="eyebrow mb-3">{about.label}</p>}
             <h2 id="home-about-title" className="section-title">
@@ -131,9 +156,7 @@ export default async function HomePage() {
             <ul className="grid gap-4 sm:grid-cols-2">
               {(about.features ?? []).slice(0, 4).map((f, i) => (
                 <li key={i} className="card card-hover p-5">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-light text-orange">
-                    <DynamicIcon name={f.icon} className="h-5 w-5" aria-hidden />
-                  </span>
+                  <IconTile icon={f.icon ?? ""} tone="orange" />
                   <h3 className="mt-4 text-base font-bold text-navy">{f.title}</h3>
                   {f.description && <p className="mt-1.5 text-sm leading-relaxed text-muted">{f.description}</p>}
                 </li>
@@ -141,14 +164,22 @@ export default async function HomePage() {
             </ul>
           </Reveal>
         </div>
+        {/* Only drawn when the next band really is lavender. */}
+        {data.programs.length > 0 && <SectionDivider variant="wave" className="text-lavender" />}
       </section>
 
       {/* Programs */}
       {data.programs.length > 0 && (
-        <section className="bg-lavender py-16 sm:py-20 lg:py-24" aria-labelledby="home-programs-title">
-          <div className="container-x">
-            <Reveal>
-              <SectionHeading id="home-programs-title" label={programs.label} title={programs.title} description={programs.description} align="center" />
+        <section className="relative overflow-hidden bg-lavender py-16 sm:py-20 lg:py-24" aria-labelledby="home-programs-title">
+          <SectionBg variant="blobs" />
+          <div className="relative z-10 container-x">
+            <Reveal className="text-center">
+              {programs.label && (
+                <Eyebrow emoji="🎓" center>
+                  {programs.label}
+                </Eyebrow>
+              )}
+              <SectionHeading id="home-programs-title" title={programs.title} description={programs.description} align="center" />
             </Reveal>
             <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {data.programs.map((p, i) => (
@@ -163,10 +194,14 @@ export default async function HomePage() {
 
       {/* Popular courses */}
       {data.featuredCourses.length > 0 && (
-        <section className="bg-white py-16 sm:py-20 lg:py-24" aria-labelledby="home-courses-title">
-          <div className="container-x">
+        <section className="relative overflow-hidden bg-white py-16 sm:py-20 lg:py-24" aria-labelledby="home-courses-title">
+          <SectionBg variant="dots" />
+          <div className="relative z-10 container-x">
             <Reveal className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <SectionHeading id="home-courses-title" label={courses.label} title={courses.title} description={courses.description} />
+              <div>
+                {courses.label && <Eyebrow emoji="📚">{courses.label}</Eyebrow>}
+                <SectionHeading id="home-courses-title" title={courses.title} description={courses.description} />
+              </div>
               <ButtonLink href="/courses" variant="outline" rightIcon={<ArrowRight className="h-4 w-4" />} className="self-start lg:self-auto">
                 View all courses
               </ButtonLink>
@@ -182,13 +217,14 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Find a training center */}
-      <section className="bg-lavender py-16 sm:py-20" aria-labelledby="home-center-search-title">
-        <div className="container-x">
+      {/* Find a training center — rings frame the single focal card. */}
+      <section className="relative overflow-hidden bg-lavender py-16 sm:py-20" aria-labelledby="home-center-search-title">
+        <SectionBg variant="rings" />
+        <div className="relative z-10 container-x">
           <Reveal className="card rounded-card-lg p-6 sm:p-10">
             <div className="grid gap-8 lg:grid-cols-12 lg:items-center">
               <div className="lg:col-span-5">
-                <SectionHeading id="home-center-search-title" label={centerSearch.label} title={centerSearch.title} description={centerSearch.description} />
+                <SectionHeading id="home-center-search-title" emoji="📍" label={centerSearch.label} title={centerSearch.title} description={centerSearch.description} />
               </div>
               <div className="lg:col-span-7">
                 <CenterSearchForm compact />
@@ -209,22 +245,28 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Admission process */}
-      <section id="admission-process" className="scroll-mt-24 bg-white py-16 sm:py-20 lg:py-24" aria-labelledby="home-process-title">
-        <div className="container-x">
+      {/* Admission process — grid lines under the steps, slant into the fees band. */}
+      <section id="admission-process" className="relative scroll-mt-24 overflow-hidden bg-white py-16 sm:py-20 lg:py-24" aria-labelledby="home-process-title">
+        <SectionBg variant="grid" />
+        <div className="relative z-10 container-x">
           <Reveal>
-            <SectionHeading id="home-process-title" label={process.label} title={process.title} align="center" />
+            <SectionHeading id="home-process-title" emoji="📝" label={process.label} title={process.title} align="center" />
           </Reveal>
-          <ol className="relative mt-14 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          <div className="relative mt-14">
             <div aria-hidden className="absolute top-7 right-[12.5%] left-[12.5%] hidden h-0.5 bg-linear-to-r from-orange/20 via-orange to-orange/20 lg:block" />
-            {(process.steps ?? []).slice(0, 4).map((step, i) => (
-              <Reveal as="li" key={i} delay={i * 100} className="relative flex flex-col items-center text-center">
-                <span className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-orange font-heading text-lg font-extrabold text-white shadow-card-hover ring-8 ring-white">{String(i + 1).padStart(2, "0")}</span>
-                <h3 className="mt-5 text-lg font-bold text-navy">{step.title}</h3>
-                {step.description && <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">{step.description}</p>}
-              </Reveal>
-            ))}
-          </ol>
+            <ol className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+              {(process.steps ?? []).slice(0, 4).map((step, i) => (
+                <Reveal as="li" key={i} delay={i * 100} className="relative flex flex-col items-center text-center">
+                  <span className="relative z-10">
+                    <IconTile icon={PROCESS_ICONS[i % PROCESS_ICONS.length]} tone="navy" size="lg" className="shadow-card-hover" />
+                    <span className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white font-heading text-xs font-extrabold text-navy shadow-card ring-1 ring-navy/10">{i + 1}</span>
+                  </span>
+                  <h3 className="mt-5 text-lg font-bold text-navy">{step.title}</h3>
+                  {step.description && <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">{step.description}</p>}
+                </Reveal>
+              ))}
+            </ol>
+          </div>
           {process.ctaLabel && process.ctaHref && (
             <Reveal className="mt-12 text-center">
               <ButtonLink href={process.ctaHref} size="xl" rightIcon={<ArrowRight className="h-5 w-5" />}>
@@ -233,13 +275,15 @@ export default async function HomePage() {
             </Reveal>
           )}
         </div>
+        <SectionDivider variant="slant" className="text-lavender" />
       </section>
 
-      {/* Fees & scholarship */}
-      <section id="fees" className="scroll-mt-24 bg-lavender py-16 sm:py-20 lg:py-24" aria-labelledby="home-fees-title">
-        <div className="container-x grid items-center gap-12 lg:grid-cols-2">
+      {/* Fees & scholarship — wave bands ramp the lavender down into the navy CTA below. */}
+      <section id="fees" className="relative scroll-mt-24 overflow-hidden bg-lavender py-16 sm:py-20 lg:py-24" aria-labelledby="home-fees-title">
+        <SectionBg variant="waves" />
+        <div className="relative z-10 container-x grid items-center gap-12 lg:grid-cols-2">
           <Reveal>
-            <SectionHeading id="home-fees-title" label={fees.label} title={fees.title} description={fees.description} />
+            <SectionHeading id="home-fees-title" emoji="💰" label={fees.label} title={fees.title} description={fees.description} />
             {fees.ctaLabel && fees.ctaHref && (
               <ButtonLink href={fees.ctaHref} size="lg" className="mt-8" rightIcon={<ArrowRight className="h-4 w-4" />}>
                 {fees.ctaLabel}
@@ -288,18 +332,30 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/*
+        The editable closing CTA (`home.cta`) sits HERE rather than above the footer. The footer carries
+        its own "Ready to start learning or teaching?" strip with the same two destinations, so a navy CTA
+        band immediately before it read as the same call made twice. Mid-page it earns its place: it
+        answers the fee question directly above it, and it breaks the long white/lavender run.
+      */}
+      <CtaBand
+        title={cta.title}
+        description={cta.description}
+        primary={cta.primaryLabel && cta.primaryHref ? { label: cta.primaryLabel, href: cta.primaryHref } : undefined}
+        secondary={cta.secondaryLabel && cta.secondaryHref ? { label: cta.secondaryLabel, href: cta.secondaryHref } : undefined}
+      />
+
       {/* Why EduSkill */}
-      <section className="bg-white py-16 sm:py-20 lg:py-24" aria-labelledby="home-why-title">
-        <div className="container-x">
+      <section className="relative overflow-hidden bg-white py-16 sm:py-20 lg:py-24" aria-labelledby="home-why-title">
+        <SectionBg variant="spotlight" className="opacity-70" />
+        <div className="relative z-10 container-x">
           <Reveal>
-            <SectionHeading id="home-why-title" label={why.label} title={why.title} description={why.description} align="center" />
+            <SectionHeading id="home-why-title" emoji="⭐" label={why.label} title={why.title} description={why.description} align="center" />
           </Reveal>
           <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {(why.features ?? []).slice(0, 8).map((f, i) => (
               <Reveal as="li" key={i} delay={Math.min(i, 7) * 50} className="card card-hover p-6">
-                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-navy text-white">
-                  <DynamicIcon name={f.icon} className="h-6 w-6" aria-hidden />
-                </span>
+                <IconTile icon={f.icon ?? ""} tone="navy" />
                 <h3 className="mt-5 text-base font-bold text-navy">{f.title}</h3>
                 {f.description && <p className="mt-1.5 text-sm leading-relaxed text-muted">{f.description}</p>}
               </Reveal>
@@ -308,20 +364,24 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Impact across India */}
-      <section className="bg-lavender py-16 sm:py-20 lg:py-24" aria-labelledby="home-impact-title">
-        <div className="container-x">
-          <Reveal>
-            <SectionHeading id="home-impact-title" label={impact.label} title={impact.title} description={impact.description} align="center" />
+      {/* Impact across India — quiet dot matrix under the map, arch into the stats band. */}
+      <section className="relative overflow-hidden bg-lavender py-16 sm:py-20 lg:py-24" aria-labelledby="home-impact-title">
+        <SectionBg variant="dots" />
+        <div className="relative z-10 container-x">
+          <Reveal className="text-center">
+            {impact.label && (
+              <Eyebrow emoji="🗺️" center>
+                {impact.label}
+              </Eyebrow>
+            )}
+            <SectionHeading id="home-impact-title" title={impact.title} description={impact.description} align="center" />
           </Reveal>
           <div className="mt-12 grid gap-8 lg:grid-cols-12">
             <Reveal className="lg:col-span-4">
               <ul className="grid grid-cols-2 gap-4 lg:grid-cols-1 xl:grid-cols-2">
                 {coverageItems.map((c) => (
                   <li key={c.label} className="card flex items-center gap-4 p-4">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-light text-orange">
-                      <c.icon className="h-5 w-5" aria-hidden />
-                    </span>
+                    <IconTile icon={c.icon} tone="orange" size="sm" />
                     <span>
                       <span className="block font-heading text-2xl font-extrabold text-navy tabular-nums">
                         <CountUp value={c.value} />
@@ -338,37 +398,37 @@ export default async function HomePage() {
             </Reveal>
           </div>
         </div>
+        {data.impact.length > 0 && <SectionDivider variant="curve" height="lg" className="text-navy" />}
       </section>
 
       <ImpactBand stats={data.impact} />
 
-      {/* Success stories */}
+      {/* Success stories — one swipeable rail instead of a three-card grid. */}
       {data.stories.length > 0 && (
-        <section className="bg-white py-16 sm:py-20 lg:py-24" aria-labelledby="home-stories-title">
-          <div className="container-x">
+        <section className="relative overflow-hidden bg-white py-16 sm:py-20 lg:py-24" aria-labelledby="home-stories-title">
+          <SectionBg variant="blobs" />
+          <div className="relative z-10 container-x">
             <Reveal className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <SectionHeading id="home-stories-title" label={stories.label} title={stories.title} description={stories.description} />
+              <div>
+                {stories.label && <Eyebrow emoji="🌟">{stories.label}</Eyebrow>}
+                <SectionHeading id="home-stories-title" title={stories.title} description={stories.description} />
+              </div>
               <ButtonLink href="/success-stories" variant="outline" rightIcon={<ArrowRight className="h-4 w-4" />} className="self-start lg:self-auto">
                 All stories
               </ButtonLink>
             </Reveal>
-            <ul className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {data.stories.map((st, i) => (
-                <Reveal as="li" key={st.id} delay={i * 80}>
-                  <StoryCard story={st} />
-                </Reveal>
-              ))}
-            </ul>
+            <Reveal className="mt-12">
+              <Carousel aria-label={stories.label ?? stripHighlight(stories.title)} slidesPerView={{ base: 1, sm: 2, lg: 3 }} gap={6} autoPlay={6500} loop pauseOnHover snapStop trackClassName="-mx-1">
+                {data.stories.map((st) => (
+                  <CarouselSlide key={st.id}>
+                    <StoryCard story={st} />
+                  </CarouselSlide>
+                ))}
+              </Carousel>
+            </Reveal>
           </div>
         </section>
       )}
-
-      <CtaBand
-        title={cta.title}
-        description={cta.description}
-        primary={cta.primaryLabel && cta.primaryHref ? { label: cta.primaryLabel, href: cta.primaryHref } : undefined}
-        secondary={cta.secondaryLabel && cta.secondaryHref ? { label: cta.secondaryLabel, href: cta.secondaryHref } : undefined}
-      />
     </>
   );
 }

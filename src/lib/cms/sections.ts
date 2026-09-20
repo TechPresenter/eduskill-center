@@ -55,6 +55,21 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
       { key: "badgeLabel", label: "Floating badge label", type: "text" },
       { key: "badgeValueKey", label: "Floating badge statistic", type: "text", help: "Impact stat key: students, centers, trainers, states, completion" },
       { key: "cardTitle", label: "Finder card title", type: "text" },
+      {
+        key: "slides",
+        label: "Extra hero slides",
+        type: "list",
+        max: 4,
+        itemFields: [
+          { key: "eyebrow", label: "Eyebrow", type: "text" },
+          { key: "title", label: "Headline", type: "textarea", help: "Wrap words in [[ ]] to highlight in orange." },
+          { key: "subtitle", label: "Supporting text", type: "textarea" },
+          ...cta("primary", "Primary button"),
+          ...cta("secondary", "Secondary button"),
+          { key: "imageUrl", label: "Slide image", type: "image", help: "Leave empty to reuse the built-in illustration." },
+          { key: "imageAlt", label: "Image alt text", type: "text" },
+        ],
+      },
     ],
     defaults: {
       eyebrow: "Skill Development • Education • Opportunity",
@@ -72,6 +87,34 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
       badgeLabel: "Students Reached",
       badgeValueKey: "students",
       cardTitle: "Find a Training Center",
+      // Two further slides for real programmes that already exist on this platform. Every link
+      // points at a live route. Edit or remove them in Admin → CMS → Homepage → Hero.
+      slides: [
+        {
+          eyebrow: "Project EduSkill Shiksha Mission",
+          title: "Foundational Learning for\n[[Class 1 to 4]]",
+          subtitle:
+            "Normal Education Centres in panchayat and rural areas, where children study Hindi, English, Mathematics and EVS with daily practice, homework support and regular assessment.",
+          primaryLabel: "See the classes",
+          primaryHref: "/courses",
+          secondaryLabel: "About the mission",
+          secondaryHref: "/programs",
+          imageUrl: "",
+          imageAlt: "Children studying at an EduSkill Normal Education Centre",
+        },
+        {
+          eyebrow: "Open a Centre",
+          title: "Run a Learning Centre\nin [[Your Village]]",
+          subtitle:
+            "If you can provide a room in your village or panchayat, you can apply to open a Normal Education Centre. Seven clear steps from application to opening day.",
+          primaryLabel: "Apply to open a centre",
+          primaryHref: "/open-a-centre",
+          secondaryLabel: "Track an application",
+          secondaryHref: "/open-a-centre/status",
+          imageUrl: "",
+          imageAlt: "A community learning centre run by a local teacher",
+        },
+      ],
     },
   },
   {
