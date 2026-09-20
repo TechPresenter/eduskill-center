@@ -12,6 +12,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { buttonClasses } from "@/components/ui/button";
 import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
 import { LocationImportDialog } from "@/components/admin/locations/import-dialog";
+import { withBasePath } from "@/lib/base-path";
 
 export const metadata: Metadata = { title: "Locations · Foundation Admin" };
 
@@ -45,7 +46,7 @@ export default async function LocationsPage() {
           <>
             <LocationImportDialog disabled={!canImport} />
             {canExport ? (
-              <a href="/api/admin/locations/export" className={buttonClasses({ variant: "outline", size: "sm" })} title="Download the full hierarchy as CSV" download>
+              <a href={withBasePath("/api/admin/locations/export")} className={buttonClasses({ variant: "outline", size: "sm" })} title="Download the full hierarchy as CSV" download>
                 <Download className="h-4 w-4" /> Export CSV
               </a>
             ) : (

@@ -5,6 +5,7 @@ import { audit } from "@/lib/audit";
 import type { AuthUser } from "@/lib/auth/session";
 import { toNumber } from "@/lib/utils";
 import { batchAttendanceReport } from "@/server/attendance";
+import { isFileUrlUnder } from "@/lib/storage";
 
 /**
  * Trainer-portal scope helpers. Every query here is scoped to ONE trainer:
@@ -192,7 +193,7 @@ export async function updateTrainerProfile(user: AuthUser, input: z.infer<typeof
   const t = trainerOf(user);
   const before = await db.trainer.findFirst({ where: { id: t.id, deletedAt: null }, select: { bio: true, qualification: true, skills: true, languages: true } });
   if (!before) throw Errors.notFound("Trainer");
-  if (input.photoUrl && !input.photoUrl.startsWith(`/api/files/private/trainers/${t.id}/photo/`)) throw Errors.badRequest("Invalid photo");
+  if (input.photoUrl && !isFileUrlUnder(input.photoUrl, `private/trainers/${t.id}/photo/`)) throw Errors.badRequest("Invalid photo");
   const updated = await db.$transaction(async (tx) => {
     const tr = await tx.trainer.update({
       where: { id: t.id },

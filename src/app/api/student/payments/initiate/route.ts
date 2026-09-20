@@ -3,6 +3,7 @@ import { apiHandler, parseBody } from "@/lib/api/handler";
 import { Errors } from "@/lib/api/errors";
 import { initiatePayment } from "@/server/payments";
 import { attachPaymentProof } from "@/server/student-portal";
+import { isFileUrlUnder } from "@/lib/storage";
 
 const schema = z.object({
   applicationId: z.string().uuid("Invalid application"),
@@ -25,7 +26,7 @@ export const POST = apiHandler({ roles: ["STUDENT"], rateLimit: { limit: 30, win
   if (body.method !== "ONLINE" && !body.referenceNo && body.method !== "CASH") {
     throw Errors.validation("Please correct the highlighted fields.", { referenceNo: "Enter the transaction / reference number" });
   }
-  if (body.proofUrl && !body.proofUrl.startsWith(`/api/files/private/students/${studentId}/`)) throw Errors.badRequest("Invalid proof file");
+  if (body.proofUrl && !isFileUrlUnder(body.proofUrl, `private/students/${studentId}/`)) throw Errors.badRequest("Invalid proof file");
 
   const result = await initiatePayment(
     { applicationId: body.applicationId, studentId, amount: body.amount, method: body.method, referenceNo: body.referenceNo || null, notes: body.notes || null },

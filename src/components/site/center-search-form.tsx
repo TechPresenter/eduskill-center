@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { LocationCascade, type LocationValue } from "@/components/shared/location-cascade";
 import { CourseSelect } from "@/components/site/course-select";
 import { buildQuery, cn } from "@/lib/utils";
+import { withBasePath } from "@/lib/base-path";
 
 export interface CenterSearchValues {
   stateId?: string;
@@ -38,7 +39,7 @@ export function CenterSearchForm({ initial = {}, compact, className, submitLabel
   };
 
   return (
-    <form action="/training-centers" method="get" onSubmit={submit} role="search" aria-label="Search training centers" className={cn("grid gap-3", compact ? "sm:grid-cols-2 lg:grid-cols-5" : "sm:grid-cols-2 lg:grid-cols-6", className)}>
+    <form action={withBasePath("/training-centers")} method="get" onSubmit={submit} role="search" aria-label="Search training centers" className={cn("grid gap-3", compact ? "sm:grid-cols-2 lg:grid-cols-5" : "sm:grid-cols-2 lg:grid-cols-6", className)}>
       {initial.view && <input type="hidden" name="view" value={initial.view} />}
       <LocationCascade value={loc} onChange={setLoc} withCenters bare className="contents" />
       <CourseSelect value={courseId} onChange={setCourseId} placeholder="Any course" />

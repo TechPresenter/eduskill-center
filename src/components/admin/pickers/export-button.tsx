@@ -1,6 +1,7 @@
 import { Download } from "lucide-react";
 import { buttonClasses } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { withBasePath } from "@/lib/base-path";
 
 /** Plain anchor to a CSV endpoint (bypasses client navigation). Disabled state explains the missing permission. */
 export function ExportButton({ href, label = "Export CSV", disabled, className }: { href: string; label?: string; disabled?: boolean; className?: string }) {
@@ -12,7 +13,8 @@ export function ExportButton({ href, label = "Export CSV", disabled, className }
     );
   }
   return (
-    <a href={href} className={cn(buttonClasses({ variant: "outline", size: "sm" }), className)} download>
+    // Raw <a href> — Next does not apply the deployment sub-path to it, so do it here.
+    <a href={withBasePath(href)} className={cn(buttonClasses({ variant: "outline", size: "sm" }), className)} download>
       <Download className="h-4 w-4" /> {label}
     </a>
   );

@@ -13,6 +13,7 @@ import { Alert, EmptyState, Skeleton, SkeletonTable } from "@/components/ui/feed
 import { ProgressBar } from "@/components/ui/stats";
 import { Avatar } from "@/components/ui/misc";
 import { TableWrap, THead, TH, TBody, TR, TD } from "@/components/ui/table";
+import { withBasePath } from "@/lib/base-path";
 
 interface StudentHit {
   id: string;
@@ -133,7 +134,7 @@ export function StudentLookup({ canExport, studentId, onSelect }: Props) {
               </span>
             </Link>
             {canExport ? (
-              <a href={`/api/admin/attendance/export?studentId=${data.student.id}${batchFilter ? `&batchId=${batchFilter}` : ""}`} className={buttonClasses({ variant: "outline", size: "sm" })} download>
+              <a href={withBasePath(`/api/admin/attendance/export?studentId=${data.student.id}${batchFilter ? `&batchId=${batchFilter}` : ""}`)} className={buttonClasses({ variant: "outline", size: "sm" })} download>
                 <Download className="h-4 w-4" /> Export CSV
               </a>
             ) : (

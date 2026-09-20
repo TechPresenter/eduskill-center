@@ -3,6 +3,7 @@
 import { Download, FileSpreadsheet, FileText, Table2 } from "lucide-react";
 import { Dropdown } from "@/components/ui/dropdown";
 import { buttonClasses } from "@/components/ui/button";
+import { withBasePath } from "@/lib/base-path";
 
 export type ExportFormat = "csv" | "xlsx" | "pdf";
 
@@ -22,7 +23,8 @@ export function ExportButton({ href, params = {}, formats = ["csv", "xlsx", "pdf
     const sp = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) if (v) sp.set(k, v);
     sp.set("format", fmt);
-    return `${href}?${sp.toString()}`;
+    // Raw <a href> — Next does not apply the deployment sub-path to it, so do it here.
+    return `${withBasePath(href)}?${sp.toString()}`;
   };
   return (
     <Dropdown

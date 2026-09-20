@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Download, Receipt } from "lucide-react";
 import { formatDate, formatINR, titleCase } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/badge";
+import { withBasePath } from "@/lib/base-path";
 
 export interface PaymentRow {
   id: string;
@@ -69,7 +70,7 @@ export function PaymentRowCard({ payment: p }: { payment: PaymentRow }) {
 
       {RECEIPTABLE.includes(p.status) && (
         <a
-          href={`/api/student/payments/${p.id}/receipt`}
+          href={withBasePath(`/api/student/payments/${p.id}/receipt`)}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line px-4 text-[14px] font-semibold text-navy tap-highlight-none active:bg-surface"

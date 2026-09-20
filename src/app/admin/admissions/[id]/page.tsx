@@ -13,6 +13,7 @@ import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/t
 import { ProgressBar, RingProgress } from "@/components/ui/stats";
 import { AdmissionActions } from "@/components/admin/admissions/admission-actions";
 import { EligibilityChecklist } from "@/components/admin/progress/eligibility-checklist";
+import { withBasePath } from "@/lib/base-path";
 
 export const metadata = { title: "Admission" };
 
@@ -224,7 +225,7 @@ export default async function AdmissionDetailPage({ params }: { params: Promise<
                     </TD>
                     <TD actions>
                       <a
-                        href={`/api/admin/payments/${pm.id}/document`}
+                        href={withBasePath(`/api/admin/payments/${pm.id}/document`)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex min-h-11 items-center text-xs font-semibold text-orange hover:underline md:min-h-0"

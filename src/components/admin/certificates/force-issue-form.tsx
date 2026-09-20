@@ -12,6 +12,7 @@ import { Checkbox, Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/feedback";
 import { StatusBadge, Badge } from "@/components/ui/badge";
 import { useMutation } from "@/components/admin/pickers/use-mutation";
+import { withBasePath } from "@/lib/base-path";
 
 interface AdmissionPreview {
   id: string;
@@ -143,7 +144,7 @@ export function ForceIssueForm({ initialAdmissionId, canIssue }: { initialAdmiss
 
           {issuedHere ? (
             <Alert tone="success" title={`Certificate ${issuedHere.certificateNo} issued`}>
-              <a href={`/api/admin/certificates/${issuedHere.certificateId}/download`} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+              <a href={withBasePath(`/api/admin/certificates/${issuedHere.certificateId}/download`)} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
                 Download PDF
               </a>{" "}
               ·{" "}

@@ -8,6 +8,21 @@
 import "dotenv/config";
 
 const BASE = (process.argv[2] ?? process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+/**
+ * The URL sub-path the app is mounted at, derived from the base URL ("" for a root deployment,
+ * "/center" for http://host/center). Routes below stay base-path-free: the prefix is added when a
+ * URL is built, and stripped off Location headers, which always carry it.
+ */
+const BASE_PREFIX = (() => {
+  try {
+    return new URL(BASE).pathname.replace(/\/+$/, "");
+  } catch {
+    return "";
+  }
+})();
+/** "/" must probe the deployment root itself (".../center", not ".../center/", which Next 308s). */
+const urlFor = (route: string) => (route === "/" && BASE_PREFIX ? BASE : `${BASE}${route}`);
+const stripPrefix = (p: string) => (BASE_PREFIX && (p === BASE_PREFIX || p.startsWith(`${BASE_PREFIX}/`)) ? p.slice(BASE_PREFIX.length) || "/" : p);
 const DEMO_PASSWORD = "Demo@1234";
 
 const PUBLIC_ROUTES = [
@@ -60,14 +75,14 @@ async function login(identifier: string, password: string): Promise<string> {
 async function check(route: string, cookie?: string): Promise<Result> {
   const started = Date.now();
   try {
-    let res = await fetch(`${BASE}${route}`, { headers: cookie ? { Cookie: cookie } : {}, redirect: "manual" });
+    let res = await fetch(urlFor(route), { headers: cookie ? { Cookie: cookie } : {}, redirect: "manual" });
     // Follow one same-portal redirect (e.g. /admin/settings → /admin/settings/branding); cross-portal redirects are reported.
     const location = res.headers.get("location");
     if (res.status >= 300 && res.status < 400 && location) {
-      const target = location.startsWith("http") ? new URL(location).pathname : location;
+      const target = stripPrefix(location.startsWith("http") ? new URL(location).pathname : location);
       const portal = (p: string) => p.split("/")[1] ?? "";
       if (portal(target) === portal(route) && target !== route) {
-        res = await fetch(`${BASE}${target}`, { headers: cookie ? { Cookie: cookie } : {}, redirect: "manual" });
+        res = await fetch(urlFor(target), { headers: cookie ? { Cookie: cookie } : {}, redirect: "manual" });
       }
     }
     const ms = Date.now() - started;

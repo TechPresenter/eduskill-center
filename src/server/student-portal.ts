@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import type { AdmissionStatus, Prisma } from "@/generated/prisma/client";
 import { Errors } from "@/lib/api/errors";
 import { revokeAllSessions } from "@/lib/auth/session";
+import { isFileUrlUnder } from "@/lib/storage";
 import { toNumber } from "@/lib/utils";
 import { computeFeeLines, missingDocuments, requiredDocumentKeys } from "@/server/applications";
 import { countOccupiedSeats } from "@/server/batches";
@@ -131,7 +132,7 @@ export async function submitAssignment(studentId: string, assignmentId: string, 
   const text = input.text?.trim() || null;
   const fileUrl = input.fileUrl || null;
   if (!text && !fileUrl) throw Errors.validation("Please correct the highlighted fields.", { text: "Write your answer or attach a file" });
-  if (fileUrl && !fileUrl.startsWith(`/api/files/private/students/${studentId}/`)) throw Errors.badRequest("Invalid attachment");
+  if (fileUrl && !isFileUrlUnder(fileUrl, `private/students/${studentId}/`)) throw Errors.badRequest("Invalid attachment");
   const existing = await db.assignmentSubmission.findUnique({ where: { assignmentId_studentId: { assignmentId, studentId } } });
   if (existing?.status === "GRADED") throw Errors.badRequest("This assignment has already been graded and cannot be resubmitted.");
   const status = assignment.dueDate && Date.now() > assignment.dueDate.getTime() ? "LATE" : "SUBMITTED";

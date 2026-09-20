@@ -20,6 +20,7 @@ import { StatusActions } from "@/components/admin/applications/status-actions";
 import { ChangeBatchButton, ChangeCourseCenterButton } from "@/components/admin/applications/course-batch-actions";
 import { DiscountButton, InstallmentPlanButton, InstallmentsToggle } from "@/components/admin/applications/fee-actions";
 import { ScholarshipPanel } from "@/components/admin/applications/scholarship-panel";
+import { withBasePath } from "@/lib/base-path";
 
 export const metadata = { title: "Application" };
 
@@ -402,7 +403,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                         </TD>
                         <TD actions>
                           <a
-                            href={`/api/admin/payments/${pm.id}/document`}
+                            href={withBasePath(`/api/admin/payments/${pm.id}/document`)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex min-h-11 items-center text-xs font-semibold text-orange hover:underline md:min-h-0"

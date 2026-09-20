@@ -16,6 +16,7 @@ import { ProgressBar } from "@/components/ui/stats";
 import { TabbedPanels } from "@/components/admin/pickers/query-tabs";
 import { StudentHeaderActions } from "@/components/admin/students/student-header-actions";
 import { DocumentActions } from "@/components/admin/students/document-actions";
+import { withBasePath } from "@/lib/base-path";
 
 export const metadata = { title: "Student" };
 
@@ -390,7 +391,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             </TD>
             <TD actions>
               <a
-                href={`/api/admin/payments/${p.id}/document`}
+                href={withBasePath(`/api/admin/payments/${p.id}/document`)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex min-h-11 items-center text-xs font-semibold text-orange hover:underline md:min-h-0"
@@ -439,7 +440,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
               {formatDate(c.issuedAt)}
             </TD>
             <TD actions className="space-x-3 text-xs font-semibold">
-              <a href={`/api/admin/certificates/${c.id}/download`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-orange hover:underline md:min-h-0">
+              <a href={withBasePath(`/api/admin/certificates/${c.id}/download`)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-orange hover:underline md:min-h-0">
                 Download
               </a>
               <Link href={`/verify-certificate/${c.certificateNo}`} target="_blank" className="inline-flex min-h-11 items-center text-navy hover:underline md:min-h-0">

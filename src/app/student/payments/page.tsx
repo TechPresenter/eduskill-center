@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/feedback";
 import { ProgressBar } from "@/components/ui/stats";
 import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
 import { PaymentRowCard } from "@/components/student/mobile";
+import { withBasePath } from "@/lib/base-path";
 
 export const metadata: Metadata = { title: "Fees & Payments" };
 
@@ -133,7 +134,7 @@ export default async function StudentPaymentsPage() {
                     </TD>
                     <TD>
                       {["COMPLETED", "PENDING", "PROCESSING"].includes(p.status) ? (
-                        <a href={`/api/student/payments/${p.id}/receipt`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-semibold text-orange hover:underline">
+                        <a href={withBasePath(`/api/student/payments/${p.id}/receipt`)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-semibold text-orange hover:underline">
                           {p.status === "COMPLETED" ? <Download className="h-4 w-4" /> : <Receipt className="h-4 w-4" />}
                           {p.status === "COMPLETED" ? "Receipt" : "Invoice"}
                         </a>

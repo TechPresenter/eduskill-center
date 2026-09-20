@@ -6,7 +6,7 @@ import { getPaging, paged } from "@/lib/api/query";
 import { audit, type AuditActor } from "@/lib/audit";
 import type { AuthUser } from "@/lib/auth/session";
 import { notify } from "@/lib/notifications";
-import { deleteStoredFile, keyFromUrl, type StoredFile } from "@/lib/storage";
+import { deleteStoredFile, isFileUrlUnder, keyFromUrl, type StoredFile } from "@/lib/storage";
 import { toNumber } from "@/lib/utils";
 import { assertBatchAccess } from "@/server/attendance";
 import { recomputeProgress } from "@/server/progress";
@@ -71,7 +71,7 @@ export async function listAssignments(batchId: string) {
 }
 
 function assertAttachment(url: string | null | undefined, batchId: string) {
-  if (url && !url.startsWith(`/api/files/private/materials/${batchId}/`)) throw Errors.badRequest("Invalid attachment");
+  if (url && !isFileUrlUnder(url, `private/materials/${batchId}/`)) throw Errors.badRequest("Invalid attachment");
 }
 
 export async function createAssignment(input: AssignmentInput, user: AuthUser, meta: Omit<Ctx, "user"> = {}) {

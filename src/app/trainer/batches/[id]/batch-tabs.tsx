@@ -12,6 +12,7 @@ import { ProgressBar, StatsCard } from "@/components/ui/stats";
 import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/feedback";
 import { ButtonLink } from "@/components/ui/button";
+import { withBasePath } from "@/lib/base-path";
 
 interface Batch {
   id: string;
@@ -186,7 +187,7 @@ export function BatchTabs({ batch, roster, report, assignments, assessments, mat
               <ButtonLink href={`/trainer/attendance?batchId=${batch.id}`} size="sm" variant="navy">
                 Mark attendance
               </ButtonLink>
-              <a href={`/api/trainer/attendance/report?batchId=${batch.id}&range=all&format=csv`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-line bg-white px-3.5 text-sm font-semibold text-ink hover:bg-surface">
+              <a href={withBasePath(`/api/trainer/attendance/report?batchId=${batch.id}&range=all&format=csv`)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-line bg-white px-3.5 text-sm font-semibold text-ink hover:bg-surface">
                 <Download className="h-4 w-4" /> CSV
               </a>
             </div>

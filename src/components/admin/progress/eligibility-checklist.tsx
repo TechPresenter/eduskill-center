@@ -3,6 +3,7 @@ import { CheckCircle2, Circle, XCircle } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import type { ProgressNumbers } from "@/server/admissions";
+import { withBasePath } from "@/lib/base-path";
 
 interface Props {
   progress: ProgressNumbers | null;
@@ -46,7 +47,7 @@ export function EligibilityChecklist({ progress, admissionStatus, batchStatus, m
               {certificate.certificateNo}
             </Link>
             <StatusBadge status={certificate.status} />
-            <a href={`/api/admin/certificates/${certificate.id}/download`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-orange hover:underline">
+            <a href={withBasePath(`/api/admin/certificates/${certificate.id}/download`)} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-orange hover:underline">
               Download PDF
             </a>
           </p>

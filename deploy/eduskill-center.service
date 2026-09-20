@@ -1,0 +1,99 @@
+# =============================================================================
+#  EduSkill Center — systemd service
+#  Install as: /etc/systemd/system/eduskill-center.service
+# =============================================================================
+#
+#  Replace every <PLACEHOLDER> before installing:
+#    <APP_DIR>   the folder the project was copied to, e.g. /var/www/center
+#    <APP_USER>  a dedicated non-root user, e.g. eduskill
+#
+#  This project does NOT use `output: "standalone"` in next.config.ts (verified),
+#  so the correct way to run it is `next start` via `npm run start`. Do not try
+#  `node .next/standalone/server.js` — that file is not produced by this build.
+#
+#  Install:
+#    sudo useradd --system --home <APP_DIR> --shell /usr/sbin/nologin <APP_USER>
+#    sudo chown -R <APP_USER>:<APP_USER> <APP_DIR>
+#    sudo cp deploy/eduskill-center.service /etc/systemd/system/
+#    sudo nano /etc/systemd/system/eduskill-center.service   # fill placeholders
+#    sudo systemctl daemon-reload
+#    sudo systemctl enable --now eduskill-center
+#    sudo systemctl status eduskill-center
+#    journalctl -u eduskill-center -f          # live logs
+#
+#  Use EITHER this service OR deploy/ecosystem.config.cjs (PM2) — never both,
+#  they would fight over port 3001.
+# =============================================================================
+
+[Unit]
+Description=EduSkill India Foundation — Center app (Next.js, sub-path /center)
+Documentation=file://<APP_DIR>/DEPLOYMENT.md
+# Start after the network and the local database are up. If PostgreSQL runs on
+# another host, drop postgresql.service from both lines below.
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=<APP_USER>
+Group=<APP_USER>
+WorkingDirectory=<APP_DIR>
+
+# All configuration lives in the app's own .env (see deploy/.env.production.example).
+# systemd reads it as KEY=VALUE and strips surrounding quotes. It does NOT expand
+# shell syntax, so avoid $ ` and inline # inside values (DB passwords especially).
+EnvironmentFile=<APP_DIR>/.env
+
+# Belt and braces: these are the two values the unit must not get wrong, so they
+# are pinned here as well. systemd applies Environment= after EnvironmentFile=,
+# so the values below win over anything in .env.
+Environment=NODE_ENV=production
+Environment=PORT=3001
+# Bind to loopback only — the web server in front is the only way in.
+Environment=HOSTNAME=127.0.0.1
+# npm wants a writable cache and a HOME; PrivateTmp gives it a private /tmp.
+Environment=HOME=<APP_DIR>
+Environment=npm_config_cache=/tmp/.npm
+Environment=NPM_CONFIG_UPDATE_NOTIFIER=false
+
+# `npm run start` -> `next start`. Use the absolute path to npm; `which npm` on
+# the server tells you if it is /usr/bin/npm or /usr/local/bin/npm (nvm installs
+# land under /home/<user>/.nvm/versions/node/vXX/bin/npm — use that full path).
+ExecStart=/usr/bin/npm run start
+
+Restart=always
+RestartSec=5
+# Give the app time to open the DB pool before systemd calls it started/stopped.
+TimeoutStartSec=90
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=eduskill-center
+
+# ---------------------------------------------------------------------------
+# Hardening. ProtectSystem=strict makes the ENTIRE filesystem read-only for this
+# service, which is what keeps it away from the existing website's files. The
+# two ReadWritePaths below are the only places it may write:
+#   <APP_DIR>/.next     — Next's runtime cache (image optimiser, fetch cache)
+#   <APP_DIR>/storage   — uploaded documents (STORAGE_LOCAL_DIR in .env)
+# If you point STORAGE_LOCAL_DIR somewhere else, add that path here too, or the
+# app will fail with EROFS / EACCES on the first upload.
+# ---------------------------------------------------------------------------
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=<APP_DIR>/.next <APP_DIR>/storage
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
