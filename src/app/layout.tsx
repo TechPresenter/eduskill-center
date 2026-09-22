@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Manrope } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toast";
 import { RegisterSW } from "@/components/pwa/register-sw";
@@ -8,8 +8,26 @@ import { getPublicSettings } from "@/lib/settings";
 import { appUrl } from "@/lib/utils";
 import { withBasePath } from "@/lib/base-path";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
-const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin"], display: "swap" });
+// Fonts are self-hosted from src/app/fonts (SIL Open Font License, licence files alongside) rather than
+// loaded through next/font/google. next/font/google downloads the files from Google at build and dev
+// compile time, and on a slow link its fetch times out, which fails the font module and turns every
+// page into a 500. Bundling them removes that network dependency from every build, including the
+// production build on the VPS. Both are variable fonts, so one file covers the full weight range.
+// Latin only, matching the previous `subsets: ["latin"]`; Devanagari falls back to the system font.
+const inter = localFont({
+  src: "./fonts/inter-latin.woff2",
+  weight: "100 900",
+  style: "normal",
+  variable: "--font-inter",
+  display: "swap",
+});
+const manrope = localFont({
+  src: "./fonts/manrope-latin.woff2",
+  weight: "200 800",
+  style: "normal",
+  variable: "--font-manrope",
+  display: "swap",
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getPublicSettings().catch(() => ({}) as Record<string, unknown>);
