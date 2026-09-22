@@ -13,21 +13,21 @@ import { usePortalHeader } from "./header-context";
 import { matchNavItem } from "./bottom-nav";
 import type { NavItem, ShellUser } from "./shell";
 
-/** 44px icon control used across the app bar (IconButton from the UI kit is not on disk yet). */
+/** The 44px icon control of the app bar: one size, one radius, one 150ms press, one focus ring. */
 export const APP_BAR_ICON_CLASS =
-  "touch-target inline-flex items-center justify-center rounded-xl text-ink tap-highlight-none transition-colors duration-150 active:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange";
+  "touch-target ring-focus inline-flex items-center justify-center rounded-md text-ink tap-highlight-none transition-colors duration-micro active:bg-surface motion-reduce:transition-none";
 
 /** 56px row inside the account sheet; shared with the LogoutButton row rendered by the shell. */
 export function accountRowClass(danger?: boolean) {
   return cn(
-    "flex min-h-14 w-full items-center gap-3 rounded-xl px-3 text-left text-[15px] font-medium tap-highlight-none transition-colors duration-150 active:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange",
+    "ring-focus flex min-h-14 w-full items-center gap-3 rounded-md px-3 text-left text-body font-medium tap-highlight-none transition-colors duration-micro active:bg-surface motion-reduce:transition-none",
     danger ? "text-danger" : "text-ink"
   );
 }
 
 /** Icon well for account-sheet rows. */
 export function AccountRowIcon({ children, danger }: { children: React.ReactNode; danger?: boolean }) {
-  return <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", danger ? "bg-danger-light text-danger" : "bg-lavender text-navy")}>{children}</span>;
+  return <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-md", danger ? "bg-danger-light text-danger" : "bg-lavender text-navy")}>{children}</span>;
 }
 
 export interface MobileHeaderProps {
@@ -101,11 +101,11 @@ export function MobileHeader({ portalLabel, homeHref, branding, navItems, user, 
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-line bg-white/95 pt-safe backdrop-blur lg:hidden" data-app-bar>
+      <header className="sticky top-0 z-header border-b border-line bg-white pt-safe lg:hidden" data-app-bar>
         <div className="flex h-14 items-center gap-1 px-2">
           <div className="flex shrink-0 items-center">{leading}</div>
           <div className="min-w-0 flex-1 px-1">
-            <p className="truncate text-[17px] font-bold leading-tight text-navy" aria-live="polite">
+            <p className="truncate text-h4 text-navy" aria-live="polite">
               {title}
             </p>
           </div>
@@ -113,9 +113,9 @@ export function MobileHeader({ portalLabel, homeHref, branding, navItems, user, 
             {ctx.action}
             {notificationsHref && (
               <Link href={notificationsHref} className={cn(APP_BAR_ICON_CLASS, "relative")} aria-label={`Notifications${unreadCount ? ` (${unreadCount} unread)` : ""}`}>
-                <Bell className="h-[22px] w-[22px]" aria-hidden />
+                <Bell className="h-5.5 w-5.5" aria-hidden />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white" aria-hidden>
+                  <span className="absolute top-1.5 right-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-orange px-1 text-caption leading-none font-bold text-white ring-2 ring-white" aria-hidden>
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}

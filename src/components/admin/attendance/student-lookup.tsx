@@ -83,21 +83,21 @@ export function StudentLookup({ canExport, studentId, onSelect }: Props) {
   return (
     <div className="space-y-4">
       <div className="card p-4">
-        <label htmlFor="att-student-q" className="mb-1.5 block text-sm font-medium text-ink">
+        <label htmlFor="att-student-q" className="mb-1.5 block text-body-sm font-medium text-ink">
           Find a student
         </label>
         <Input id="att-student-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Type a name, Student ID or mobile number" leftIcon={<Search className="h-4 w-4" />} autoComplete="off" />
         {searching && <Skeleton className="mt-2 h-10 w-full" />}
         {!searching && hits && (
-          <ul className="mt-2 divide-y divide-line rounded-xl border border-line" role="listbox" aria-label="Matching students">
-            {hits.length === 0 && <li className="px-3 py-2 text-sm text-muted">No students match “{q.trim()}”.</li>}
+          <ul className="mt-2 divide-y divide-line rounded-md border border-line" role="listbox" aria-label="Matching students">
+            {hits.length === 0 && <li className="px-3 py-2 text-body-sm text-muted">No students match “{q.trim()}”.</li>}
             {hits.map((h) => (
               <li key={h.id}>
                 <button
                   type="button"
                   role="option"
                   aria-selected={h.id === studentId}
-                  className={cn("flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left text-sm tap-highlight-none hover:bg-surface active:bg-surface sm:min-h-0", h.id === studentId && "bg-lavender/60")}
+                  className={cn("flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left text-body-sm tap-highlight-none hover:bg-surface active:bg-surface sm:min-h-0", h.id === studentId && "bg-lavender/60")}
                   onClick={() => {
                     onSelect(h.id);
                     setQ("");
@@ -106,7 +106,7 @@ export function StudentLookup({ canExport, studentId, onSelect }: Props) {
                   <Avatar name={h.name} src={h.photoUrl} size={36} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-semibold text-ink">{h.name}</span>
-                    <span className="block font-mono text-xs text-muted">{h.studentId ?? h.mobile}</span>
+                    <span className="block font-mono text-caption text-muted">{h.studentId ?? h.mobile}</span>
                   </span>
                 </button>
               </li>
@@ -130,7 +130,7 @@ export function StudentLookup({ canExport, studentId, onSelect }: Props) {
               <Avatar name={data.student.name} src={data.student.photoUrl} size={44} />
               <span>
                 <span className="block font-semibold text-navy">{data.student.name}</span>
-                <span className="block font-mono text-xs text-muted">{data.student.studentId ?? data.student.mobile}</span>
+                <span className="block font-mono text-caption text-muted">{data.student.studentId ?? data.student.mobile}</span>
               </span>
             </Link>
             {canExport ? (
@@ -151,11 +151,11 @@ export function StudentLookup({ canExport, studentId, onSelect }: Props) {
                 <Card key={b.batchId} className={cn("cursor-pointer", batchFilter === b.batchId && "ring-2 ring-orange/40")} onClick={() => toggleBatch(b.batchId)} role="button" tabIndex={0} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && toggleBatch(b.batchId)} aria-pressed={batchFilter === b.batchId}>
                   <CardBody>
                     <p className="font-semibold text-navy">{b.batch.name}</p>
-                    <p className="text-xs text-muted">
+                    <p className="text-caption text-muted">
                       {b.batch.code} · {b.batch.course.name}
                     </p>
                     <ProgressBar className="mt-3" value={b.pct} label="Attendance" tone={b.pct >= 75 ? "success" : b.pct >= 50 ? "warning" : "danger"} />
-                    <p className="mt-2 text-xs text-muted">
+                    <p className="mt-2 text-caption text-muted">
                       {b.held} held · {b.present} present · {b.late} late · {b.absent} absent · {b.leave} leave
                     </p>
                   </CardBody>
@@ -184,13 +184,13 @@ export function StudentLookup({ canExport, studentId, onSelect }: Props) {
                         </span>
                       </span>
                     </TD>
-                    <TD label="Batch" className="text-xs">
+                    <TD label="Batch" className="text-caption">
                       {r.batch.code} · {r.batch.course.name}
                     </TD>
                     <TD mobile="hidden">
                       <StatusBadge status={r.status} />
                     </TD>
-                    <TD label="Remarks" className="text-xs text-muted">
+                    <TD label="Remarks" className="text-caption text-muted">
                       {r.remarks ?? "—"}
                     </TD>
                   </TR>
@@ -198,7 +198,7 @@ export function StudentLookup({ canExport, studentId, onSelect }: Props) {
               </TBody>
             </TableWrap>
           )}
-          {data.records.length > 100 && <p className="text-xs text-muted">Showing the latest 100 of {data.records.length} records – export the CSV for the full history.</p>}
+          {data.records.length > 100 && <p className="text-caption text-muted">Showing the latest 100 of {data.records.length} records – export the CSV for the full history.</p>}
         </>
       ) : null}
     </div>

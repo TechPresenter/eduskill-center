@@ -125,7 +125,7 @@ export function ApplicationActions({ id, status, allowedTransitions, interviewAt
   }
 
   if (visible.length === 0 && !canApprove) {
-    return <p className="text-sm text-muted">{status === "APPROVED" ? "This application has been approved." : allowedTransitions.length === 0 ? "No further actions are available." : "You do not have permission to change this application."}</p>;
+    return <p className="text-body-sm text-muted">{status === "APPROVED" ? "This application has been approved." : allowedTransitions.length === 0 ? "No further actions are available." : "You do not have permission to change this application."}</p>;
   }
 
   return (

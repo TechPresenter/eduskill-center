@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { Activity, ArrowRight, Award, BookOpen, Building2, CalendarDays, ClipboardList, Coins, CreditCard, Eye, FileText, GraduationCap, HandCoins, Map, MapPinned, Search, ShieldCheck, UserCheck, Users, UsersRound } from "lucide-react";
+import { Activity, ArrowRight, Award, BookOpen, Building2, CalendarDays, CheckCircle2, ClipboardList, Coins, CreditCard, Eye, FileText, GraduationCap, HandCoins, Map, MapPinned, Search, ShieldCheck, UserCheck, Users, UsersRound } from "lucide-react";
 import { StatsCard } from "@/components/ui/stats";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Timeline } from "@/components/ui/misc";
 import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { formatDateTime, formatINR, formatNumber, titleCase } from "@/lib/utils";
+import { cn, formatDateTime, formatINR, formatNumber, titleCase } from "@/lib/utils";
 import type { getDashboard } from "@/server/dashboard";
 
 type Dashboard = Awaited<ReturnType<typeof getDashboard>>;
@@ -20,7 +20,7 @@ export function KpiGrid({ kpis, rangeLabel }: { kpis: Dashboard["kpis"]; rangeLa
   return (
     <div className="space-y-6">
       <section aria-labelledby="kpi-network">
-        <h2 id="kpi-network" className="mb-3 text-xs font-bold tracking-[0.16em] text-muted uppercase">
+        <h2 id="kpi-network" className="mb-3 text-overline text-muted">
           Network
         </h2>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
@@ -33,7 +33,7 @@ export function KpiGrid({ kpis, rangeLabel }: { kpis: Dashboard["kpis"]; rangeLa
         </div>
       </section>
       <section aria-labelledby="kpi-people">
-        <h2 id="kpi-people" className="mb-3 text-xs font-bold tracking-[0.16em] text-muted uppercase">
+        <h2 id="kpi-people" className="mb-3 text-overline text-muted">
           Students &amp; trainers
         </h2>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
@@ -46,7 +46,7 @@ export function KpiGrid({ kpis, rangeLabel }: { kpis: Dashboard["kpis"]; rangeLa
         </div>
       </section>
       <section aria-labelledby="kpi-finance">
-        <h2 id="kpi-finance" className="mb-3 text-xs font-bold tracking-[0.16em] text-muted uppercase">
+        <h2 id="kpi-finance" className="mb-3 text-overline text-muted">
           Finance &amp; outcomes
         </h2>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
@@ -68,11 +68,11 @@ export function ApplicationStatusStrip({ byStatus }: { byStatus: Record<string, 
   const entries = APP_ORDER.filter((s) => byStatus[s]).map((s) => [s, byStatus[s]!] as const);
   return (
     <Card>
-      <CardHeader title="Applications by status" description="All time" action={<Link href="/admin/applications" className="text-xs font-semibold text-orange hover:underline">View all</Link>} />
+      <CardHeader title="Applications by status" description="All time" action={<Link href="/admin/applications" className="text-body-sm font-semibold text-orange ring-focus rounded-xs hover:underline">View all</Link>} />
       <CardBody className="flex flex-wrap gap-2">
-        {entries.length === 0 && <p className="text-sm text-muted">No applications yet.</p>}
+        {entries.length === 0 && <p className="text-body text-muted">No applications have been submitted yet.</p>}
         {entries.map(([s, n]) => (
-          <Link key={s} href={`/admin/applications?status=${s}`} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1 text-[13px] font-medium text-ink tap-highlight-none active:bg-lavender hover:border-navy/40 lg:min-h-0 lg:px-3 lg:text-xs">
+          <Link key={s} href={`/admin/applications?status=${s}`} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1 text-body-sm font-medium text-ink ring-focus tap-highlight-none transition-colors duration-micro hover:border-navy/40 hover:bg-lavender active:bg-lavender motion-reduce:transition-none lg:min-h-0 lg:px-3">
             {titleCase(s)} <span className="rounded-full bg-white px-1.5 font-bold text-navy tabular-nums">{formatNumber(n)}</span>
           </Link>
         ))}
@@ -96,13 +96,13 @@ export function AnalyticsPanel({ analytics, rangeLabel }: { analytics: Dashboard
       <CardBody className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         {items.map((it) => (
           <div key={it.label} className="flex min-w-0 items-start gap-2 sm:gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-lavender text-navy">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">
               <it.Icon className="h-4 w-4" />
             </span>
             <div className="min-w-0">
-              <p className="text-xs font-medium text-muted">{it.label}</p>
+              <p className="text-caption font-medium text-muted">{it.label}</p>
               <p className="font-heading text-xl font-extrabold text-navy tabular-nums">{formatNumber(it.value)}</p>
-              <p className="text-[11px] text-muted">{it.hint}</p>
+              <p className="text-caption text-muted">{it.hint}</p>
             </div>
           </div>
         ))}
@@ -117,10 +117,10 @@ export function ActivityFeed({ activity }: { activity: Dashboard["activity"] }) 
   const tone = (action: string): "orange" | "navy" | "success" | "danger" | "neutral" => (action.includes("delete") || action.includes("reject") || action.includes("revoke") ? "danger" : action.includes("create") || action.includes("approve") || action.includes("verify") ? "success" : action === "login" ? "neutral" : "navy");
   return (
     <Card>
-      <CardHeader title="Recent activity" description="Latest audit log entries" action={<Link href="/admin/audit-logs" className="text-xs font-semibold text-orange hover:underline">All logs</Link>} />
+      <CardHeader title="Recent activity" description="Latest audit log entries" action={<Link href="/admin/audit-logs" className="text-body-sm font-semibold text-orange ring-focus rounded-xs hover:underline">All logs</Link>} />
       <CardBody>
         {activity.length === 0 ? (
-          <p className="text-sm text-muted">No activity recorded yet.</p>
+          <p className="text-body text-muted">No activity recorded yet.</p>
         ) : (
           <Timeline
             className="[&>li]:min-h-12"
@@ -142,28 +142,114 @@ export function ActivityFeed({ activity }: { activity: Dashboard["activity"] }) 
   );
 }
 
-export function QuickLinks({ pending }: { pending: { applications: number; trainerApplications: number; centersPending: number; paymentsPending: number } }) {
-  const links = [
-    { href: "/admin/applications?status=SUBMITTED,UNDER_REVIEW,DOCUMENTS_REQUIRED", label: "Review applications", count: pending.applications, Icon: ClipboardList },
-    { href: "/admin/trainer-applications", label: "Trainer applications in pipeline", count: pending.trainerApplications, Icon: FileText },
-    { href: "/admin/applications?status=PAYMENT_PENDING", label: "Payments pending", count: pending.paymentsPending, Icon: CreditCard },
-    { href: "/admin/centers?status=PENDING", label: "Centers awaiting verification", count: pending.centersPending, Icon: Building2 },
-    { href: "/admin/centers/new", label: "Add a training center", Icon: Building2 },
-    { href: "/admin/batches/new", label: "Create a batch", Icon: CalendarDays },
-    { href: "/admin/reports", label: "Reports & exports", Icon: Activity },
-    { href: "/admin/dashboard/explore", label: "Explore India → State → Center", Icon: Map },
-  ];
+export interface AttentionCounts {
+  applications: number;
+  trainerApplications: number;
+  centersPending: number;
+  paymentsPending: number;
+  paymentsDue: number;
+}
+
+/** Which queues this member of staff can actually act on. Showing a queue nobody can clear is noise. */
+export interface AttentionPerms {
+  applications: boolean;
+  trainerApplications: boolean;
+  centers: boolean;
+  payments: boolean;
+}
+
+/**
+ * The first thing on the dashboard, and deliberately so: a Foundation Admin opens this page to find out
+ * what is waiting, not to read eighteen totals. Every number here is a live count from the database —
+ * all time, not the selected period, because a three-week-old application is still unreviewed today.
+ * Queues are ordered by size, so the longest one is read first, and a queue the signed-in user has no
+ * permission to work on is not shown at all.
+ */
+export function NeedsAttention({ counts, can }: { counts: AttentionCounts; can: AttentionPerms }) {
+  const queues = [
+    { key: "applications", show: can.applications, href: "/admin/applications?status=SUBMITTED,UNDER_REVIEW,DOCUMENTS_REQUIRED", label: "Applications to review", hint: "Submitted, under review or waiting on documents", count: counts.applications, Icon: ClipboardList },
+    { key: "trainers", show: can.trainerApplications, href: "/admin/trainer-applications", label: "Trainer applications", hint: "In the pipeline, before approval", count: counts.trainerApplications, Icon: FileText },
+    { key: "payments", show: can.payments, href: "/admin/applications?status=PAYMENT_PENDING", label: "Payments pending", hint: `${formatINR(counts.paymentsDue)} still due`, count: counts.paymentsPending, Icon: CreditCard },
+    { key: "centers", show: can.centers, href: "/admin/centers?status=PENDING", label: "Centers to verify", hint: "Awaiting Foundation verification", count: counts.centersPending, Icon: Building2 },
+  ]
+    .filter((q) => q.show)
+    .sort((a, b) => b.count - a.count);
+
+  const waiting = queues.reduce((n, q) => n + q.count, 0);
+
   return (
     <Card>
-      <CardHeader title="Quick links" description="Where attention is needed" />
+      <CardHeader
+        title="Needs your attention"
+        description={queues.length === 0 ? "Your role does not include any of the review queues." : waiting > 0 ? `${formatNumber(waiting)} item${waiting === 1 ? "" : "s"} waiting on the Foundation team right now.` : "Live queues, counted across all time."}
+      />
+      <CardBody>
+        {queues.length > 0 && waiting === 0 ? (
+          <div className="flex items-center gap-3 rounded-card border border-success/25 bg-success-light px-4 py-5">
+            <CheckCircle2 className="h-6 w-6 shrink-0 text-success-dark" aria-hidden />
+            <p className="text-body text-success-dark">
+              <span className="font-semibold">Every queue is clear.</span> Nothing is waiting for review, verification or payment follow-up.
+            </p>
+          </div>
+        ) : (
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {queues.map((q) => {
+              const idle = q.count === 0;
+              return (
+                <li key={q.key} className="min-w-0">
+                  <Link
+                    href={q.href}
+                    className={cn(
+                      // Spelled out rather than composed from `card`: the tile overrides the card's
+                      // border and background, and utility-vs-utility override order is not something
+                      // to bet a layout on.
+                      "card-hover ring-focus flex min-h-[7rem] flex-col gap-2 rounded-card border p-4 shadow-e1",
+                      // An empty queue stays legible but stops competing for the eye.
+                      idle ? "border-line bg-white" : "border-orange/30 bg-orange-light/50"
+                    )}
+                  >
+                    <span className="flex items-start justify-between gap-2">
+                      <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-md", idle ? "bg-surface text-muted" : "bg-orange text-white")}>
+                        <q.Icon className="h-4.5 w-4.5" aria-hidden />
+                      </span>
+                      <span className={cn("font-heading text-h2 leading-none tabular-nums", idle ? "text-muted" : "text-orange")}>{formatNumber(q.count)}</span>
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-h4 text-navy">{q.label}</span>
+                      <span className="mt-0.5 flex items-center gap-1 text-body-sm text-muted">
+                        <span className="min-w-0 truncate">{q.hint}</span>
+                        <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+/** The four things staff start from the dashboard. No counts here — this is "do", not "triage". */
+export function CommonTasks({ can }: { can: { centers: boolean; batches: boolean } }) {
+  const links = [
+    { href: "/admin/centers/new", label: "Add a training center", show: can.centers, Icon: Building2 },
+    { href: "/admin/batches/new", label: "Create a batch", show: can.batches, Icon: CalendarDays },
+    { href: "/admin/reports", label: "Reports & exports", show: true, Icon: Activity },
+    { href: "/admin/dashboard/explore", label: "Explore India → State → Center", show: true, Icon: Map },
+  ].filter((l) => l.show);
+  return (
+    <Card>
+      <CardHeader title="Common tasks" description="The usual starting points" />
       <ul className="divide-y divide-line">
         {links.map((l) => (
           <li key={l.href}>
-            <Link href={l.href} className="flex min-h-[72px] items-center gap-3 px-5 py-3 text-sm text-ink tap-highlight-none active:bg-surface hover:bg-surface lg:min-h-0">
-              <l.Icon className="h-5 w-5 shrink-0 text-navy lg:h-4 lg:w-4" aria-hidden />
+            <Link href={l.href} className="flex min-h-14 items-center gap-3 px-5 py-3 text-body text-ink ring-focus tap-highlight-none transition-colors duration-micro hover:bg-surface active:bg-surface motion-reduce:transition-none">
+              <l.Icon className="h-5 w-5 shrink-0 text-navy" aria-hidden />
               <span className="min-w-0 flex-1">{l.label}</span>
-              {l.count !== undefined && l.count > 0 && <span className="rounded-full bg-orange px-2 py-0.5 text-[11px] font-bold text-white tabular-nums">{formatNumber(l.count)}</span>}
-              <ArrowRight className="h-4 w-4 text-muted" />
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted" aria-hidden />
             </Link>
           </li>
         ))}
@@ -175,7 +261,7 @@ export function QuickLinks({ pending }: { pending: { applications: number; train
 export function CenterPerformanceTable({ rows }: { rows: Dashboard["charts"]["centerPerformance"] }) {
   return (
     <Card>
-      <CardHeader title="Center performance" description="Top centers by active students" action={<Link href="/admin/reports/centers" className="text-xs font-semibold text-orange hover:underline">Full report</Link>} />
+      <CardHeader title="Center performance" description="Top centers by active students" action={<Link href="/admin/reports/centers" className="text-body-sm font-semibold text-orange ring-focus rounded-xs hover:underline">Full report</Link>} />
       {/* Card mode below md (TableWrap default); md:border-0 keeps the desktop look flush inside the Card. */}
       <TableWrap className="rounded-none border-0 md:rounded-none md:border-0">
         <THead>
@@ -195,7 +281,7 @@ export function CenterPerformanceTable({ rows }: { rows: Dashboard["charts"]["ce
               <TD primary>
                 <Link href={`/admin/centers/${r.id}`} className="flex min-h-11 flex-col justify-center font-medium text-navy hover:underline md:min-h-0 md:block">
                   {r.name}
-                  <span className="block text-xs font-normal text-muted">{r.code}</span>
+                  <span className="block text-body-sm font-normal text-muted">{r.code}</span>
                 </Link>
               </TD>
               <TD label="Students" className="text-right tabular-nums">{formatNumber(r.students)}</TD>

@@ -55,16 +55,16 @@ export default async function StudentCoursesPage() {
                   <RingProgress value={p?.completionPct ?? 0} size={64} stroke={7} className="shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <h2 className="min-w-0 font-heading text-[16px] font-extrabold text-navy">{a.course.name}</h2>
+                      <h2 className="min-w-0 text-h4 text-navy">{a.course.name}</h2>
                       <StatusBadge status={a.status} />
                     </div>
-                    <p className="mt-0.5 flex items-start gap-1 text-[13px] text-muted">
+                    <p className="mt-0.5 flex items-start gap-1 text-body-sm text-muted">
                       <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
                       <span className="min-w-0 truncate">
                         {a.center.name} ({a.center.code})
                       </span>
                     </p>
-                    <p className="flex items-start gap-1 text-[13px] text-muted">
+                    <p className="flex items-start gap-1 text-body-sm text-muted">
                       <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
                       <span className="min-w-0 truncate">
                         {a.batch.name} · {formatSchedule(a.batch)}
@@ -75,18 +75,18 @@ export default async function StudentCoursesPage() {
 
                 <dl className="grid grid-cols-3 gap-2 border-t border-line px-4 py-3 text-center">
                   <div>
-                    <dt className="text-[12px] text-muted">Attendance</dt>
-                    <dd className="text-[15px] font-bold text-navy tabular-nums">{p ? `${Math.round(p.attendancePct)}%` : "—"}</dd>
+                    <dt className="text-caption text-muted">Attendance</dt>
+                    <dd className="text-body font-bold text-navy tabular-nums">{p ? `${Math.round(p.attendancePct)}%` : "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-[12px] text-muted">Classes</dt>
-                    <dd className="text-[15px] font-bold text-navy tabular-nums">
+                    <dt className="text-caption text-muted">Classes</dt>
+                    <dd className="text-body font-bold text-navy tabular-nums">
                       {p?.classesAttended ?? 0}/{p?.classesHeld ?? 0}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-[12px] text-muted">Assignments</dt>
-                    <dd className="text-[15px] font-bold text-navy tabular-nums">
+                    <dt className="text-caption text-muted">Assignments</dt>
+                    <dd className="text-body font-bold text-navy tabular-nums">
                       {p?.assignmentsCompleted ?? 0}/{p?.assignmentsTotal ?? 0}
                     </dd>
                   </div>
@@ -102,7 +102,7 @@ export default async function StudentCoursesPage() {
                 </div>
 
                 {a.certificate?.status === "ISSUED" && (
-                  <Link href="/student/certificates" className="flex min-h-11 items-center gap-2 border-t border-line bg-success-light px-4 text-[13px] font-semibold text-green-900">
+                  <Link href="/student/certificates" className="flex min-h-11 items-center gap-2 border-t border-line bg-success-light px-4 text-body-sm font-semibold text-green-900">
                     Certificate {a.certificate.certificateNo} issued {formatDate(a.certificate.issuedAt)}
                     <ChevronRight className="ml-auto h-4 w-4 shrink-0" aria-hidden />
                   </Link>
@@ -125,22 +125,22 @@ export default async function StudentCoursesPage() {
         />
         {discover.length === 0 ? (
           <CardBody>
-            <p className="text-[13px] text-muted">New courses are added regularly – check back or contact the Foundation for upcoming batches.</p>
+            <p className="text-body-sm text-muted">New courses are added regularly – check back or contact the Foundation for upcoming batches.</p>
           </CardBody>
         ) : (
           <ul className="divide-y divide-line">
             {discover.map((c) => (
               <li key={c.id}>
                 <Link href={`/student/apply?courseId=${c.id}`} className="flex min-h-16 items-center gap-3 px-4 py-3 tap-highlight-none active:bg-surface">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lavender text-navy">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">
                     <BookOpen className="h-5 w-5" aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-semibold text-ink">{c.name}</span>
-                    <span className="block truncate text-[12px] text-muted">
+                    <span className="block truncate text-body font-semibold text-ink">{c.name}</span>
+                    <span className="block truncate text-caption text-muted">
                       {[c.category?.name, c.durationText, titleCase(c.level), titleCase(c.mode)].filter(Boolean).join(" · ")}
                     </span>
-                    <span className="block text-[12px] font-semibold text-orange">
+                    <span className="block text-caption font-semibold text-orange">
                       {formatINR(toNumber(c.courseFee))}
                       {c.scholarshipAvailable ? " · scholarship available" : ""}
                     </span>

@@ -86,7 +86,7 @@ export function BatchPicker({ endpoint, value, onChange, allowNone, currentBatch
       <label
         key={id || "none"}
         className={cn(
-          "flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all",
+          "flex cursor-pointer items-start gap-3 rounded-card border p-3 transition-all duration-micro motion-reduce:transition-none",
           selected ? "border-orange bg-orange-light/50 ring-2 ring-orange/30" : "border-line bg-white hover:border-navy/40",
           full && "cursor-not-allowed opacity-60"
         )}
@@ -122,7 +122,7 @@ export function BatchPicker({ endpoint, value, onChange, allowNone, currentBatch
     <div className="space-y-2" role="radiogroup" aria-label="Batch">
       {allowNone && option(null)}
       {batches.map((b) => option(b))}
-      {batches.length === 0 && <p className="rounded-xl border border-dashed border-line p-4 text-sm text-muted">No open batches for this course at this center. Create a batch first from Batches.</p>}
+      {batches.length === 0 && <p className="rounded-card border border-dashed border-line p-4 text-body text-muted">No open batches for this course at this center. Create a batch first from Batches.</p>}
       {error && (
         <p className="text-xs font-medium text-danger" role="alert">
           {error}

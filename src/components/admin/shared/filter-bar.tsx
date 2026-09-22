@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Loader2, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsDesktop } from "@/lib/hooks";
 import { Input } from "@/components/ui/input";
@@ -13,22 +13,85 @@ import { LocationCascade, type LocationValue } from "@/components/shared/locatio
 import { useUrlParams } from "./use-url-params";
 
 /*
- * Mobile-first filters.
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════
+ * THE admin filter bar. One engine, two call styles.
  *
- * Below `lg` the bar collapses to a sticky toolbar: the search field plus a 48px "Filters" button with a
- * count badge that opens a BottomSheet holding every other control stacked full width, with Apply / Clear.
- * From `lg` up the exact same inline card as before is rendered, so desktop is untouched.
+ * The audit found two FilterBars with different search semantics — one applied on a 400ms debounce
+ * with no way to clear the field, the other only on Enter and offered an "Apply search" button. Both
+ * now run on the engine in this file, so there is ONE documented behaviour:
  *
- * Nothing changes at the call sites: `<FilterBar><SearchInput/><SelectFilter…/></FilterBar>` keeps working.
- * Inside the sheet the controls switch to *draft* mode (they hold local state and one navigation happens on
- * Apply) instead of pushing the URL on every change, which would reload the page under the open sheet.
+ *   SEARCH   type freely; the query is applied 400ms after you stop typing, immediately on Enter, and
+ *            immediately when you press the × that appears in the field. Applying while you type uses
+ *            router.replace, so Back returns to the previous page rather than the previous keystroke,
+ *            and a spinner in the field says the server is still working — on a 2G connection that
+ *            feedback is the whole difference between "loading" and "broken".
+ *   FILTERS  a select applies the moment it changes. Any other named control (a raw input a page
+ *            renders itself) applies when the form is submitted.
+ *   RESET    clears every filter; keys listed in `preserve` (the active tab, usually) survive.
+ *   PHONE    below `lg` the bar is a sticky toolbar under the app bar: the search field plus a
+ *            "Filters (n)" button opening a BottomSheet with every other control stacked full width.
+ *            Sheet edits are a DRAFT — one navigation happens on "Show results", not one per tap.
+ *
+ * Controls inside the sheet read and write the draft through FilterDraftContext, which is a single
+ * shared map rather than per-control state. That is what lets a dependent control (a Batch select that
+ * depends on the chosen Centre) see the sibling value the user just picked, and it is why the old
+ * hidden-input trick for clearing a stale districtId is gone.
+ *
+ * No backdrop-blur on the sticky toolbar: a blurred ancestor becomes the containing block for every
+ * position:fixed descendant (this is what clamped the mobile menu and lost the admin FAB), and blur on
+ * a surface that scrolls costs real battery on the cheap Android phones our staff use in the field.
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════
  */
 
-/** `true` for controls rendered inside the mobile filter sheet (draft mode: apply on submit). */
-const DraftContext = React.createContext(false);
-
-/** Sticks the toolbar right below the 56px mobile app bar (`pt-safe` included). */
+/** Sticks the toolbar right below the 56px mobile app bar (pt-safe included). */
 const STICKY_TOP = "top-[calc(3.5rem+env(safe-area-inset-top,0px))]";
+
+/** How long after the last keystroke the search is applied. */
+export const SEARCH_DEBOUNCE_MS = 400;
+
+interface DraftStore {
+  values: Record<string, string>;
+  set: (values: Record<string, string | undefined>) => void;
+}
+
+/** Present only inside the mobile filter sheet: controls write a draft and one navigation happens on Apply. */
+const FilterDraftContext = React.createContext<DraftStore | null>(null);
+
+/** `true` while the router is navigating because of a filter change. */
+const FilterPendingContext = React.createContext(false);
+
+/**
+ * Read and write one filter key. Inside the sheet this is the shared draft; outside it is the URL.
+ * `commitNow` always goes straight to the URL, whichever side you are on.
+ */
+export function useFilterField() {
+  const { get: urlGet, set: urlSet } = useUrlParams();
+  const draft = React.useContext(FilterDraftContext);
+  const pending = React.useContext(FilterPendingContext);
+  const inSheet = draft !== null;
+
+  const get = React.useCallback((key: string) => (draft && key in draft.values ? draft.values[key]! : urlGet(key)), [draft, urlGet]);
+  const set = React.useCallback(
+    (values: Record<string, string | undefined>) => {
+      if (draft) draft.set(values);
+      else urlSet(values);
+    },
+    [draft, urlSet]
+  );
+
+  return { inSheet, pending, get, set, commitNow: urlSet };
+}
+
+/** One label treatment for every filter control, at both sizes. Never below 12px. */
+export function FilterLabel({ htmlFor, children, as = "label" }: { htmlFor?: string; children: React.ReactNode; as?: "label" | "span" }) {
+  const className = "mb-1.5 block text-caption font-semibold tracking-wide text-muted uppercase";
+  if (as === "span") return <span className={className}>{children}</span>;
+  return (
+    <label className={className} htmlFor={htmlFor}>
+      {children}
+    </label>
+  );
+}
 
 function isSearchElement(node: React.ReactNode): boolean {
   return React.isValidElement(node) && node.type === SearchInput;
@@ -39,22 +102,21 @@ export interface FilterBarProps {
   className?: string;
   showReset?: boolean;
   /**
-   * The control shown next to the "Filters" button on phones. Defaults to the `<SearchInput>` found
-   * among `children`; pass it explicitly when the search field is rendered by a wrapper component.
+   * The control shown next to the "Filters" button on phones. Defaults to the SearchInput found among
+   * `children`; pass it explicitly when the search field is rendered by a wrapper component.
    */
   search?: React.ReactNode;
   /** Title of the mobile filter sheet. Default "Filters". */
   sheetTitle?: string;
+  /** Query keys that must survive Reset — the active tab, a locked status, and so on. */
+  preserve?: string[];
 }
 
-/**
- * Wraps filter controls. Submitting pushes every named field into the query string
- * (empty values are removed, `page` is reset). Reset clears all filters.
- */
-export function FilterBar({ children, className, showReset = true, search, sheetTitle = "Filters" }: FilterBarProps) {
-  const { set, reset, searchParams } = useUrlParams();
+export function FilterBar({ children, className, showReset = true, search, sheetTitle = "Filters", preserve = [] }: FilterBarProps) {
+  const { set, reset, pending, searchParams } = useUrlParams();
   const isDesktop = useIsDesktop();
   const [open, setOpen] = React.useState(false);
+  const [draftValues, setDraftValues] = React.useState<Record<string, string>>({});
   const sheetFormId = React.useId();
 
   // Split the search field out of the children so it can live in the phone toolbar.
@@ -62,47 +124,70 @@ export function FilterBar({ children, className, showReset = true, search, sheet
   const detected = search ?? items.find(isSearchElement);
   const rest = search ? items : items.filter((c) => c !== detected);
 
-  // Active filters = every query param except paging (used for the count badge and the Reset button).
-  const activeKeys = new Set(Array.from(searchParams.keys()).filter((k) => k !== "page" && (searchParams.get(k) ?? "") !== ""));
-  const activeCount = activeKeys.size;
+  // Active filters = every query param except paging and the preserved keys.
+  const skip = new Set(["page", "limit", ...preserve]);
+  const activeCount = Array.from(searchParams.keys()).filter((k) => !skip.has(k) && (searchParams.get(k) ?? "") !== "").length;
   const hasFilters = activeCount > 0;
 
-  const apply = (form: HTMLFormElement) => {
-    const values: Record<string, string | undefined> = {};
+  const draft = React.useMemo<DraftStore>(
+    () => ({
+      values: draftValues,
+      // "" is a real state here — "the user cleared this" — so it is stored, not dropped.
+      set: (values) => setDraftValues((d) => ({ ...d, ...Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v ?? ""])) })),
+    }),
+    [draftValues]
+  );
+
+  /** Collects any raw named input a page rendered itself. Kit controls are handled by the draft. */
+  const formValues = (form: HTMLFormElement) => {
+    const out: Record<string, string | undefined> = {};
     new FormData(form).forEach((v, k) => {
-      values[k] = typeof v === "string" ? v : undefined;
+      if (typeof v === "string") out[k] = v;
     });
-    set(values);
+    return out;
   };
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    apply(e.currentTarget);
+    set(formValues(e.currentTarget));
   };
 
   const onSheetSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    apply(e.currentTarget);
+    // Draft wins over FormData: a select the user changed in the sheet is authoritative.
+    set({ ...formValues(e.currentTarget), ...draftValues });
+    setDraftValues({});
     setOpen(false);
   };
 
   const clearAll = () => {
-    reset();
+    setDraftValues({});
+    reset(preserve);
+    setOpen(false);
+  };
+
+  const openSheet = () => {
+    setDraftValues({});
+    setOpen(true);
+  };
+  const closeSheet = () => {
+    setDraftValues({});
     setOpen(false);
   };
 
   return (
-    <>
+    <FilterPendingContext.Provider value={pending}>
       <form
         onSubmit={onSubmit}
         role="search"
         aria-label="Filters"
         className={cn(
-          // Phones / tablets: sticky one-line toolbar under the app bar, bleeding into the page gutter.
-          "sticky z-20 mb-4 -mx-4 flex items-end gap-2 bg-surface/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6",
+          // Phones / tablets: a sticky one-line toolbar under the app bar, bleeding into the page gutter.
+          // Opaque, never blurred — see the note at the top of this file.
+          "sticky z-sticky mb-4 -mx-4 flex items-end gap-2 border-b border-line bg-surface px-4 py-2.5 sm:-mx-6 sm:px-6",
           STICKY_TOP,
-          // lg+: the original inline filter card, unchanged.
-          "lg:card lg:static lg:mx-0 lg:flex-wrap lg:gap-3 lg:bg-white lg:px-4 lg:py-4 lg:backdrop-blur-none",
+          // lg+: the inline filter card.
+          "lg:card lg:static lg:mx-0 lg:flex-wrap lg:gap-3 lg:bg-white lg:px-4 lg:py-4",
           className
         )}
       >
@@ -110,15 +195,18 @@ export function FilterBar({ children, className, showReset = true, search, sheet
         {isDesktop ? (
           <>
             <div className="hidden lg:contents">{rest}</div>
-            <div className="hidden items-center gap-2 lg:flex">
+            <div className="hidden items-center gap-2 self-end lg:flex">
               <Button type="submit" size="sm" variant="navy">
                 Apply
               </Button>
               {showReset && hasFilters && (
-                <Button type="button" size="sm" variant="ghost" onClick={reset} leftIcon={<X className="h-4 w-4" />}>
+                <Button type="button" size="sm" variant="ghost" onClick={() => reset(preserve)} leftIcon={<RotateCcw className="h-4 w-4" aria-hidden />}>
                   Reset
                 </Button>
               )}
+              <span aria-live="polite" className="text-body-sm text-muted">
+                {pending ? "Updating…" : hasFilters ? `${activeCount} filter${activeCount === 1 ? "" : "s"} active` : ""}
+              </span>
             </div>
           </>
         ) : (
@@ -127,15 +215,15 @@ export function FilterBar({ children, className, showReset = true, search, sheet
               type="button"
               size="md"
               variant="outline"
-              onClick={() => setOpen(true)}
+              onClick={openSheet}
               className={cn("shrink-0", !detected && "flex-1")}
               aria-haspopup="dialog"
               aria-expanded={open}
-              leftIcon={<SlidersHorizontal className="h-4 w-4" aria-hidden />}
+              leftIcon={pending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <SlidersHorizontal className="h-4 w-4" aria-hidden />}
             >
               {sheetTitle}
               {activeCount > 0 && (
-                <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-orange px-1.5 text-[11px] font-bold text-white tabular-nums" aria-hidden>
+                <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-orange px-1.5 text-caption font-bold text-white tabular-nums" aria-hidden>
                   {activeCount}
                 </span>
               )}
@@ -148,134 +236,137 @@ export function FilterBar({ children, className, showReset = true, search, sheet
       {!isDesktop && rest.length > 0 && (
         <BottomSheet
           open={open}
-          onClose={() => setOpen(false)}
+          onClose={closeSheet}
           title={sheetTitle}
           description={activeCount > 0 ? `${activeCount} filter${activeCount === 1 ? "" : "s"} applied` : "Narrow down the list"}
           height="auto"
           size="md"
           footer={
             <>
-              <Button type="button" variant="ghost" size="md" onClick={clearAll} leftIcon={<X className="h-4 w-4" />} fullWidth className="sm:w-auto">
+              <Button type="button" variant="outline" size="md" onClick={clearAll} leftIcon={<RotateCcw className="h-4 w-4" aria-hidden />} fullWidth className="sm:w-auto">
                 Clear all
               </Button>
-              <Button type="submit" form={sheetFormId} variant="primary" size="md" fullWidth className="sm:w-auto">
-                Apply filters
+              <Button type="submit" form={sheetFormId} variant="navy" size="md" fullWidth className="sm:w-auto">
+                Show results
               </Button>
             </>
           }
         >
-          <form id={sheetFormId} onSubmit={onSheetSubmit} aria-label="Filter options" className="grid gap-4 pb-2">
-            <DraftContext.Provider value>{rest}</DraftContext.Provider>
+          <form id={sheetFormId} onSubmit={onSheetSubmit} aria-label="Filter options" className="grid gap-5 pb-2">
+            <FilterDraftContext.Provider value={draft}>{rest}</FilterDraftContext.Provider>
           </form>
         </BottomSheet>
       )}
-    </>
+    </FilterPendingContext.Provider>
   );
 }
 
 /**
- * Reads a filter param. In the mobile sheet (or with `immediate={false}`) the value is kept locally and
- * applied when the sheet's Apply button submits the form; otherwise every change pushes the URL.
+ * Free-text search bound to a query param (default `q`). See the behaviour note at the top of the file:
+ * debounce, Enter, and a × that clears — one field, one rule, everywhere in admin.
  */
-function useFilterValue(name: string, immediate = true) {
-  const inSheet = React.useContext(DraftContext);
-  const draft = inSheet || !immediate;
+export function SearchInput({ name = "q", placeholder = "Search…", className, debounceMs = SEARCH_DEBOUNCE_MS, label = "Search" }: { name?: string; placeholder?: string; className?: string; debounceMs?: number; label?: string }) {
   const { get, set } = useUrlParams();
-  const urlValue = get(name);
-  const [local, setLocal] = React.useState(urlValue);
-  const [synced, setSynced] = React.useState(urlValue);
-  // Re-sync when the URL changes from outside (Reset, another control) – during render, not in an effect.
-  if (synced !== urlValue) {
-    setSynced(urlValue);
-    setLocal(urlValue);
-  }
-  const commit = (v: string) => (draft ? setLocal(v) : set({ [name]: v || undefined }));
-  return { draft, inSheet, value: draft ? local : urlValue, commit };
-}
-
-/** Debounced free-text search bound to a query param (default `q`). */
-export function SearchInput({ name = "q", placeholder = "Search…", className, debounceMs = 400 }: { name?: string; placeholder?: string; className?: string; debounceMs?: number }) {
-  const { get, set } = useUrlParams();
+  const pending = React.useContext(FilterPendingContext);
   const initial = get(name);
   const [value, setValue] = React.useState(initial);
   const [syncedInitial, setSyncedInitial] = React.useState(initial);
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Re-sync when the URL changes from outside (e.g. Reset) – state adjustment during render, not in an effect.
+  // Re-sync when the URL changes from outside (Reset, Back) – state adjustment during render, not an effect.
   if (syncedInitial !== initial) {
     setSyncedInitial(initial);
     setValue(initial);
   }
-  const onChange = (v: string) => {
-    setValue(v);
+
+  React.useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    []
+  );
+
+  const commit = (v: string, immediate: boolean) => {
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => set({ [name]: v.trim() || undefined }, { replace: true }), debounceMs);
+    // `replace` while typing so the history is pages, not keystrokes.
+    const run = () => set({ [name]: v.trim() || undefined }, { replace: true });
+    if (immediate) run();
+    else timer.current = setTimeout(run, debounceMs);
   };
+
+  const id = `filter-${name}`;
   return (
     <div className={cn("min-w-[14rem] flex-1", className)}>
-      <label className="sr-only" htmlFor={`filter-${name}`}>
-        Search
+      <label className="sr-only" htmlFor={id}>
+        {label}
       </label>
       <Input
-        id={`filter-${name}`}
+        id={id}
         name={name}
+        type="search"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          setValue(e.target.value);
+          commit(e.target.value, false);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit(e.currentTarget.value, true);
+          }
+        }}
         placeholder={placeholder}
-        leftIcon={<Search className="h-4 w-4" />}
+        leftIcon={pending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Search className="h-4 w-4" aria-hidden />}
+        rightIcon={
+          value ? (
+            <button
+              type="button"
+              aria-label="Clear search"
+              className="touch-target -mr-1.5 inline-flex items-center justify-center rounded-md text-muted ring-focus tap-highlight-none transition-colors duration-micro hover:text-navy motion-reduce:transition-none"
+              onClick={() => {
+                setValue("");
+                commit("", true);
+              }}
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          ) : undefined
+        }
         autoComplete="off"
+        inputMode="search"
         enterKeyHint="search"
       />
     </div>
   );
 }
 
-/** Select bound to a query param. Updates the URL immediately on change (on Apply inside the mobile sheet). */
-export function SelectFilter({ name, label, options, placeholder = "All", className, immediate = true }: { name: string; label: string; options: SelectOption[]; placeholder?: string; className?: string; immediate?: boolean }) {
-  const { value, commit, inSheet } = useFilterValue(name, immediate);
+/** Select bound to a query param. Applies on change (on "Show results" inside the mobile sheet). */
+export function SelectFilter({ name, label, options, placeholder = "All", className, disabled }: { name: string; label: string; options: SelectOption[]; placeholder?: string; className?: string; immediate?: boolean; disabled?: boolean }) {
+  const { get, set, inSheet } = useFilterField();
+  const id = `filter-${name}`;
   return (
     <div className={cn(inSheet ? "w-full min-w-0" : "min-w-[10rem]", className, inSheet && "min-w-0")}>
-      <label className={cn("mb-1 block font-medium text-muted", inSheet ? "text-[13px]" : "text-xs")} htmlFor={`filter-${name}`}>
-        {label}
-      </label>
-      <Select id={`filter-${name}`} name={name} value={value} onChange={(e) => commit(e.target.value)} options={options} placeholder={placeholder} />
+      <FilterLabel htmlFor={id}>{label}</FilterLabel>
+      <Select id={id} name={name} value={get(name)} onChange={(e) => set({ [name]: e.target.value || undefined })} options={options} placeholder={placeholder} disabled={disabled} />
     </div>
   );
 }
 
-/** State / district / block filter bound to `stateId`, `districtId`, `blockId` query params. */
+/** State / district / block filter bound to the stateId, districtId and blockId query params. */
 export function LocationFilter({ depth = "block", className }: { depth?: "state" | "district" | "block"; className?: string }) {
-  const inSheet = React.useContext(DraftContext);
-  const { get, set } = useUrlParams();
-  const urlValue: LocationValue = { stateId: get("stateId") || undefined, districtId: get("districtId") || undefined, blockId: get("blockId") || undefined };
-  const urlKey = `${urlValue.stateId ?? ""}|${urlValue.districtId ?? ""}|${urlValue.blockId ?? ""}`;
-  const [local, setLocal] = React.useState(urlValue);
-  const [synced, setSynced] = React.useState(urlKey);
-  if (synced !== urlKey) {
-    setSynced(urlKey);
-    setLocal(urlValue);
-  }
-  const value = inSheet ? local : urlValue;
-  const onChange = (v: LocationValue) => (inSheet ? setLocal(v) : set({ stateId: v.stateId, districtId: v.districtId, blockId: v.blockId }));
-
-  // Disabled / not-rendered selects are left out of FormData, so the sheet submits them as empty
-  // hidden fields instead – otherwise a stale districtId/blockId could never be cleared.
-  const submittable = new Set(["stateId"]);
-  if (depth !== "state" && value.stateId) submittable.add("districtId");
-  if (depth === "block" && value.districtId) submittable.add("blockId");
-  const hiddenNames = ["districtId", "blockId"].filter((n) => !submittable.has(n));
-
+  const { get, set, inSheet } = useFilterField();
+  const value: LocationValue = { stateId: get("stateId") || undefined, districtId: get("districtId") || undefined, blockId: get("blockId") || undefined };
   return (
     <div className={cn(inSheet ? "w-full min-w-0" : "min-w-[10rem]", className, inSheet && "min-w-0")}>
-      <span className={cn("mb-1 block font-medium text-muted", inSheet ? "text-[13px]" : "text-xs")}>Location</span>
+      <FilterLabel as="span">Location</FilterLabel>
       <LocationCascade
         bare
         depth={depth}
         value={value}
-        onChange={onChange}
+        // All three keys are written together, so narrowing the state always clears a stale district.
+        onChange={(v) => set({ stateId: v.stateId, districtId: v.districtId, blockId: v.blockId })}
         placeholderPrefix="All"
         className={inSheet ? "grid gap-3" : "flex flex-wrap gap-2 [&>div]:min-w-[10rem]"}
       />
-      {inSheet && hiddenNames.map((n) => <input key={n} type="hidden" name={n} value="" />)}
     </div>
   );
 }
@@ -289,44 +380,25 @@ const RANGE_OPTIONS: SelectOption[] = [
   { value: "custom", label: "Custom range" },
 ];
 
-/** Date range filter bound to `range`, `from`, `to` query params (see dateRangeSchema). */
+/** Date range filter bound to the range, from and to query params (see dateRangeSchema). */
 export function DateRangeFilter({ className, allLabel = "All time", defaultRange = "" }: { className?: string; allLabel?: string; defaultRange?: string }) {
-  const inSheet = React.useContext(DraftContext);
-  const { get, set } = useUrlParams();
-  const urlRange = get("range");
-  const urlFrom = get("from");
-  const urlTo = get("to");
-  const [range, setRange] = React.useState(urlRange || defaultRange);
-  const [from, setFrom] = React.useState(urlFrom);
-  const [to, setTo] = React.useState(urlTo);
-  const [synced, setSynced] = React.useState(`${urlRange}|${urlFrom}|${urlTo}`);
-  // Re-sync when the URL changes from outside – state adjustment during render, not in an effect.
-  if (synced !== `${urlRange}|${urlFrom}|${urlTo}`) {
-    setSynced(`${urlRange}|${urlFrom}|${urlTo}`);
-    setRange(urlRange || defaultRange);
-    setFrom(urlFrom);
-    setTo(urlTo);
-  }
-  const effectiveRange = inSheet ? range : urlRange || defaultRange;
-  const custom = effectiveRange === "custom";
-  const applyCustom = (f: string, t: string) => set({ range: "custom", from: f || undefined, to: t || undefined });
+  const { get, set, inSheet } = useFilterField();
+  const range = get("range") || defaultRange;
+  const from = get("from");
+  const to = get("to");
+  const custom = range === "custom";
 
   const periodSelect = (
     <div className={inSheet ? "min-w-0" : "min-w-[10rem]"}>
-      <label className={cn("mb-1 block font-medium text-muted", inSheet ? "text-[13px]" : "text-xs")} htmlFor="filter-range">
-        Period
-      </label>
+      <FilterLabel htmlFor="filter-range">Period</FilterLabel>
       <Select
         id="filter-range"
         name="range"
-        value={effectiveRange}
+        value={range}
         onChange={(e) => {
           const v = e.target.value;
-          if (inSheet) {
-            setRange(v);
-            return;
-          }
-          if (v === "custom") applyCustom(from, to);
+          // Leaving "custom" drops the dates with it, so the URL never carries a range nobody is using.
+          if (v === "custom") set({ range: "custom" });
           else set({ range: v || undefined, from: undefined, to: undefined });
         }}
         options={RANGE_OPTIONS}
@@ -335,19 +407,11 @@ export function DateRangeFilter({ className, allLabel = "All time", defaultRange
     </div>
   );
 
-  // Inside the sheet: one stacked block using the shared DateRangeInput, applied with the rest on submit.
   if (inSheet) {
     return (
       <div className={cn("w-full min-w-0 space-y-3", className)}>
         {periodSelect}
-        {custom ? (
-          <DateRangeInput from={from} to={to} onChange={(v) => { setFrom(v.from); setTo(v.to); }} max={new Date()} />
-        ) : (
-          <>
-            <input type="hidden" name="from" value="" />
-            <input type="hidden" name="to" value="" />
-          </>
-        )}
+        {custom && <DateRangeInput from={from} to={to} onChange={(v) => set({ from: v.from || undefined, to: v.to || undefined })} max={new Date()} />}
       </div>
     );
   }
@@ -358,16 +422,12 @@ export function DateRangeFilter({ className, allLabel = "All time", defaultRange
       {custom && (
         <>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted" htmlFor="filter-from">
-              From
-            </label>
-            <Input id="filter-from" name="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} onBlur={() => applyCustom(from, to)} />
+            <FilterLabel htmlFor="filter-from">From</FilterLabel>
+            <Input id="filter-from" name="from" type="date" value={from} max={to || undefined} onChange={(e) => set({ from: e.target.value || undefined })} />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted" htmlFor="filter-to">
-              To
-            </label>
-            <Input id="filter-to" name="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} onBlur={() => applyCustom(from, to)} />
+            <FilterLabel htmlFor="filter-to">To</FilterLabel>
+            <Input id="filter-to" name="to" type="date" value={to} min={from || undefined} onChange={(e) => set({ to: e.target.value || undefined })} />
           </div>
         </>
       )}

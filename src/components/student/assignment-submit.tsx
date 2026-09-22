@@ -45,7 +45,7 @@ export function AssignmentSubmit({ assignmentId, hasSubmission, overdue, initial
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-xl border border-dashed border-line p-4" noValidate>
+    <form onSubmit={submit} className="space-y-3 rounded-md border border-dashed border-line p-4" noValidate>
       {overdue && <Alert tone="warning">The due date has passed. You can still submit, but it will be marked as late.</Alert>}
       <Field label="Your answer" htmlFor={`text-${assignmentId}`} error={errors.text} hint="Type your answer, attach a file, or both.">
         <Textarea id={`text-${assignmentId}`} rows={4} value={text} onChange={(e) => setText(e.target.value)} invalid={!!errors.text} />

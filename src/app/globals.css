@@ -1,5 +1,56 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * EduSkill design tokens — THE CONTRACT
+ * ---------------------------------------------------------------------------
+ * One system. If you need a value that is not on a scale below, you are either
+ * solving the wrong problem or the scale needs a new step — add it HERE, never
+ * inline. Arbitrary values (text-[13px], shadow-[...], py-[72px], z-[90]) are
+ * how this layer fragmented the first time.
+ *
+ *  TYPE      one class sets size + leading + weight + tracking, responsive built in:
+ *            text-display  text-h1  text-h2  text-h3  text-h4
+ *            text-body-lg  text-body  text-body-sm  text-caption  text-overline
+ *            text-input    (16px always — Android must not zoom a form field)
+ *            Nothing renders below 12px. Anywhere.
+ *
+ *  SPACING   4px base, Tailwind's own scale. Stack gaps: 2 / 3 / 4 / 6 / 8 / 12.
+ *            Section rhythm: `section-y` (py-16 sm:py-20 lg:py-24) — ONE rhythm
+ *            for the whole site, never hand-rolled. Card padding: `card-p`.
+ *            Page gutter: `container-x`.
+ *
+ *  RADIUS    xs 6 · sm 8 · md 12 · lg 16 · xl 20 · 2xl 24 · full.
+ *            Cards `rounded-card` (= lg, 16). Buttons md. Pills full.
+ *            Sheets `rounded-t-2xl` (24, top corners only). Stop at 2xl.
+ *
+ *  ELEVATION exactly three: shadow-e1 resting card · shadow-e2 hover/raised ·
+ *            shadow-e3 overlay. shadow-card / -card-hover / -float are the old
+ *            names for the same three values. No other shadow exists.
+ *
+ *  MOTION    one easing (--ease-out-soft), three durations: --duration-micro
+ *            150ms (hover, press), --duration-element 250ms (fade, slide),
+ *            --duration-overlay 350ms (sheets, dialogs). Nothing longer.
+ *            Utilities: ease-soft, duration-micro / -element / -overlay.
+ *            Every animation/transition pairs with motion-reduce:*; the global
+ *            reduced-motion block at the bottom is the backstop, not the plan.
+ *
+ *  Z-INDEX   z-raised 10 · z-sticky 20 · z-header 30 · z-drawer 40 ·
+ *            z-overlay 50 · z-toast 60. Never a number above 60.
+ *
+ *  MEDIA     one ratio per role: `media media-16x9` wide, `media media-4x3`
+ *            portrait card, `media media-1x1` avatar/logo. Every image goes
+ *            through next/image or SafeImage with sizes + real alt text.
+ *
+ *  DEPTH     `surface-tint` / `surface-tint-dark` — the ONE soft radial tint,
+ *            allowed behind hero and CTA bands only. 1px borders in `line`.
+ *            NEVER backdrop-blur/filter/transform on an ancestor of anything
+ *            position:fixed — it becomes the containing block and the fixed
+ *            child silently clamps to it (this broke the mobile menu and the
+ *            admin Fab). A finished `fill-mode: both` animation still counts.
+ *
+ *  FOCUS     `ring-focus` everywhere; `ring-focus-inverse` on navy/orange.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
 @theme {
   --color-navy: #12357a;
   --color-navy-dark: #102f70;
@@ -14,6 +65,11 @@
   --color-muted: #667085;
   --color-line: #e4e7ec;
   --color-success: #12b76a;
+  /*
+   * success is ~2.4:1 on white — correct for a dot, a bar or an icon, wrong for a sentence.
+   * success-dark is 5.0:1, so success MESSAGES use it (the way navy-dark sits beside navy).
+   */
+  --color-success-dark: #027a48;
   --color-success-light: #e6f8ef;
   --color-warning: #f79009;
   --color-warning-light: #fef3e1;
@@ -25,24 +81,55 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-heading: var(--font-manrope), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
+  /*
+   * RADIUS SCALE — xs 6 · sm 8 · md 12 · lg 16 · xl 20 · 2xl 24 · full.
+   * These deliberately REPLACE Tailwind's defaults so `rounded-lg` means one
+   * thing everywhere. rounded-card (16) === rounded-lg; rounded-card-lg (20)
+   * === rounded-xl, kept because a lot of markup already asks for them.
+   * The scale stops at 2xl — 3xl/4xl stay at Tailwind's defaults, unused.
+   */
+  --radius-xs: 0.375rem; /* 6 — chips, tags, tiny controls */
+  --radius-sm: 0.5rem; /* 8 — inputs, badges */
+  --radius-md: 0.75rem; /* 12 — buttons */
+  --radius-lg: 1rem; /* 16 — cards (canonical) */
+  --radius-xl: 1.25rem; /* 20 — large/feature cards */
+  --radius-2xl: 1.5rem; /* 24 — sheets (top corners only) */
   --radius-card: 1rem;
   --radius-card-lg: 1.25rem;
-  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05), 0 10px 30px -14px rgb(16 24 40 / 0.18);
-  --shadow-card-hover: 0 2px 4px rgb(16 24 40 / 0.06), 0 20px 40px -16px rgb(16 24 40 / 0.28);
-  --shadow-float: 0 24px 60px -20px rgb(16 24 40 / 0.45);
 
-  /* All UI motion stays at or under 300ms (app-like); the reduced-motion block below neutralises everything. */
-  --animate-fade-up: fade-up 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-fade-in: fade-in 0.2s ease-out both;
-  --animate-slide-in-right: slide-in-right 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-pop: pop 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /*
+   * ELEVATION — exactly three steps plus none. Values live in :root as
+   * --elevation-1/2/3 (see @layer base) so the old names and the new names can
+   * never drift apart. Do not add a fourth shadow; raise the step instead.
+   */
+  --shadow-e1: var(--elevation-1); /* resting card */
+  --shadow-e2: var(--elevation-2); /* hover / raised */
+  --shadow-e3: var(--elevation-3); /* overlay: sheet, dialog, popover */
+  --shadow-card: var(--elevation-1);
+  --shadow-card-hover: var(--elevation-2);
+  --shadow-float: var(--elevation-3);
+
+  /* One easing for the whole product, so `transition` alone already feels right. */
+  --default-transition-timing-function: var(--ease-out-soft);
+
+  /*
+   * All UI motion runs on the three duration tokens (150 / 250 / 350ms) and the
+   * single easing; the reduced-motion block at the bottom neutralises everything.
+   */
+  --animate-fade-up: fade-up var(--duration-element) var(--ease-out-soft) both;
+  --animate-fade-in: fade-in var(--duration-micro) var(--ease-out-soft) both;
+  --animate-slide-in-right: slide-in-right var(--duration-element) var(--ease-out-soft) both;
+  --animate-pop: pop var(--duration-micro) var(--ease-out-soft) both;
   /* Bottom sheets / toasts / sticky bars entering from the bottom edge, and their exit. */
-  --animate-slide-up: slide-up 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-slide-down: slide-down 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
-  /* Decorative only (hero blobs, illustrations). */
+  --animate-slide-up: slide-up var(--duration-overlay) var(--ease-out-soft) both;
+  --animate-slide-down: slide-down var(--duration-overlay) var(--ease-out-soft) both;
+  /*
+   * Decorative only (hero blobs, illustrations). Continuous motion costs battery
+   * on the cheap Android phones most of our students use — do not add new uses.
+   */
   --animate-float: float 5s ease-in-out infinite;
   /* Alias from an earlier draft of the page transition; prefer animate-fade-up. */
-  --animate-page: page-in 0.22s ease-out both;
+  --animate-page: page-in var(--duration-micro) var(--ease-out-soft) both;
 
   @keyframes fade-up {
     from {
@@ -133,6 +220,33 @@
     --sticky-bar-h: 0px;
     --header-h: 3.5rem;
   }
+
+  /*
+   * Scale primitives. These live outside @theme on purpose: they are always
+   * emitted (Tailwind only emits the @theme variables a build actually uses),
+   * so both the token names and any hand-written var() reference resolve.
+   */
+  :root {
+    /* ── Elevation: three steps, nothing else. ── */
+    --elevation-1: 0 1px 2px rgb(16 24 40 / 0.05), 0 10px 30px -14px rgb(16 24 40 / 0.18);
+    --elevation-2: 0 2px 4px rgb(16 24 40 / 0.06), 0 20px 40px -16px rgb(16 24 40 / 0.28);
+    --elevation-3: 0 24px 60px -20px rgb(16 24 40 / 0.45);
+
+    /* ── Motion: one curve, three durations. Nothing longer than 350ms. ── */
+    --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+    --duration-micro: 150ms; /* hover, press, colour change */
+    --duration-element: 250ms; /* fade, slide, reveal */
+    --duration-overlay: 350ms; /* sheet, drawer, dialog */
+
+    /* ── Stacking order. Every fixed/absolute layer names its step. ── */
+    --z-base: 0;
+    --z-raised: 10; /* cards lifted on hover, sticky table headers */
+    --z-sticky: 20; /* sticky filter bars, sticky action bars, FAB */
+    --z-header: 30; /* app bar, site header, bottom nav */
+    --z-drawer: 40; /* side drawer / off-canvas nav */
+    --z-overlay: 50; /* modal, bottom sheet, dropdown, backdrop */
+    --z-toast: 60; /* highest. nothing goes above this. */
+  }
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
@@ -190,28 +304,339 @@
   }
 }
 
+/*
+ * ───────────── Reduced motion: the backstop ─────────────
+ * Unlayered and !important so it outranks utilities, inline styles from
+ * animation libraries and anything a component sets. Components must still
+ * pair their own motion with motion-reduce:animate-none / :transition-none —
+ * this only guarantees nobody gets hurt when they forget.
+ * Note: durations are collapsed, not removed, so `fill-mode: both` keyframes
+ * still land on their final frame instead of never running.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  html {
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * ───────────── Minimum legible text: 12px, no exceptions ─────────────
+ * Most of our students read this on a cheap Android phone in daylight.
+ * text-xs (12px) is the smallest named step and no smaller one exists, so the
+ * only way under the floor is an arbitrary value. These selectors catch the
+ * ones that have actually appeared in this codebase; exact values only, so a
+ * legitimate text-[110px] display size is never hit.
+ */
+[class*="text-[9px]"],
+[class*="text-[10px]"],
+[class*="text-[10.5px]"],
+[class*="text-[11px]"],
+[class*="text-[11.5px]"],
+[class*="text-[0.5rem]"],
+[class*="text-[0.5625rem]"],
+[class*="text-[0.625rem]"],
+[class*="text-[0.6875rem]"],
+[class*="text-[0.7rem]"] {
+  font-size: 0.75rem !important;
+}
+
+/*
+ * ───────────── Form fields never trigger Android's zoom ─────────────
+ * Below 16px Chrome on Android zooms the viewport on focus, which on a phone
+ * reads as the page "jumping" and leaves the user scrolled sideways. Unlayered
+ * so it beats a stray text-sm on an input. Opt out with data-allow-zoom only if
+ * you have measured that the control cannot fit at 16px.
+ */
+@media (width < 40rem) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([data-allow-zoom]),
+  select:not([data-allow-zoom]),
+  textarea:not([data-allow-zoom]) {
+    font-size: 1rem;
+  }
+}
+
+/* ═════════════ TYPE SCALE ═════════════
+ * One class carries size, leading, weight and tracking together, and the
+ * responsive steps are baked in — a heading is `text-h2`, not four classes and
+ * a breakpoint guess. Written as plain declarations (not @apply) so nothing
+ * here depends on Tailwind's own text-* scale.
+ *
+ *   text-display  40/44  →  sm 48/52  →  lg 60/64   hero only, once per page
+ *   text-h1       32/38  →  lg 40/46               page title
+ *   text-h2       24/30  →  lg 30/36               section title
+ *   text-h3       20/26                            card title, subsection
+ *   text-h4       17/24                            list-row title, label group
+ *   text-body-lg  17/28                            lede, intro paragraph
+ *   text-body     16/26 on phones → 15/24 sm+      default copy
+ *   text-body-sm  13.5/20                          meta, helper, captions in rows
+ *   text-caption  12/16                            timestamps, footnotes
+ *   text-overline 12/16 700 .14em uppercase        eyebrows, table-card labels
+ *   text-input    16/26                            anything the user types into
+ */
+
+@utility text-display {
+  font-family: var(--font-heading);
+  font-size: 2.5rem;
+  line-height: 2.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  @media (width >= 40rem) {
+    font-size: 3rem;
+    line-height: 3.25rem;
+  }
+  @media (width >= 64rem) {
+    font-size: 3.75rem;
+    line-height: 4rem;
+  }
+}
+
+@utility text-h1 {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  line-height: 2.375rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  @media (width >= 64rem) {
+    font-size: 2.5rem;
+    line-height: 2.875rem;
+  }
+}
+
+@utility text-h2 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  line-height: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  @media (width >= 64rem) {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+}
+
+@utility text-h3 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  line-height: 1.625rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+@utility text-h4 {
+  font-family: var(--font-heading);
+  font-size: 1.0625rem;
+  line-height: 1.5rem;
+  font-weight: 700;
+}
+
+@utility text-body-lg {
+  font-size: 1.0625rem;
+  line-height: 1.75rem;
+  font-weight: 400;
+}
+
+/* Phone-first: 16px while the screen is small, 15px once there is room for it. */
+@utility text-body {
+  font-size: 1rem;
+  line-height: 1.625rem;
+  font-weight: 400;
+  @media (width >= 40rem) {
+    font-size: 0.9375rem;
+    line-height: 1.5rem;
+  }
+}
+
+@utility text-body-sm {
+  font-size: 0.84375rem;
+  line-height: 1.25rem;
+  font-weight: 400;
+}
+
+@utility text-caption {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+}
+
+@utility text-overline {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Every control the user types into. 16px at every width — see the Android note. */
+@utility text-input {
+  font-size: 1rem;
+  line-height: 1.625rem;
+  font-weight: 400;
+}
+
+/* ═════════════ SPACING RHYTHM ═════════════ */
+
+/* The card's own padding. Use it instead of re-picking p-4/p-5/p-6 per card. */
+@utility card-p {
+  @apply p-5 sm:p-6;
+}
+
+/* ═════════════ MOTION UTILITIES ═════════════ */
+
+@utility ease-soft {
+  transition-timing-function: var(--ease-out-soft);
+  animation-timing-function: var(--ease-out-soft);
+}
+@utility duration-micro {
+  transition-duration: var(--duration-micro);
+  animation-duration: var(--duration-micro);
+}
+@utility duration-element {
+  transition-duration: var(--duration-element);
+  animation-duration: var(--duration-element);
+}
+@utility duration-overlay {
+  transition-duration: var(--duration-overlay);
+  animation-duration: var(--duration-overlay);
+}
+
+/* ═════════════ STACKING ORDER ═════════════ */
+
+@utility z-raised {
+  z-index: var(--z-raised);
+}
+@utility z-sticky {
+  z-index: var(--z-sticky);
+}
+@utility z-header {
+  z-index: var(--z-header);
+}
+@utility z-drawer {
+  z-index: var(--z-drawer);
+}
+@utility z-overlay {
+  z-index: var(--z-overlay);
+}
+@utility z-toast {
+  z-index: var(--z-toast);
+}
+
+/* ═════════════ FOCUS ═════════════
+ * One focus treatment for the whole product. outline (not box-shadow) so it
+ * never fights a card's elevation, and it follows border-radius for free.
+ */
+@utility ring-focus {
+  &:focus-visible {
+    outline: 2px solid var(--color-orange);
+    outline-offset: 2px;
+  }
+}
+/* On navy, orange or any photo — the orange ring disappears there. */
+@utility ring-focus-inverse {
+  &:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+}
+
+/* ═════════════ DEPTH ═════════════
+ * The ONE decorative tint we allow, for hero and CTA bands. Two soft radial
+ * washes, no blur, no animation, no extra element, no bytes. Sets only
+ * background-image, so it composes with bg-white / bg-surface / bg-navy.
+ */
+@utility surface-tint {
+  background-image:
+    radial-gradient(42rem 26rem at 8% -12%, rgb(18 53 122 / 0.1), transparent 68%),
+    radial-gradient(36rem 22rem at 96% 4%, rgb(232 82 10 / 0.07), transparent 66%);
+  background-repeat: no-repeat;
+}
+/* Same idea on navy bands, where the light tint would be invisible. */
+@utility surface-tint-dark {
+  background-image:
+    radial-gradient(44rem 28rem at 12% -14%, rgb(255 255 255 / 0.1), transparent 66%),
+    radial-gradient(34rem 22rem at 94% 8%, rgb(232 82 10 / 0.22), transparent 64%);
+  background-repeat: no-repeat;
+}
+
+/* ═════════════ MEDIA ═════════════
+ * One aspect ratio per role, so the same photograph crops the same way in a
+ * list and on a detail page. `media` is the frame; pair it with exactly one
+ * ratio. Children (next/image fill, SafeImage, the SVG placeholder) get
+ * object-cover automatically.
+ *   media-16x9  wide media: hero cards, course/centre covers, gallery
+ *   media-4x3   portrait cards: people, story cards
+ *   media-1x1   avatars, logos, icon tiles
+ */
+@utility media {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: inherit;
+  background-color: var(--color-lavender);
+  & > img,
+  & > svg,
+  & > video {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+}
+@utility media-16x9 {
+  aspect-ratio: 16 / 9;
+}
+@utility media-4x3 {
+  aspect-ratio: 4 / 3;
+}
+@utility media-1x1 {
+  aspect-ratio: 1 / 1;
+}
+
 @utility container-x {
   @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
 }
 
+/* The eyebrow IS the overline step, tinted orange. Kept as its own name because
+ * a lot of markup already asks for it. */
 @utility eyebrow {
-  @apply inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-orange;
+  @apply inline-flex items-center gap-2 text-overline text-orange;
 }
 
+/*
+ * THE card. One border (`border-line` at full opacity — the decided 1px hairline), one radius,
+ * one elevation. `@utility table-cards` draws the phone row-card with exactly these three
+ * values and `DefaultCard` in responsive-table.tsx spells them out to match: if you retune
+ * this, retune those two in the same commit.
+ */
 @utility card {
-  @apply rounded-card border border-line/70 bg-white shadow-card;
+  @apply rounded-card border border-line bg-white shadow-e1;
 }
 
-/* Lift on hover only where hover exists (mouse/trackpad); touch devices get a press feedback instead. */
+/*
+ * Lift on hover only where hover exists (mouse/trackpad); touch devices get a
+ * press feedback instead. Note the transform: never put a position:fixed child
+ * inside a card-hover — the transform makes the card its containing block.
+ */
 @utility card-hover {
-  @apply transition-all duration-300 active:scale-[0.99];
+  @apply transition-all duration-micro ease-soft active:scale-[0.99] motion-reduce:transition-none;
   @media (hover: hover) and (pointer: fine) {
-    @apply hover:-translate-y-1 hover:shadow-card-hover;
+    @apply hover:-translate-y-1 hover:shadow-e2;
   }
 }
 
+/* Legacy name for the section heading. text-h2 is canonical — same values. */
 @utility section-title {
-  @apply font-heading text-3xl font-extrabold leading-tight tracking-tight text-navy sm:text-4xl lg:text-[2.75rem] lg:leading-[1.1];
+  @apply text-h2 text-navy;
 }
 
 @utility scrollbar-thin {
@@ -220,12 +645,13 @@
 }
 
 @utility prose-content {
-  @apply text-[15.5px] leading-7 text-ink;
+  /* Long-form reading sits one step above default copy. */
+  @apply text-body-lg text-ink;
   & h2 {
-    @apply mt-8 mb-3 text-2xl;
+    @apply mt-8 mb-3 text-h2;
   }
   & h3 {
-    @apply mt-6 mb-2 text-xl;
+    @apply mt-6 mb-2 text-h3;
   }
   & p {
     @apply mb-4;
@@ -306,13 +732,17 @@
   }
 }
 
-/* Vertical rhythm for public-site sections. */
+/*
+ * THE section rhythm. One value for the entire site — public pages, portals and
+ * admin alike. If a band needs to feel tighter, remove content or change the
+ * background; do not hand-roll a py-* pair. Audit found six competing rhythms.
+ */
 @utility section-y {
-  @apply py-12 sm:py-16 lg:py-24;
+  @apply py-16 sm:py-20 lg:py-24;
 }
-/* Secondary text on cards and list rows (13px keeps above the 12px floor). */
+/* Legacy name for the body-sm step; identical values so the two cannot drift. */
 @utility text-meta {
-  @apply text-[13px] leading-5;
+  @apply text-body-sm;
 }
 
 /*
@@ -386,7 +816,7 @@
       gap: 0.75rem;
     }
     & tr {
-      @apply rounded-2xl border border-line bg-white p-4 shadow-card;
+      @apply rounded-card border border-line bg-white p-4 shadow-e1;
     }
     & td {
       display: flex;
@@ -402,7 +832,8 @@
       flex: 0 0 38%;
       padding-top: 0.125rem;
       text-align: left;
-      @apply text-[11px] leading-4 font-semibold uppercase tracking-wide text-muted;
+      /* 12px floor: the label column is 38% wide, so it keeps the tighter tracking-wide rather than the overline's .14em. */
+      @apply text-caption font-semibold uppercase tracking-wide text-muted;
     }
     /* Unlabelled cells simply stack. */
     & td[data-label=""] {
@@ -414,7 +845,7 @@
     & td[data-mobile="full"] {
       display: block;
       text-align: left;
-      @apply mb-1 border-b border-line/70 pb-3 text-base font-semibold text-navy;
+      @apply mb-1 border-b border-line/70 pb-3 text-h4 text-navy;
     }
     /* Actions row: right-aligned footer. */
     & td[data-actions]:not([data-actions="false"]),

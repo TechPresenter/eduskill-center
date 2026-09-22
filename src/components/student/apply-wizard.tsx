@@ -657,7 +657,7 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
               <StepIntro title="Your details" text="These details appear on your application, ID card and certificate." />
               <PersonalDetailsFields form={form} set={setField} errors={profileErrors} />
               <div className="border-t border-line pt-5">
-                <p className="mb-4 text-sm font-bold text-navy">Contact</p>
+                <p className="mb-4 text-body-sm font-bold text-navy">Contact</p>
                 <ContactFields form={form} set={setField} errors={profileErrors} />
               </div>
             </CardBody>
@@ -708,7 +708,7 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
                 type="button"
                 onClick={() => setFiltersOpen((v) => !v)}
                 aria-expanded={filtersOpen}
-                className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-line bg-surface/70 px-4 text-sm font-semibold text-navy tap-highlight-none lg:hidden"
+                className="flex min-h-11 w-full items-center justify-between gap-2 rounded-md border border-line bg-surface/70 px-4 text-body-sm font-semibold text-navy tap-highlight-none lg:hidden"
               >
                 <span className="inline-flex items-center gap-2">
                   <ListFilter className="h-4 w-4" /> Filter by state, district & course
@@ -739,9 +739,9 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
                       <ChoiceCard key={c.id} selected={selected} onSelect={() => selectCenter(c)}>
                         <div className="pr-8">
                           <p className="font-bold text-navy">{c.name}</p>
-                          <p className="font-mono text-xs text-muted">{c.code}</p>
+                          <p className="font-mono text-caption text-muted">{c.code}</p>
                         </div>
-                        <p className="text-sm text-muted">
+                        <p className="text-body-sm text-muted">
                           {[c.villageTown, c.block?.name, c.district?.name, c.state?.name].filter(Boolean).join(", ")} · {c.pincode}
                         </p>
                         <div className="flex flex-wrap gap-1.5">
@@ -780,9 +780,9 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
                   {courses.map((c) => (
                     <ChoiceCard key={c.id} selected={course?.id === c.id} onSelect={() => selectCourse(c)}>
                       <div className="pr-8">
-                        {c.category && <p className="text-xs font-bold tracking-wide text-orange uppercase">{c.category.name}</p>}
+                        {c.category && <p className="text-caption font-bold tracking-wide text-orange uppercase">{c.category.name}</p>}
                         <p className="font-bold text-navy">{c.name}</p>
-                        {c.shortDescription && <p className="mt-0.5 line-clamp-2 text-sm text-muted">{c.shortDescription}</p>}
+                        {c.shortDescription && <p className="mt-0.5 line-clamp-2 text-body-sm text-muted">{c.shortDescription}</p>}
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         <Badge tone="neutral">
@@ -796,12 +796,12 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm">
+                      <p className="text-body-sm">
                         <span className="font-bold text-ink">{c.totalFee > 0 ? formatINR(c.totalFee) : "Free"}</span>
                         {c.totalFee > 0 && <span className="text-muted"> total fee</span>}
                       </p>
                       {(c.eligibility || c.minAge || c.maxAge) && (
-                        <p className="text-xs text-muted">
+                        <p className="text-caption text-muted">
                           Eligibility: {c.eligibility ?? "Open to all"}
                           {c.minAge || c.maxAge ? ` · Age ${c.minAge ?? "any"}–${c.maxAge ?? "any"}` : ""}
                         </p>
@@ -824,13 +824,13 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
                           <ChoiceCard key={b.id} selected={batchId === b.id} disabled={full} onSelect={() => setBatchId(b.id)}>
                             <div className="flex flex-wrap items-center gap-2 pr-8">
                               <p className="font-bold text-navy">{b.name}</p>
-                              <span className="font-mono text-xs text-muted">{b.code}</span>
+                              <span className="font-mono text-caption text-muted">{b.code}</span>
                               <StatusBadge status={b.status} />
                             </div>
-                            <p className="flex items-start gap-1.5 text-sm text-ink">
+                            <p className="flex items-start gap-1.5 text-body-sm text-ink">
                               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-muted" /> {b.schedule}
                             </p>
-                            <p className="text-xs text-muted">
+                            <p className="text-caption text-muted">
                               {formatDate(b.startDate)} – {formatDate(b.endDate)}
                               {b.room ? ` · Room ${b.room}` : ""}
                               {b.trainerName ? ` · ${b.trainerName}` : ""}
@@ -841,7 +841,7 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
                       })}
                       <ChoiceCard selected={batchId === ""} onSelect={() => setBatchId("")} dashed>
                         <p className="pr-8 font-bold text-navy">Let the Foundation allocate a batch</p>
-                        <p className="text-sm text-muted">{batches.length === 0 ? "No batches are open right now. Apply anyway and we will place you in the next batch." : "Not sure about timings? We will assign a suitable batch and notify you."}</p>
+                        <p className="text-body-sm text-muted">{batches.length === 0 ? "No batches are open right now. Apply anyway and we will place you in the next batch." : "Not sure about timings? We will assign a suitable batch and notify you."}</p>
                       </ChoiceCard>
                     </div>
                   )}
@@ -864,7 +864,7 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
                 </Alert>
               ) : (
                 <>
-                  <p className="text-sm font-semibold text-navy">
+                  <p className="text-body-sm font-semibold text-navy">
                     {requiredDocs.length - missingDocs.length} of {requiredDocs.length} uploaded
                   </p>
                   <DocumentsChecklist applicationId={draftId ?? ""} required={requiredDocs} uploaded={uploadedByType} other={otherDocs} editable={!!draftId} onChange={() => void loadDocuments()} />
@@ -888,36 +888,36 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
                 <LoadingBlock label="Loading fee details…" />
               ) : (
                 <>
-                  <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
+                  <ul className="divide-y divide-line overflow-hidden rounded-md border border-line">
                     {detail.feeLines.length === 0 ? (
-                      <li className="p-4 text-sm font-semibold text-green-700">This course is free of cost.</li>
+                      <li className="p-4 text-body-sm font-semibold text-green-700">This course is free of cost.</li>
                     ) : (
                       <>
                         {detail.feeLines.map((l) => (
-                          <li key={l.type} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                          <li key={l.type} className="flex items-center justify-between gap-3 px-4 py-2.5 text-body-sm">
                             <span className="text-ink">{l.description}</span>
                             <span className="font-medium text-ink tabular-nums">{formatINR(l.amount)}</span>
                           </li>
                         ))}
                         <li className="flex items-center justify-between gap-3 bg-surface px-4 py-3">
                           <span className="font-bold text-navy">Total course fee</span>
-                          <span className="text-lg font-extrabold text-navy tabular-nums">{formatINR(detail.originalFee)}</span>
+                          <span className="text-h4 text-navy tabular-nums">{formatINR(detail.originalFee)}</span>
                         </li>
                       </>
                     )}
                   </ul>
                   {canScholarship ? (
-                    <div className="space-y-3 rounded-xl border border-line bg-surface/60 p-4">
+                    <div className="space-y-3 rounded-md border border-line bg-surface/60 p-4">
                       <Checkbox checked={scholarship} onChange={(e) => setScholarship(e.target.checked)} label="I would like to request a scholarship for this course" description={detail.scholarshipNote ?? "Need-based and merit scholarships may reduce your payable fee."} />
                       {scholarship && (
                         <Field label="Why do you need scholarship support?" htmlFor="reason" hint="Briefly describe your family situation. Supporting documents (income certificate) can be uploaded with the application.">
                           <Textarea id="reason" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
                         </Field>
                       )}
-                      <p className="text-xs text-muted">The scholarship decision is made by the Foundation after reviewing your application. The payable fee shown may change.</p>
+                      <p className="text-caption text-muted">The scholarship decision is made by the Foundation after reviewing your application. The payable fee shown may change.</p>
                     </div>
                   ) : (
-                    detail.originalFee > 0 && <p className="text-sm text-muted">Scholarships are not offered for this course.</p>
+                    detail.originalFee > 0 && <p className="text-body-sm text-muted">Scholarships are not offered for this course.</p>
                   )}
                 </>
               )}
@@ -962,18 +962,18 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
           <Card>
             <CardBody className="space-y-5">
               <StepIntro title="Fees & payment" text="Your application is submitted. Fees become payable once the Foundation approves it." />
-              <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
-                <li className="flex items-center justify-between gap-3 px-4 py-2.5 text-base">
+              <ul className="divide-y divide-line overflow-hidden rounded-md border border-line">
+                <li className="flex items-center justify-between gap-3 px-4 py-2.5 text-body">
                   <span className="text-muted">Course fee</span>
                   <span className="font-medium text-ink tabular-nums">{detail && detail.originalFee > 0 ? formatINR(detail.originalFee) : "Free"}</span>
                 </li>
-                <li className="flex items-center justify-between gap-3 px-4 py-2.5 text-base">
+                <li className="flex items-center justify-between gap-3 px-4 py-2.5 text-body">
                   <span className="text-muted">Scholarship</span>
                   <span className="font-medium text-ink">{canScholarship && scholarship ? "Requested – decided by the Foundation" : "Not requested"}</span>
                 </li>
                 <li className="flex items-center justify-between gap-3 bg-surface px-4 py-3">
-                  <span className="text-base font-semibold text-ink">Payable now</span>
-                  <span className="text-2xl font-extrabold text-orange tabular-nums">{formatINR(0)}</span>
+                  <span className="text-body font-semibold text-ink">Payable now</span>
+                  <span className="text-h2 text-orange tabular-nums">{formatINR(0)}</span>
                 </li>
               </ul>
               <Alert tone="info" title="Nothing to pay right now">
@@ -998,10 +998,10 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
                 </span>
               </div>
               <div>
-                <h2 className="font-heading text-xl font-extrabold text-navy">Application submitted</h2>
-                <p className="mt-1 text-sm text-muted">Keep your application number safe – you will need it for any query.</p>
+                <h2 className="text-h3 text-navy">Application submitted</h2>
+                <p className="mt-1 text-body-sm text-muted">Keep your application number safe – you will need it for any query.</p>
               </div>
-              <p className="rounded-xl bg-lavender px-4 py-3 font-mono text-lg font-bold text-navy">{applicationNo ?? "—"}</p>
+              <p className="rounded-md bg-lavender px-4 py-3 text-h4 font-mono text-navy">{applicationNo ?? "—"}</p>
               <ol className="space-y-3 text-left">
                 <NextStep icon={<FileCheck2 className="h-4 w-4" />} title="Document verification" text="The Foundation verifies your documents. You will be notified if anything else is needed." />
                 <NextStep icon={<BadgeCheck className="h-4 w-4" />} title="Approval" text="Once approved, your fee (after any scholarship) becomes payable in the app." />
@@ -1030,8 +1030,8 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
 function StepIntro({ title, text }: { title: string; text: string }) {
   return (
     <div>
-      <h2 className="text-base font-bold text-navy lg:text-lg">{title}</h2>
-      <p className="mt-0.5 text-sm text-muted">{text}</p>
+      <h2 className="text-h4 text-navy">{title}</h2>
+      <p className="mt-0.5 text-body-sm text-muted">{text}</p>
     </div>
   );
 }
@@ -1046,7 +1046,7 @@ function ChoiceCard({ selected, disabled, dashed, onSelect, children }: { select
       disabled={disabled}
       onClick={onSelect}
       className={cn(
-        "relative flex flex-col gap-2 rounded-2xl border p-4 text-left transition-all tap-highlight-none active:scale-[0.99] motion-reduce:transition-none",
+        "duration-micro ease-soft relative flex flex-col gap-2 rounded-card border p-4 text-left transition tap-highlight-none active:scale-[0.99] motion-reduce:transition-none",
         dashed ? "border-dashed bg-surface/60" : "bg-white",
         selected ? "border-orange bg-orange-light/50 ring-2 ring-orange/30" : "border-line hover:border-navy/40",
         disabled && "cursor-not-allowed opacity-60 hover:border-line"
@@ -1064,7 +1064,7 @@ function ChoiceCard({ selected, disabled, dashed, onSelect, children }: { select
 
 function SelectedSummary({ center, course, batch }: { center: CenterResult; course?: CourseResult | null; batch?: BatchResult | null }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-lavender px-4 py-3 text-sm">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md bg-lavender px-4 py-3 text-body-sm">
       <span className="inline-flex items-center gap-1.5 font-semibold text-navy">
         <Building2 className="h-4 w-4 shrink-0" /> {center.name}
       </span>
@@ -1086,11 +1086,11 @@ function SelectedSummary({ center, course, batch }: { center: CenterResult; cour
 
 function ReviewItem({ label, value, sub, onEdit }: { label: string; value: string; sub?: string; onEdit: () => void }) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-xl border border-line p-4">
+    <div className="flex items-start justify-between gap-3 rounded-md border border-line p-4">
       <div className="min-w-0">
-        <dt className="text-xs font-semibold tracking-wide text-muted uppercase">{label}</dt>
+        <dt className="text-caption font-semibold tracking-wide text-muted uppercase">{label}</dt>
         <dd className="mt-1 font-semibold break-words text-ink">{value}</dd>
-        {sub && <dd className="text-xs text-muted">{sub}</dd>}
+        {sub && <dd className="text-caption text-muted">{sub}</dd>}
       </div>
       <Button type="button" variant="ghost" size="sm" onClick={onEdit} aria-label={`Edit ${label}`} leftIcon={<Pencil className="h-4 w-4" />} className="shrink-0">
         Edit
@@ -1106,8 +1106,8 @@ function NextStep({ icon, title, text }: { icon: React.ReactNode; title: string;
         {icon}
       </span>
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-ink">{title}</span>
-        <span className="block text-sm text-muted">{text}</span>
+        <span className="block text-body-sm font-semibold text-ink">{title}</span>
+        <span className="block text-body-sm text-muted">{text}</span>
       </span>
     </li>
   );

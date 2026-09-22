@@ -65,7 +65,7 @@ function StudentEditForm({ onClose, studentId, initial }: { onClose: () => void;
   const opts = (list: readonly string[]) => list.map((x) => ({ value: x, label: x }));
 
   return (
-    <form onSubmit={submit} className="space-y-7" noValidate>
+    <form onSubmit={submit} className="space-y-6" noValidate>
       <FormSection title="Personal details">
         <FormGrid>
           <Field label="Full name" htmlFor="se-name" required error={err("name")}>

@@ -126,7 +126,7 @@ export function ChatPanel({ panelId, name, config, chat, closing, onClose, voice
         aria-hidden
         onClick={onClose}
         className={cn(
-          "fixed inset-0 z-[54] bg-navy/40 sm:hidden",
+          "fixed inset-0 z-overlay bg-navy/40 sm:hidden",
           closing ? "opacity-0 transition-opacity duration-200 motion-reduce:transition-none" : "animate-fade-in motion-reduce:animate-none"
         )}
       />
@@ -140,11 +140,11 @@ export function ChatPanel({ panelId, name, config, chat, closing, onClose, voice
         tabIndex={-1}
         style={keyboardStyle}
         className={cn(
-          "fixed z-[55] flex flex-col overflow-hidden bg-white shadow-float outline-none",
+          "fixed z-overlay flex flex-col overflow-hidden bg-white shadow-e3 outline-none",
           // phone: near-full-height sheet that clears the notch
-          "inset-x-0 bottom-0 top-[max(1.5rem,env(safe-area-inset-top))] rounded-t-3xl",
+          "inset-x-0 bottom-0 top-[max(1.5rem,env(safe-area-inset-top))] rounded-t-2xl",
           // desktop: compact card sitting just above the launcher (1rem offset + 3.5rem button + 0.75rem gap)
-          "sm:inset-x-auto sm:top-auto sm:left-auto sm:right-[max(1rem,env(safe-area-inset-right))] sm:bottom-[calc(var(--bottom-nav-h)+var(--sticky-bar-h)+env(safe-area-inset-bottom,0px)+5.25rem)] sm:h-[600px] sm:max-h-[calc(100dvh-7rem)] sm:w-[380px] sm:rounded-2xl sm:border sm:border-line",
+          "sm:inset-x-auto sm:top-auto sm:left-auto sm:right-[max(1rem,env(safe-area-inset-right))] sm:bottom-[calc(var(--bottom-nav-h)+var(--sticky-bar-h)+env(safe-area-inset-bottom,0px)+5.25rem)] sm:h-[600px] sm:max-h-[calc(100dvh-7rem)] sm:w-[380px] sm:rounded-card sm:border sm:border-line",
           closing
             ? "pointer-events-none animate-slide-down sm:animate-none sm:translate-y-2 sm:opacity-0 sm:transition sm:duration-200 sm:ease-in sm:motion-reduce:transition-none"
             : "animate-slide-up sm:animate-fade-up motion-reduce:animate-none"

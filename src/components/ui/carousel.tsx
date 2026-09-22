@@ -176,8 +176,10 @@ export function Carousel({
         onClick={() => prev(true)}
         disabled={!loop && atStart}
         className={cn(
-          "rounded-full border border-line/70 bg-white text-navy shadow-card transition-all duration-200 motion-reduce:transition-none hover:border-orange/40 hover:text-orange",
-          overlay && "absolute top-1/2 left-1 z-10 hidden -translate-y-1/2 bg-white/95 backdrop-blur sm:inline-flex disabled:opacity-0"
+          "rounded-full border border-line bg-white text-navy shadow-e1 transition-colors duration-micro motion-reduce:transition-none hover:border-orange/40 hover:text-orange",
+          // Opaque, never blurred: backdrop-filter costs a full-screen GPU pass and makes the button a
+          // containing block for any position:fixed descendant.
+          overlay && "absolute top-1/2 left-1 z-raised hidden -translate-y-1/2 bg-white sm:inline-flex disabled:opacity-0"
         )}
       />
       <IconButton
@@ -186,8 +188,8 @@ export function Carousel({
         onClick={() => next(true)}
         disabled={!loop && atEnd}
         className={cn(
-          "rounded-full border border-line/70 bg-white text-navy shadow-card transition-all duration-200 motion-reduce:transition-none hover:border-orange/40 hover:text-orange",
-          overlay && "absolute top-1/2 right-1 z-10 hidden -translate-y-1/2 bg-white/95 backdrop-blur sm:inline-flex disabled:opacity-0"
+          "rounded-full border border-line bg-white text-navy shadow-e1 transition-colors duration-micro motion-reduce:transition-none hover:border-orange/40 hover:text-orange",
+          overlay && "absolute top-1/2 right-1 z-raised hidden -translate-y-1/2 bg-white sm:inline-flex disabled:opacity-0"
         )}
       />
     </>
@@ -275,7 +277,7 @@ export function Carousel({
           )}
           {withDots &&
             (stops > MAX_DOTS ? (
-              <p className={cn("min-h-11 px-2 text-[13px] leading-11 font-semibold tabular-nums", onDark ? "text-white/80" : "text-muted")}>
+              <p className={cn("min-h-11 px-2 text-body-sm leading-11 font-semibold tabular-nums", onDark ? "text-white/80" : "text-muted")}>
                 {index + 1} / {stops}
               </p>
             ) : (
@@ -293,7 +295,7 @@ export function Carousel({
                     >
                       <span
                         className={cn(
-                          "block h-2 rounded-full transition-all duration-200 motion-reduce:transition-none",
+                          "block h-2 rounded-full transition-all duration-micro motion-reduce:transition-none",
                           active ? "w-5 bg-orange" : onDark ? "w-2 bg-white/35 group-hover:bg-white/60" : "w-2 bg-navy/20 group-hover:bg-navy/40"
                         )}
                       />

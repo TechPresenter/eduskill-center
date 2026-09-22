@@ -47,7 +47,7 @@ function ChartCard({ title, description, data, series, labelKey, emptyText = "No
           {description && <p className="mt-0.5 text-xs text-muted">{description}</p>}
         </div>
         {!empty && (
-          <div className="flex shrink-0 rounded-lg bg-surface p-0.5" role="tablist" aria-label={`${title} view`}>
+          <div className="flex shrink-0 rounded-md bg-surface p-0.5" role="tablist" aria-label={`${title} view`}>
             <button type="button" role="tab" aria-selected={view === "chart"} onClick={() => setView("chart")} className={cn("rounded-md p-1.5", view === "chart" ? "bg-white text-navy shadow-sm" : "text-muted hover:text-ink")} aria-label="Chart view">
               <BarChart3 className="h-3.5 w-3.5" />
             </button>
@@ -58,13 +58,13 @@ function ChartCard({ title, description, data, series, labelKey, emptyText = "No
         )}
       </div>
       {empty ? (
-        <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-line bg-surface/60 text-sm text-muted" style={{ minHeight: height }}>
+        <div className="flex flex-1 items-center justify-center rounded-card border border-dashed border-line bg-surface/60 text-body text-muted" style={{ minHeight: height }}>
           {emptyText}
         </div>
       ) : view === "table" ? (
-        <div className="scrollbar-thin max-h-[320px] overflow-auto rounded-xl border border-line">
-          <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 bg-surface text-[11px] font-semibold tracking-wide text-muted uppercase">
+        <div className="scrollbar-thin max-h-[320px] overflow-auto rounded-card border border-line">
+          <table className="w-full text-left text-body-sm">
+            <thead className="sticky top-0 z-raised bg-surface text-caption font-semibold tracking-wide text-muted uppercase">
               <tr>
                 <th className="px-3 py-2">{labelKey === "month" ? "Month" : labelKey === "week" ? "Week" : "Name"}</th>
                 {series.map((s) => (
@@ -100,7 +100,7 @@ function ChartCard({ title, description, data, series, labelKey, emptyText = "No
 function ChartTooltip({ active, payload, label, series }: { active?: boolean; payload?: { dataKey?: string | number; value?: unknown; color?: string; name?: string }[]; label?: string | number; series: SeriesDef[] }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-line bg-white px-3 py-2 text-xs shadow-card">
+    <div className="rounded-md border border-line bg-white px-3 py-2 text-body-sm shadow-e3">
       <p className="mb-1 font-semibold text-ink">{label}</p>
       {payload.map((p, i) => {
         const s = series.find((x) => x.key === p.dataKey);

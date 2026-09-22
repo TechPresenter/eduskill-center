@@ -102,27 +102,50 @@ export function DonationForm({ campaigns, gateway, bankDetails, initialCampaignI
     }
   };
 
+  /*
+   * Three outcomes, one panel. In the manual flow the donation NUMBER is the most important thing on
+   * screen — it is what the donor has to quote on the transfer — so it is set as a figure in the
+   * heading block rather than buried mid-sentence.
+   */
   if (result) {
     const paid = result.kind === "paid";
     return (
-      <div className={cn("rounded-card-lg p-6 sm:p-8", paid ? "bg-success-light" : "bg-lavender")} role="status">
+      <div className={cn("rounded-card-lg border p-6 sm:p-8", paid ? "border-success/25 bg-success-light" : "border-navy/10 bg-lavender")} role="status">
         <div className="flex items-start gap-4">
-          {paid ? <CheckCircle2 className="h-10 w-10 shrink-0 text-success" aria-hidden /> : <Clock className="h-10 w-10 shrink-0 text-navy" aria-hidden />}
+          <span className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white shadow-e1", paid ? "text-success-dark" : "text-navy")}>
+            {paid ? <CheckCircle2 className="h-6 w-6" aria-hidden /> : <Clock className="h-6 w-6" aria-hidden />}
+          </span>
           <div className="min-w-0">
-            <h3 className="text-xl font-extrabold text-navy">{paid ? "Thank you for your donation!" : result.kind === "manual" ? "Almost there – complete your transfer" : "Payment received, confirmation pending"}</h3>
-            <p className="mt-1 text-sm text-muted">
-              Donation number <span className="font-semibold text-navy">{result.donationNo}</span> · {formatINR(result.amount)}
-              {result.campaignTitle ? ` · ${result.campaignTitle}` : ""}
+            <h3 className="text-h3 text-navy">{paid ? "Thank you for your donation!" : result.kind === "manual" ? "Almost there — complete your transfer" : "Payment received, confirmation pending"}</h3>
+            <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-body-sm text-muted">
+              <span className="text-overline text-muted">Donation no.</span>
+              <span className="text-h4 text-navy tabular-nums">{result.donationNo}</span>
+              <span aria-hidden>·</span>
+              <span className="font-semibold text-navy tabular-nums">{formatINR(result.amount)}</span>
+              {result.campaignTitle ? (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>{result.campaignTitle}</span>
+                </>
+              ) : null}
             </p>
           </div>
         </div>
         {result.kind === "manual" && (
-          <div className="mt-6 space-y-3 text-sm">
-            <p className="text-ink">Your donation is recorded as <strong>pending</strong>. Please transfer {formatINR(result.amount)} using the details below and quote your donation number as the payment reference. Our team will confirm it and issue your receipt.</p>
+          <div className="mt-6 space-y-3">
+            <p className="text-body text-ink">
+              Your donation is recorded as <strong className="font-semibold text-navy">pending</strong>. Please transfer {formatINR(result.amount)} using the details below and quote your donation number as the payment reference. Our team will confirm it and issue your receipt.
+            </p>
             {result.bankDetails ? (
-              <pre className="rounded-xl bg-white p-4 font-sans whitespace-pre-wrap text-ink shadow-card">{result.bankDetails}</pre>
+              <pre className="card rounded-card p-4 font-sans text-body-sm whitespace-pre-wrap text-ink">{result.bankDetails}</pre>
             ) : (
-              <Alert tone="info">Bank details will be shared by our team. Please <Link href="/contact" className="font-semibold underline">contact us</Link> quoting your donation number.</Alert>
+              <Alert tone="info">
+                Bank details will be shared by our team. Please{" "}
+                <Link href="/contact" className="font-semibold underline underline-offset-2">
+                  contact us
+                </Link>{" "}
+                quoting your donation number.
+              </Alert>
             )}
           </div>
         )}
@@ -131,27 +154,37 @@ export function DonationForm({ campaigns, gateway, bankDetails, initialCampaignI
             {error ?? "We could not confirm the payment automatically."} Please keep your donation number – our team will reconcile it with the payment gateway and email your receipt.
           </Alert>
         )}
-        {paid && <p className="mt-6 text-sm text-ink">A receipt will be sent to the email address you provided. Your support funds scholarships, training materials and local center operations.</p>}
+        {paid && <p className="mt-6 text-body text-ink">A receipt will be sent to the email address you provided. Your support funds scholarships, training materials and local centre operations.</p>}
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-5" aria-label="Donation form">
+    // `relative` so the honeypot below is positioned against this form and can never widen the page.
+    <form onSubmit={submit} noValidate className="relative space-y-6" aria-label="Donation form">
       {error && <Alert tone="danger">{error}</Alert>}
       <fieldset>
-        <legend className="mb-2 block text-sm font-medium text-ink">Choose an amount</legend>
+        <legend className="mb-3 block text-body font-semibold text-ink">Choose an amount</legend>
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
           {QUICK_AMOUNTS.map((a) => {
             const active = form.amount === String(a);
             return (
-              <button key={a} type="button" onClick={() => setForm((f) => ({ ...f, amount: String(a) }))} aria-pressed={active} className={cn("h-11 rounded-xl border text-sm font-bold transition-colors", active ? "border-orange bg-orange text-white" : "border-line bg-white text-navy hover:border-orange hover:text-orange")}>
+              <button
+                key={a}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, amount: String(a) }))}
+                aria-pressed={active}
+                className={cn(
+                  "ring-focus h-12 rounded-md border text-body-sm font-bold tabular-nums transition-colors duration-micro ease-soft active:scale-[0.98] motion-reduce:transition-none sm:h-11",
+                  active ? "border-orange bg-orange text-white" : "border-line bg-white text-navy hover:border-orange/50 hover:bg-orange-light hover:text-orange"
+                )}
+              >
                 {formatINR(a)}
               </button>
             );
           })}
         </div>
-        <Field label="Or enter an amount (₹)" htmlFor="don-amount" className="mt-3" error={errors.amount} hint="Minimum ₹100">
+        <Field label="Or enter an amount (₹)" htmlFor="don-amount" className="mt-4" error={errors.amount} hint="Minimum ₹100">
           <Input id="don-amount" type="number" min={100} step={1} inputMode="numeric" value={form.amount} onChange={set("amount")} leftIcon={<IndianRupee className="h-4 w-4" />} invalid={!!errors.amount} required />
         </Field>
       </fieldset>
@@ -178,14 +211,22 @@ export function DonationForm({ campaigns, gateway, bankDetails, initialCampaignI
         <Textarea id="don-message" rows={3} value={form.message} onChange={set("message")} maxLength={1000} />
       </Field>
       <Checkbox checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} label="Keep my donation anonymous" description="Your name will not be shown publicly." />
+      {/* Honeypot – hidden from people, filled by bots. Offset to the LEFT: a negative inline-start
+          position cannot extend document.scrollWidth the way a right-hand one would. */}
       <div className="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden>
         <label htmlFor="don-website">Website</label>
         <input id="don-website" tabIndex={-1} autoComplete="off" value={form.website} onChange={set("website")} />
       </div>
-      <Button type="submit" size="lg" loading={busy} leftIcon={<HandHeart className="h-5 w-5" />}>
-        {gateway === "razorpay" ? `Donate ${form.amount ? formatINR(Number(form.amount)) : ""} securely` : "Continue to bank transfer"}
-      </Button>
-      {gateway === "manual" && <p className="text-xs text-muted">Online payments are not enabled yet. You will receive bank transfer instructions and a donation number after this step.{bankDetails ? "" : " Our team will share the account details with you."}</p>}
+      <div className="border-t border-line pt-6">
+        <Button type="submit" size="lg" loading={busy} leftIcon={<HandHeart className="h-5 w-5" />} fullWidth className="sm:w-auto">
+          {gateway === "razorpay" ? `Donate ${form.amount ? formatINR(Number(form.amount)) : ""} securely` : "Continue to bank transfer"}
+        </Button>
+        {gateway === "manual" && (
+          <p className="mt-3 text-caption text-muted">
+            Online payments are not enabled yet. You will receive bank transfer instructions and a donation number after this step.{bankDetails ? "" : " Our team will share the account details with you."}
+          </p>
+        )}
+      </div>
     </form>
   );
 }

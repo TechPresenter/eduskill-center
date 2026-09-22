@@ -59,20 +59,20 @@ export function CertificateShare({ certificateNo, courseName, studentName, verif
           href={verifyPath}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl border border-line px-1 text-[12px] font-semibold text-navy tap-highlight-none active:bg-surface"
+          className="inline-flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-md border border-line px-1 text-caption font-semibold text-navy tap-highlight-none active:bg-surface"
         >
           <ShieldCheck className="h-[18px] w-[18px]" aria-hidden /> Verify
         </Link>
         {downloadUrl ? (
-          <ButtonLink href={downloadUrl} target="_blank" rel="noopener noreferrer" variant="navy" className="flex-col gap-0.5 px-1 text-[12px]">
+          <ButtonLink href={downloadUrl} target="_blank" rel="noopener noreferrer" variant="navy" className="flex-col gap-0.5 px-1 text-caption">
             <Download className="h-[18px] w-[18px]" aria-hidden /> Download
           </ButtonLink>
         ) : (
-          <span className="inline-flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl border border-dashed border-line px-1 text-[12px] font-semibold text-muted">
+          <span className="inline-flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-line px-1 text-caption font-semibold text-muted">
             <Download className="h-[18px] w-[18px]" aria-hidden /> Download
           </span>
         )}
-        <Button variant="outline" onClick={() => void share()} className="flex-col gap-0.5 px-1 text-[12px]" aria-label={`Share certificate ${certificateNo}`}>
+        <Button variant="outline" onClick={() => void share()} className="flex-col gap-0.5 px-1 text-caption" aria-label={`Share certificate ${certificateNo}`}>
           <Share2 className="h-[18px] w-[18px]" aria-hidden /> Share
         </Button>
       </div>

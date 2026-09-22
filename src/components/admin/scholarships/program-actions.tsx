@@ -86,7 +86,7 @@ function ProgramForm({ program, onClose }: { program: ProgramRecord | null; onCl
   };
 
   return (
-    <form onSubmit={submit} className="space-y-7" noValidate>
+    <form onSubmit={submit} className="space-y-6" noValidate>
       <FormSection title="Program">
         <FormGrid>
           <Field label="Name" htmlFor="pg-name" required error={err("name")} className="sm:col-span-2">
@@ -189,17 +189,17 @@ export function ProgramRowActions({ program, can }: { program: ProgramRecord; ca
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <Gate allowed={can.update} reason="You do not have permission to edit programs">
-        <Button size="xs" variant="outline" leftIcon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setEdit(true)}>
+        <Button size="sm" variant="outline" leftIcon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setEdit(true)}>
           Edit
         </Button>
       </Gate>
       <Gate allowed={can.update} reason="You do not have permission to edit programs">
-        <Button size="xs" variant="ghost" leftIcon={<Power className="h-3.5 w-3.5" />} disabled={busy} onClick={() => void run(() => api.patch(`/api/admin/scholarships/programs/${program.id}`, { isActive: !program.isActive }), { success: program.isActive ? "Program deactivated" : "Program activated" })}>
+        <Button size="sm" variant="ghost" leftIcon={<Power className="h-3.5 w-3.5" />} disabled={busy} onClick={() => void run(() => api.patch(`/api/admin/scholarships/programs/${program.id}`, { isActive: !program.isActive }), { success: program.isActive ? "Program deactivated" : "Program activated" })}>
           {program.isActive ? "Deactivate" : "Activate"}
         </Button>
       </Gate>
       <Gate allowed={can.delete && program.awardsCount === 0} reason={program.awardsCount > 0 ? "Programs with awards cannot be deleted – deactivate instead" : "You do not have permission to delete programs"}>
-        <Button size="xs" variant="ghost" className="text-danger hover:bg-danger-light" leftIcon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => setDel(true)} aria-label={`Delete ${program.name}`}>
+        <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-light" leftIcon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => setDel(true)} aria-label={`Delete ${program.name}`}>
           Delete
         </Button>
       </Gate>

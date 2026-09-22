@@ -2,15 +2,16 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CheckCircle2, Send } from "lucide-react";
+import { CheckCircle2, Search } from "lucide-react";
 import { api, ApiClientError } from "@/lib/api-client";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Checkbox, Input, RadioCards, Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Field, FormGrid, FormSection } from "@/components/ui/form";
 import { Alert } from "@/components/ui/feedback";
-import { Stepper, Timeline } from "@/components/ui/misc";
+import { Timeline } from "@/components/ui/misc";
+import { WizardShell } from "@/components/ui/wizard-shell";
 import { FileUpload, TagInput, type UploadedFile } from "@/components/ui/file-upload";
 import { Badge } from "@/components/ui/badge";
 import { LocationCascade } from "@/components/shared/location-cascade";
@@ -296,18 +297,18 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
 
   if (done && submitted) {
     return (
-      <div ref={topRef} className="mx-auto max-w-2xl">
+      <div ref={topRef} className="mx-auto max-w-2xl scroll-mt-24">
         <Card>
-          <CardBody className="p-8 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success-light text-success">
-              <CheckCircle2 className="h-9 w-9" />
+          <CardBody className="card-p text-center sm:p-8">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success-light text-success-dark">
+              <CheckCircle2 className="h-9 w-9" aria-hidden />
             </div>
-            <h2 className="mt-5 font-heading text-2xl font-extrabold text-navy">Thank you for volunteering!</h2>
-            <p className="mt-2 text-sm text-muted">Your application has been received. Save your application number — you will need it, along with your registered mobile number, to track progress.</p>
-            <p className="mt-6 text-xs font-semibold tracking-[0.2em] text-muted uppercase">Application number</p>
-            <p className="mt-1 font-heading text-3xl font-extrabold tracking-wide text-orange sm:text-4xl">{submitted.applicationNo}</p>
+            <h2 className="mt-5 text-h2">Thank you for volunteering!</h2>
+            <p className="mx-auto mt-2 max-w-lg text-body text-muted">Your application has been received. Save your application number — you will need it, along with your registered mobile number, to track progress.</p>
+            <p className="mt-6 text-overline text-muted">Application number</p>
+            <p className="mt-1 font-heading text-h1 tracking-wide text-orange">{submitted.applicationNo}</p>
             <div className="mt-8 text-left">
-              <h3 className="mb-4 text-sm font-bold text-navy">What happens next</h3>
+              <h3 className="mb-4 text-h4 text-navy">What happens next</h3>
               <Timeline
                 items={[
                   { title: "Under review", description: "Our trainer team reviews your profile, skills and preferred courses.", tone: "orange" },
@@ -318,11 +319,11 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
                 ]}
               />
             </div>
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <ButtonLink href={`/become-a-trainer/status?no=${encodeURIComponent(submitted.applicationNo)}`} variant="navy">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <ButtonLink href={`/become-a-trainer/status?no=${encodeURIComponent(submitted.applicationNo)}`} variant="navy" leftIcon={<Search className="h-4 w-4" />} fullWidth className="sm:w-auto">
                 Track application status
               </ButtonLink>
-              <ButtonLink href="/" variant="outline">
+              <ButtonLink href="/" variant="outline" fullWidth className="sm:w-auto">
                 Back to home
               </ButtonLink>
             </div>
@@ -332,16 +333,31 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
     );
   }
 
+  const formId = "trainer-apply-form";
+  const onDocuments = step === 5 && submitted !== null;
+
   return (
     <div ref={topRef} className="mx-auto max-w-4xl scroll-mt-24">
-      <Stepper steps={STEPS} current={step} className="mb-8" />
-      {formError && (
-        <Alert tone="danger" className="mb-6">
-          {formError}
-        </Alert>
-      )}
+      {/* Same frame as the centre application: sticky WizardProgress under the app bar and a
+          StickyActionBar footer, so the two public application flows are one experience on a phone
+          instead of two. The footer's Next is a submit button bound to the form by id. */}
+      <WizardShell
+        steps={STEPS}
+        current={step}
+        onBack={step > 0 && !onDocuments ? back : undefined}
+        nextType={onDocuments ? "button" : "submit"}
+        onNext={onDocuments ? finish : undefined}
+        form={onDocuments ? undefined : formId}
+        nextLabel={onDocuments ? (requiredMissing.length ? "Finish for now" : "Finish") : step === 4 ? "Submit application" : "Continue"}
+        nextLoading={submitting}
+      >
+        {formError && (
+          <Alert tone="danger" className="mb-5">
+            {formError}
+          </Alert>
+        )}
 
-      {step === 5 && submitted ? (
+        {onDocuments && submitted ? (
         <Card>
           <CardHeader title="Upload your documents" description={`Application ${submitted.applicationNo} · Files are stored privately and only seen by the Foundation's trainer team.`} />
           <CardBody className="space-y-6">
@@ -366,10 +382,10 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
                 {documentTypes.map((d) => (
                   <div key={d.key} className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-ink">{d.name}</p>
+                      <p className="text-body font-semibold text-ink">{d.name}</p>
                       <Badge tone={d.isRequired ? "orange" : "neutral"}>{d.isRequired ? "Required" : "Optional"}</Badge>
                     </div>
-                    {d.description && <p className="text-xs text-muted">{d.description}</p>}
+                    {d.description && <p className="text-body-sm text-muted">{d.description}</p>}
                     <FileUpload
                       endpoint={`/api/public/trainer-applications/${submitted.id}/documents`}
                       fields={{ token: submitted.uploadToken, type: d.key }}
@@ -393,20 +409,19 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
                 {requiredMissing.map((d) => d.name).join(", ")}. Your application will be marked &ldquo;Documents required&rdquo; until they are uploaded. You can finish now and upload later.
               </Alert>
             )}
-            <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:justify-between">
-              <button type="button" onClick={startNew} className="text-sm font-medium text-muted hover:text-navy">
+            {/* Finish lives in the wizard's sticky footer; only the secondary escape hatch is here. */}
+            <div className="border-t border-line pt-5">
+              <button type="button" onClick={startNew} className="inline-flex min-h-11 items-center rounded-md text-body-sm font-semibold text-muted underline-offset-4 ring-focus hover:text-navy hover:underline">
                 Start a new application
               </button>
-              <Button onClick={finish} size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
-                {requiredMissing.length ? "Finish for now" : "Finish"}
-              </Button>
             </div>
           </CardBody>
         </Card>
       ) : (
         <Card>
-          <CardBody className="p-6 sm:p-8">
+          <CardBody className="card-p sm:p-8">
             <form
+              id={formId}
               noValidate
               onSubmit={(e) => {
                 e.preventDefault();
@@ -436,7 +451,7 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
                       <Select id="gender" value={form.gender} onChange={(e) => set("gender", e.target.value)} placeholder="Select gender" invalid={!!errors.gender} options={[{ value: "MALE", label: "Male" }, { value: "FEMALE", label: "Female" }, { value: "OTHER", label: "Other" }]} />
                     </Field>
                   </FormGrid>
-                  <p className="text-xs text-muted">You will be able to upload a passport photo and your documents right after submitting.</p>
+                  <p className="text-body-sm text-muted">You will be able to upload a passport photo and your documents right after submitting.</p>
                 </FormSection>
               )}
 
@@ -512,9 +527,9 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
                     </Field>
                     <Field label="Preferred courses" hint="Select the courses you would like to teach." className="sm:col-span-2">
                       {courses.length === 0 ? (
-                        <p className="text-sm text-muted">Loading courses…</p>
+                        <p className="text-body text-muted">Loading courses…</p>
                       ) : (
-                        <div className="grid grid-cols-1 gap-2 rounded-xl border border-line p-3 sm:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-2 rounded-card border border-line p-4 sm:grid-cols-2">
                           {courses.map((c) => (
                             <Checkbox
                               key={c.id}
@@ -556,31 +571,14 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
                 </FormSection>
               )}
 
-              <div className="mt-8 flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:justify-between">
-                <div>
-                  {step > 0 && (
-                    <Button type="button" variant="outline" onClick={back} leftIcon={<ArrowLeft className="h-4 w-4" />}>
-                      Back
-                    </Button>
-                  )}
-                </div>
-                {step < 4 ? (
-                  <Button type="submit" rightIcon={<ArrowRight className="h-4 w-4" />}>
-                    Continue
-                  </Button>
-                ) : (
-                  <Button type="submit" loading={submitting} size="lg" rightIcon={<Send className="h-4 w-4" />}>
-                    Submit application
-                  </Button>
-                )}
-              </div>
             </form>
           </CardBody>
         </Card>
       )}
-      <p className="mt-6 text-center text-sm text-muted">
+      </WizardShell>
+      <p className="mt-6 text-center text-body-sm text-muted">
         Already applied?{" "}
-        <Link href="/become-a-trainer/status" className="font-semibold text-orange hover:underline">
+        <Link href="/become-a-trainer/status" className="font-semibold text-orange underline-offset-4 ring-focus hover:underline">
           Track your application status
         </Link>
       </p>

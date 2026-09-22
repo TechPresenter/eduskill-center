@@ -17,7 +17,8 @@ export default async function DocumentTypesPage() {
   const usage = new Map<string, number>();
   for (const c of courses) for (const k of c.requiredDocuments) usage.set(k, (usage.get(k) ?? 0) + 1);
   return (
-    <div>
+    // One rhythm between the page title, the group tabs and the panel — settings used to have none.
+    <div className="space-y-5">
       <PageHeader title="Settings" mobileTitle="Document types" description="Document types define what students and trainer applicants must upload." />
       <SettingsTabs groups={SETTING_GROUPS} />
       <Card>

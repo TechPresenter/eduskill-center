@@ -58,7 +58,7 @@ export default async function CenterDetailPage({ params, searchParams }: { param
   ].map((t) => ({ ...t, href: tabHref(t.value as Tab) }));
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-3">
@@ -89,13 +89,24 @@ export default async function CenterDetailPage({ params, searchParams }: { param
         actions={<CenterHeaderActions center={{ id: center.id, code: center.code, name: center.name, status: center.status, isVerified: center.isVerified, activeStudents: center.stats.studentCount }} perms={perms} />}
       />
 
+      {/* The app bar shows only the centre code on phones – keep the name and status visible in the page. */}
+      <div className="flex flex-wrap items-center gap-2 lg:hidden">
+        <h2 className="text-h3 min-w-0 text-navy">{center.name}</h2>
+        <StatusBadge status={center.status} />
+        {center.isVerified && (
+          <Badge tone="success">
+            <BadgeCheck className="h-3.5 w-3.5" /> Verified
+          </Badge>
+        )}
+      </div>
+
       <div className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold tracking-wide text-muted uppercase">Center code</p>
-          <p className="font-heading text-3xl font-extrabold text-navy tabular-nums">{center.code}</p>
-          <p className="mt-1 text-xs text-muted">Permanent identifier: it is printed on certificates, receipts and batch codes and never changes – even if the center is renamed or moved.</p>
+          <p className="text-caption font-semibold tracking-wide text-muted uppercase">Center code</p>
+          <p className="text-h2 font-extrabold text-navy tabular-nums">{center.code}</p>
+          <p className="mt-1 text-caption text-muted">Permanent identifier: it is printed on certificates, receipts and batch codes and never changes – even if the center is renamed or moved.</p>
         </div>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-body-sm sm:grid-cols-4">
           <KeyValue label="Students" value={formatNumber(center.stats.studentCount)} />
           <KeyValue label="Open batches" value={formatNumber(openBatches.length)} />
           <KeyValue label="Trainers" value={formatNumber(center.stats.trainerCount)} />
@@ -163,7 +174,7 @@ function OverviewTab({ center }: { center: CenterData }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={center.coverImage} alt={`${center.name} cover`} className="aspect-[4/3] w-full rounded-card border border-line object-cover" />
         ) : (
-          <div className="flex aspect-[4/3] items-center justify-center rounded-card border border-dashed border-line bg-surface text-sm text-muted">No cover image</div>
+          <div className="flex aspect-[4/3] items-center justify-center rounded-card border border-dashed border-line bg-surface text-body-sm text-muted">No cover image</div>
         )}
         <Card>
           <CardHeader title="At a glance" />
@@ -220,11 +231,11 @@ async function BatchesTab({ center, canCreate }: { center: CenterData; canCreate
               <TD mobile="full">
                 <Link href={`/admin/batches/${b.id}`} className="block tap-highlight-none md:inline md:font-medium md:text-navy md:hover:underline">
                   {b.name}
-                  <span className="block font-mono text-xs font-normal text-muted">{b.code}</span>
+                  <span className="block font-mono text-caption font-normal text-muted">{b.code}</span>
                 </Link>
               </TD>
               <TD label="Course">{b.course.name}</TD>
-              <TD label="Schedule" className="text-xs">
+              <TD label="Schedule" className="text-caption">
                 {formatDate(b.startDate)} – {formatDate(b.endDate)}
                 <span className="block text-muted">
                   {b.days.join(", ")} · {b.startTime}–{b.endTime}
@@ -273,13 +284,13 @@ async function TrainersTab({ center, canAssign }: { center: CenterData; canAssig
               <TD mobile="full">
                 <Link href={`/admin/trainers/${a.trainer.id}`} className="block tap-highlight-none md:inline md:font-medium md:text-navy md:hover:underline">
                   {a.trainer.user.name}
-                  <span className="block font-mono text-xs font-normal text-muted">
+                  <span className="block font-mono text-caption font-normal text-muted">
                     {a.trainer.trainerId} · {titleCase(a.trainer.level)} level
                   </span>
                 </Link>
               </TD>
               <TD label="Scope">{a.batch ? `Batch ${a.batch.code} · ${a.batch.name}` : a.course ? `Course · ${a.course.name}` : "Whole center"}</TD>
-              <TD label="Notes" className="text-xs text-muted">
+              <TD label="Notes" className="text-caption text-muted">
                 {a.notes ?? "—"}
               </TD>
               <TD label="Since" className="text-muted md:whitespace-nowrap">
@@ -307,11 +318,11 @@ async function StudentsTab({ centerId, sp, base }: { centerId: string; sp: Recor
         description={`${formatNumber(data.meta.total)} admission${data.meta.total === 1 ? "" : "s"} at this center.`}
         action={
           <div className="flex flex-wrap gap-1.5">
-            <Link href={hrefWith(base, sp, { status: undefined, page: undefined })} className={`inline-flex min-h-11 items-center rounded-full border px-3 text-xs font-semibold tap-highlight-none md:min-h-0 md:py-1 ${!sp.status ? "border-navy bg-navy text-white" : "border-line text-muted hover:text-ink"}`}>
+            <Link href={hrefWith(base, sp, { status: undefined, page: undefined })} className={`inline-flex min-h-11 items-center rounded-full border px-3 text-caption font-semibold tap-highlight-none md:min-h-0 md:py-1 ${!sp.status ? "border-navy bg-navy text-white" : "border-line text-muted hover:text-ink"}`}>
               All
             </Link>
             {statuses.map((s) => (
-              <Link key={s} href={hrefWith(base, sp, { status: s, page: undefined })} className={`inline-flex min-h-11 items-center rounded-full border px-3 text-xs font-semibold tap-highlight-none md:min-h-0 md:py-1 ${sp.status === s ? "border-navy bg-navy text-white" : "border-line text-muted hover:text-ink"}`}>
+              <Link key={s} href={hrefWith(base, sp, { status: s, page: undefined })} className={`inline-flex min-h-11 items-center rounded-full border px-3 text-caption font-semibold tap-highlight-none md:min-h-0 md:py-1 ${sp.status === s ? "border-navy bg-navy text-white" : "border-line text-muted hover:text-ink"}`}>
                 {titleCase(s)} ({formatNumber(data.byStatus[s] ?? 0)})
               </Link>
             ))}
@@ -339,18 +350,18 @@ async function StudentsTab({ centerId, sp, base }: { centerId: string; sp: Recor
                   <Avatar name={a.student.name} src={a.student.photoUrl} size={36} />
                   <span className="min-w-0">
                     <span className="block truncate font-semibold">{a.student.name}</span>
-                    <span className="block text-xs font-normal text-muted">{a.student.studentId ?? a.student.mobile}</span>
+                    <span className="block text-caption font-normal text-muted">{a.student.studentId ?? a.student.mobile}</span>
                   </span>
                 </Link>
               </TD>
               <TD label="Admission">
-                <Link href={`/admin/admissions/${a.id}`} className="font-mono text-xs font-semibold text-navy hover:underline">
+                <Link href={`/admin/admissions/${a.id}`} className="font-mono text-caption font-semibold text-navy hover:underline">
                   {a.admissionNo}
                 </Link>
-                <span className="block text-xs text-muted">{formatDate(a.admittedAt)}</span>
+                <span className="block text-caption text-muted">{formatDate(a.admittedAt)}</span>
               </TD>
               <TD label="Course">{a.course.name}</TD>
-              <TD label="Batch" className="text-xs">
+              <TD label="Batch" className="text-caption">
                 <Link href={`/admin/batches/${a.batch.id}`} className="hover:underline">
                   {a.batch.code}
                 </Link>
@@ -383,17 +394,17 @@ async function ApplicationsTab({ centerId, sp, base }: { centerId: string; sp: R
         title="Applications"
         description={`${formatNumber(data.meta.total)} application${data.meta.total === 1 ? "" : "s"} for this center.`}
         action={
-          <Link href={`/admin/applications?centerId=${centerId}`} className="text-xs font-semibold text-orange hover:underline">
+          <Link href={`/admin/applications?centerId=${centerId}`} className="text-caption font-semibold text-orange hover:underline">
             Open in Applications
           </Link>
         }
       />
       <div className="flex flex-wrap gap-1.5 px-5 pt-4">
-        <Link href={hrefWith(base, sp, { status: undefined, page: undefined })} className={`inline-flex min-h-11 items-center rounded-full border px-3 text-xs font-semibold tap-highlight-none md:min-h-0 md:py-1 ${!sp.status ? "border-navy bg-navy text-white" : "border-line text-muted hover:text-ink"}`}>
+        <Link href={hrefWith(base, sp, { status: undefined, page: undefined })} className={`inline-flex min-h-11 items-center rounded-full border px-3 text-caption font-semibold tap-highlight-none md:min-h-0 md:py-1 ${!sp.status ? "border-navy bg-navy text-white" : "border-line text-muted hover:text-ink"}`}>
           All
         </Link>
         {statuses.map((s) => (
-          <Link key={s} href={hrefWith(base, sp, { status: s, page: undefined })} className={`inline-flex min-h-11 items-center rounded-full border px-3 text-xs font-semibold tap-highlight-none md:min-h-0 md:py-1 ${sp.status === s ? "border-navy bg-navy text-white" : "border-line text-muted hover:text-ink"}`}>
+          <Link key={s} href={hrefWith(base, sp, { status: s, page: undefined })} className={`inline-flex min-h-11 items-center rounded-full border px-3 text-caption font-semibold tap-highlight-none md:min-h-0 md:py-1 ${sp.status === s ? "border-navy bg-navy text-white" : "border-line text-muted hover:text-ink"}`}>
             {titleCase(s)}
           </Link>
         ))}
@@ -415,25 +426,25 @@ async function ApplicationsTab({ centerId, sp, base }: { centerId: string; sp: R
           {data.items.map((a) => (
             <TR key={a.id}>
               <TD label="Application" mobile="hidden">
-                <Link href={`/admin/applications/${a.id}`} className="font-mono text-xs font-semibold text-navy hover:underline">
+                <Link href={`/admin/applications/${a.id}`} className="font-mono text-caption font-semibold text-navy hover:underline">
                   {a.applicationNo}
                 </Link>
               </TD>
               <TD mobile="full">
                 <Link href={`/admin/applications/${a.id}`} className="block tap-highlight-none md:hidden">
-                  <span className="block font-mono text-xs font-semibold text-orange">{a.applicationNo}</span>
+                  <span className="block font-mono text-caption font-semibold text-orange">{a.applicationNo}</span>
                   <span className="block font-semibold text-navy">{a.student.name}</span>
-                  <span className="block text-xs font-normal text-muted">{a.student.studentId ?? a.student.mobile}</span>
+                  <span className="block text-caption font-normal text-muted">{a.student.studentId ?? a.student.mobile}</span>
                 </Link>
                 <span className="hidden md:block">
                   <Link href={`/admin/students/${a.student.id}`} className="font-medium hover:text-navy">
                     {a.student.name}
                   </Link>
-                  <span className="block text-xs text-muted">{a.student.studentId ?? a.student.mobile}</span>
+                  <span className="block text-caption text-muted">{a.student.studentId ?? a.student.mobile}</span>
                 </span>
               </TD>
               <TD label="Course">{a.course.name}</TD>
-              <TD label="Batch" className="text-xs">
+              <TD label="Batch" className="text-caption">
                 {a.batch?.code ?? <span className="text-muted">Not allocated</span>}
               </TD>
               <TD label="Payable" className="text-right tabular-nums">
@@ -498,7 +509,7 @@ async function ReportsTab({ center }: { center: CenterData }) {
                 <TD mobile="full">
                   <Link href={`/admin/batches/${b.id}`} className="block tap-highlight-none md:inline md:font-medium md:text-navy md:hover:underline">
                     {b.code}
-                    <span className="block text-xs font-normal text-muted">{b.name}</span>
+                    <span className="block text-caption font-normal text-muted">{b.name}</span>
                   </Link>
                 </TD>
                 <TD label="Course">{b.course.name}</TD>

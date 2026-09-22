@@ -115,7 +115,7 @@ function BlockForm({ initial, onDone, onCancel }: { initial: BlockRow; onDone: (
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       {error && Object.keys(fieldErrors).length === 0 && <Alert tone="danger">{error}</Alert>}
-      <p className="text-sm text-muted">
+      <p className="text-body-sm text-muted">
         {initial.districtName}, {initial.stateName}
       </p>
       <FormGrid>

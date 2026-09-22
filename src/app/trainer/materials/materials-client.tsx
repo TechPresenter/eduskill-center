@@ -1,40 +1,24 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, Download, FileText, Film, Image as ImageIcon, Plus, Trash2, UploadCloud } from "lucide-react";
+import { BookOpen, Plus, UploadCloud } from "lucide-react";
 import { api, ApiClientError, errorMessage } from "@/lib/api-client";
-import { formatDateTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Field, FormActions } from "@/components/ui/form";
-import { Drawer, ConfirmDialog } from "@/components/ui/modal";
-import { Badge } from "@/components/ui/badge";
-import { Alert, EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
+import { ConfirmDialog } from "@/components/ui/modal";
+import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
+import { Fab } from "@/components/ui/fab";
+import { Alert, EmptyState, ErrorState, SkeletonCardList } from "@/components/ui/feedback";
 import { toast } from "@/components/ui/toast";
 import { BatchPicker } from "@/components/trainer/batch-picker";
 import { useApi } from "@/components/trainer/use-api";
+import { MaterialCard, type MaterialRow } from "@/components/trainer/mobile";
 import type { BatchOption } from "@/components/trainer/types";
-
-interface MaterialRow {
-  id: string;
-  title: string;
-  description: string | null;
-  fileUrl: string;
-  fileType: string | null;
-  createdAt: string;
-  batch: { id: string; code: string; name: string } | null;
-  course: { id: string; name: string } | null;
-}
 
 const ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.mp4,.zip,.txt";
 const MAX_MB = 50;
-
-function FileIcon({ type }: { type: string | null }) {
-  const t = (type ?? "").toLowerCase();
-  const Icon = ["png", "jpg", "jpeg"].includes(t) ? ImageIcon : t === "mp4" ? Film : FileText;
-  return <Icon className="h-5 w-5" />;
-}
 
 export function MaterialsClient({ batches, initialBatchId, disabled }: { batches: BatchOption[]; initialBatchId: string; disabled: boolean }) {
   const { data: rows, error, loading, reload } = useApi<MaterialRow[]>("/api/trainer/materials");
@@ -68,7 +52,7 @@ export function MaterialsClient({ batches, initialBatchId, disabled }: { batches
         <Field label="Batch" htmlFor="mat-filter" className="sm:max-w-md sm:flex-1">
           <Select id="mat-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="All batches" options={batches.map((b) => ({ value: b.id, label: `${b.name} (${b.code})` }))} />
         </Field>
-        <Button onClick={() => setOpen(true)} disabled={!canUpload} leftIcon={<Plus className="h-4 w-4" />}>
+        <Button onClick={() => setOpen(true)} disabled={!canUpload} leftIcon={<Plus className="h-4 w-4" />} className="hidden lg:inline-flex">
           Upload material
         </Button>
       </div>
@@ -76,11 +60,7 @@ export function MaterialsClient({ batches, initialBatchId, disabled }: { batches
       {error ? (
         <ErrorState description={error} onRetry={reload} />
       ) : loading || !rows ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <SkeletonCard lines={2} />
-          <SkeletonCard lines={2} />
-          <SkeletonCard lines={2} />
-        </div>
+        <SkeletonCardList count={3} lines={2} />
       ) : visible.length === 0 ? (
         <EmptyState
           icon={<BookOpen className="h-7 w-7" />}
@@ -97,40 +77,20 @@ export function MaterialsClient({ batches, initialBatchId, disabled }: { batches
       ) : (
         <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {visible.map((m) => (
-            <li key={m.id} className="card flex flex-col p-5">
-              <div className="flex items-start gap-3">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lavender text-navy">
-                  <FileIcon type={m.fileType} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <h3 className="line-clamp-2 text-sm font-bold text-navy">{m.title}</h3>
-                  <p className="mt-0.5 truncate text-xs text-muted">{m.batch ? `${m.batch.name} · ${m.batch.code}` : (m.course?.name ?? "Course material")}</p>
-                </div>
-                <Badge tone="neutral">{(m.fileType ?? "file").toUpperCase()}</Badge>
-              </div>
-              {m.description && <p className="mt-3 line-clamp-3 text-sm text-muted">{m.description}</p>}
-              <div className="mt-4 flex items-center justify-between gap-2 border-t border-line pt-3">
-                <span className="text-xs text-muted">{formatDateTime(m.createdAt)}</span>
-                <div className="flex gap-1.5">
-                  <a href={m.fileUrl} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line bg-white px-3 text-xs font-semibold text-ink hover:bg-surface">
-                    <Download className="h-3.5 w-3.5" /> Open
-                  </a>
-                  <Button variant="ghost" size="xs" onClick={() => setDeleting(m)} disabled={disabled} className="text-danger hover:bg-danger-light" aria-label={`Delete ${m.title}`}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            </li>
+            <MaterialCard key={m.id} material={m} canDelete={!disabled} onDelete={() => setDeleting(m)} />
           ))}
         </ul>
       )}
+
       {rows && rows.length > 0 && (
-        <p className="mt-3 text-xs text-muted">
+        <p className="mt-3 text-caption text-muted">
           {visible.length} of {rows.length} material{rows.length === 1 ? "" : "s"} · only files you uploaded are listed here.
         </p>
       )}
 
-      <Drawer open={open} onClose={() => setOpen(false)} title="Upload training material" description="Files are private to the students and trainers of the batch." className="max-w-lg">
+      {canUpload && <Fab aria-label="Upload training material" icon={<UploadCloud className="h-6 w-6" />} label="Upload" onClick={() => setOpen(true)} />}
+
+      <ResponsiveSheet open={open} onClose={() => setOpen(false)} title="Upload training material" description="Files are private to the students and trainers of the batch." size="lg">
         {open && (
           <UploadForm
             batches={uploadable}
@@ -142,8 +102,18 @@ export function MaterialsClient({ batches, initialBatchId, disabled }: { batches
             }}
           />
         )}
-      </Drawer>
-      <ConfirmDialog open={!!deleting} onClose={() => setDeleting(null)} onConfirm={confirmDelete} loading={deleteBusy} danger confirmLabel="Delete material" title="Delete this material?" description={deleting ? `"${deleting.title}" will be removed and students will no longer be able to download it.` : undefined} />
+      </ResponsiveSheet>
+
+      <ConfirmDialog
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={confirmDelete}
+        loading={deleteBusy}
+        danger
+        confirmLabel="Delete material"
+        title="Delete this material?"
+        description={deleting ? `"${deleting.title}" will be removed and students will no longer be able to download it.` : undefined}
+      />
     </>
   );
 }
@@ -192,7 +162,7 @@ function UploadForm({ batches, initialBatchId, onClose, onSaved }: { batches: Ba
     <form onSubmit={submit} className="space-y-5" noValidate>
       {formError && <Alert tone="danger">{formError}</Alert>}
       <BatchPicker batches={batches} value={batchId} onChange={setBatchId} error={errors.batchId} id="mat-batch" />
-      {batch && <p className="-mt-3 text-xs text-muted">Course: {batch.courseName}</p>}
+      {batch && <p className="-mt-3 text-caption text-muted">Course: {batch.courseName}</p>}
       <Field label="Title" htmlFor="mat-title" required error={errors.title}>
         <Input id="mat-title" value={title} onChange={(e) => setTitle(e.target.value)} invalid={!!errors.title} maxLength={200} placeholder="e.g. Chapter 4 notes – Formulas & functions" />
       </Field>
@@ -206,19 +176,19 @@ function UploadForm({ batches, initialBatchId, onClose, onSaved }: { batches: Ba
           accept={ACCEPT}
           aria-invalid={errors.file ? true : undefined}
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="block w-full cursor-pointer rounded-xl border border-line bg-white text-sm text-ink file:mr-3 file:cursor-pointer file:rounded-l-xl file:border-0 file:bg-lavender file:px-4 file:py-3 file:text-sm file:font-semibold file:text-navy hover:file:bg-navy-soft focus:border-navy focus:outline-none focus:ring-2 focus:ring-navy/15 aria-invalid:border-danger"
+          className="block w-full cursor-pointer rounded-sm border border-line bg-white text-input text-ink ring-focus file:mr-3 file:cursor-pointer file:rounded-l-sm file:border-0 file:bg-lavender file:px-4 file:py-3 file:text-body-sm file:font-semibold file:text-navy hover:file:bg-navy-soft aria-invalid:border-danger"
         />
         {file && (
-          <p className="text-xs text-muted">
+          <p className="text-caption text-muted">
             {file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB
           </p>
         )}
       </Field>
       <FormActions>
-        <Button type="button" variant="outline" onClick={onClose}>
+        <Button type="button" variant="outline" size="md" onClick={onClose} className="w-full sm:w-auto">
           Cancel
         </Button>
-        <Button type="submit" loading={saving} leftIcon={<UploadCloud className="h-4 w-4" />}>
+        <Button type="submit" size="md" loading={saving} leftIcon={<UploadCloud className="h-4 w-4" />} className="w-full sm:w-auto">
           {saving ? "Uploading…" : "Upload"}
         </Button>
       </FormActions>

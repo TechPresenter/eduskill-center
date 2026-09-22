@@ -57,7 +57,7 @@ export function ApplicationActions({ applicationId, status, missingCount, canCan
             <Button fullWidth onClick={() => void submit()} loading={submitting} disabled={missingCount > 0} leftIcon={<Send className="h-4 w-4" />}>
               Submit application
             </Button>
-            {missingCount > 0 && <p className="text-xs text-muted">Upload the {missingCount} missing document{missingCount === 1 ? "" : "s"} to enable submission.</p>}
+            {missingCount > 0 && <p className="text-caption text-muted">Upload the {missingCount} missing document{missingCount === 1 ? "" : "s"} to enable submission.</p>}
           </>
         )}
         {canCancel && (

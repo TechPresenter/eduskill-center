@@ -152,7 +152,7 @@ export default async function OpenACentrePage() {
               Apply to open a centre
             </ButtonLink>
           ) : (
-            <span className="inline-flex min-h-12 items-center rounded-xl bg-white/10 px-6 text-sm font-semibold text-white">Applications are currently closed</span>
+            <span className="inline-flex min-h-12 items-center rounded-md bg-white/10 px-6 text-sm font-semibold text-white ring-1 ring-white/20">Applications are currently closed</span>
           )}
           <ButtonLink href="/open-a-centre/status" size="lg" variant="white" leftIcon={<Search className="h-4 w-4" />}>
             Track your application
@@ -161,7 +161,7 @@ export default async function OpenACentrePage() {
       </PageHero>
 
       {/* ── What the programme is ── */}
-      <section className="bg-white py-16 sm:py-20" aria-labelledby="centre-about-title">
+      <section className="bg-white section-y" aria-labelledby="centre-about-title">
         <div className="container-x grid gap-10 lg:grid-cols-12 lg:gap-12">
           <Reveal className="lg:col-span-7">
             <SectionHeading
@@ -170,7 +170,7 @@ export default async function OpenACentrePage() {
               title="Normal Education Centre, [[Class 1 to 4]]"
               description="एडुस्किल शिक्षा मिशन — नॉर्मल एजुकेशन सेंटर, कक्षा 1 से 4"
             />
-            <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-ink sm:text-base">
+            <div className="mt-6 space-y-4 text-body-lg text-ink">
               <p>
                 A Normal Education Centre is a small neighbourhood learning centre for children of Class 1 to 4. Its main purpose is to give those children regular study, practice and extra
                 academic support — close to home, in the language they understand.
@@ -179,15 +179,15 @@ export default async function OpenACentrePage() {
                 The centre is run by a local operator who is authorised by EduSkill India Foundation after the documents and the proposed space have been verified. The Foundation guides the
                 operator on how to run the centre and on the academics; the operator runs the daily classes.
               </p>
-              <p className="rounded-xl border border-orange/20 bg-orange-light/60 p-4 text-[15px] font-semibold text-navy">
+              <p className="rounded-card border border-orange/20 bg-orange-light/60 p-4 text-body font-semibold text-navy">
                 Please note: the computer course is <span className="text-orange">not</span> included in this programme. A Normal Education Centre is only for normal education of Class 1 to 4.
               </p>
             </div>
           </Reveal>
 
           <Reveal className="lg:col-span-5" delay={90}>
-            <div className="card p-6 sm:p-7">
-              <h3 className="font-heading text-lg font-extrabold text-navy">At a glance</h3>
+            <div className="card card-p sm:p-7">
+              <h3 className="text-h3 text-navy">At a glance</h3>
               <dl className="mt-5 space-y-4">
                 {[
                   { term: "Classes", detail: "Class 1, 2, 3 and 4" },
@@ -198,8 +198,8 @@ export default async function OpenACentrePage() {
                   { term: "Process", detail: "Seven steps, from application to centre start" },
                 ].map((row) => (
                   <div key={row.term} className="flex flex-col gap-0.5 border-b border-line pb-3 last:border-0 last:pb-0 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
-                    <dt className="text-xs font-bold tracking-wide text-muted uppercase">{row.term}</dt>
-                    <dd className="text-sm font-semibold text-ink sm:text-right">{row.detail}</dd>
+                    <dt className="text-overline text-muted">{row.term}</dt>
+                    <dd className="text-body font-semibold text-ink sm:text-right">{row.detail}</dd>
                   </div>
                 ))}
               </dl>
@@ -220,7 +220,7 @@ export default async function OpenACentrePage() {
       </section>
 
       {/* ── Objectives ── */}
-      <section className="bg-lavender py-16 sm:py-20" aria-labelledby="centre-objectives-title">
+      <section className="bg-lavender section-y" aria-labelledby="centre-objectives-title">
         <div className="container-x">
           <Reveal>
             <SectionHeading
@@ -235,12 +235,12 @@ export default async function OpenACentrePage() {
             {OBJECTIVES.map((o, i) => {
               const Icon = o.icon;
               return (
-                <Reveal as="li" key={o.title} delay={i * 70} className="card card-hover p-6">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-light text-orange">
+                <Reveal as="li" key={o.title} delay={i * 70} className="card card-hover card-p">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-md bg-orange-light text-orange">
                     <Icon className="h-6 w-6" aria-hidden />
                   </span>
-                  <h3 className="mt-4 text-base font-bold text-navy">{o.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-muted">{o.description}</p>
+                  <h3 className="mt-4 text-h4 text-navy">{o.title}</h3>
+                  <p className="mt-2 text-body text-muted">{o.description}</p>
                 </Reveal>
               );
             })}
@@ -249,7 +249,7 @@ export default async function OpenACentrePage() {
       </section>
 
       {/* ── Classes & subjects ── */}
-      <section className="bg-white py-16 sm:py-20" aria-labelledby="centre-classes-title">
+      <section className="bg-white section-y" aria-labelledby="centre-classes-title">
         <div className="container-x">
           <Reveal>
             <SectionHeading
@@ -264,17 +264,17 @@ export default async function OpenACentrePage() {
           {/* Phones: one card per class */}
           <Reveal className="mt-10 grid gap-4 sm:grid-cols-2 md:hidden">
             {CENTRE_CLASSES.map((c) => (
-              <div key={c.value} className="card p-5">
-                <h3 className="font-heading text-lg font-extrabold text-navy">{c.label}</h3>
+              <div key={c.value} className="card card-p">
+                <h3 className="text-h3 text-navy">{c.label}</h3>
                 <ul className="mt-3 flex flex-wrap gap-2">
                   {SUBJECTS.map((s) => (
-                    <li key={s.name} className="inline-flex items-center gap-1.5 rounded-full bg-lavender px-3 py-1.5 text-sm font-semibold text-navy">
+                    <li key={s.name} className="inline-flex items-center gap-1.5 rounded-full bg-lavender px-3 py-1.5 text-body-sm font-semibold text-navy">
                       <Check className="h-3.5 w-3.5 text-orange" aria-hidden />
                       {s.name}
                     </li>
                   ))}
                 </ul>
-                <p className="mt-3 text-xs text-muted">Plus reading, writing, revision and homework support.</p>
+                <p className="mt-3 text-body-sm text-muted">Plus reading, writing, revision and homework support.</p>
               </div>
             ))}
           </Reveal>
@@ -292,7 +292,7 @@ export default async function OpenACentrePage() {
                     {SUBJECTS.map((s) => (
                       <th key={s.name} scope="col" className="px-5 py-4 text-sm font-bold text-navy">
                         {s.name}
-                        {s.note && <span className="mt-0.5 block text-xs font-medium text-muted">{s.note}</span>}
+                        {s.note && <span className="mt-0.5 block text-caption font-medium text-muted">{s.note}</span>}
                       </th>
                     ))}
                   </tr>
@@ -306,7 +306,7 @@ export default async function OpenACentrePage() {
                       {SUBJECTS.map((s) => (
                         <td key={s.name} className="px-5 py-4">
                           <span className="inline-flex items-center gap-2 text-sm font-medium text-ink">
-                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-success-light text-success" aria-hidden>
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success-light text-success-dark" aria-hidden>
                               <Check className="h-3.5 w-3.5" strokeWidth={3} />
                             </span>
                             <span className="sr-only">
@@ -321,13 +321,13 @@ export default async function OpenACentrePage() {
                 </tbody>
               </table>
             </div>
-            <p className="mt-3 text-sm text-muted">Reading, writing, revision and homework support are also given as needed.</p>
+            <p className="mt-3 text-body-sm text-muted">Reading, writing, revision and homework support are also given as needed.</p>
           </Reveal>
         </div>
       </section>
 
       {/* ── Centre activities ── */}
-      <section className="bg-lavender py-16 sm:py-20" aria-labelledby="centre-activities-title">
+      <section className="bg-lavender section-y" aria-labelledby="centre-activities-title">
         <div className="container-x">
           <Reveal>
             <SectionHeading
@@ -342,10 +342,10 @@ export default async function OpenACentrePage() {
               const Icon = a.icon;
               return (
                 <Reveal as="li" key={a.title} delay={i * 50} className="card card-hover flex items-center gap-3 p-4 lg:flex-col lg:items-center lg:p-5 lg:text-center">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-navy text-white">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-navy text-white">
                     <Icon className="h-5 w-5" aria-hidden />
                   </span>
-                  <h3 className="text-sm font-bold text-navy">{a.title}</h3>
+                  <h3 className="text-h4 text-navy">{a.title}</h3>
                 </Reveal>
               );
             })}
@@ -354,13 +354,13 @@ export default async function OpenACentrePage() {
       </section>
 
       {/* ── Who can apply ── */}
-      <section className="bg-white py-16 sm:py-20" aria-labelledby="centre-who-title">
+      <section className="bg-white section-y" aria-labelledby="centre-who-title">
         <div className="container-x grid gap-8 lg:grid-cols-2 lg:gap-10">
           <Reveal>
             <SectionHeading id="centre-who-title" label="Who can apply" title="Local People Who Can [[Run a Centre]]" />
             <ul className="mt-6 space-y-3">
               {WHO_CAN_APPLY.map((w) => (
-                <li key={w} className="flex items-start gap-3 text-[15px] leading-relaxed text-ink">
+                <li key={w} className="flex items-start gap-3 text-body text-ink">
                   <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-light text-orange" aria-hidden>
                     <Check className="h-3.5 w-3.5" strokeWidth={3} />
                   </span>
@@ -378,20 +378,20 @@ export default async function OpenACentrePage() {
           </Reveal>
 
           <Reveal delay={90}>
-            <div className="card h-full p-6 sm:p-7">
-              <h3 className="font-heading text-lg font-extrabold text-navy">Keep this ready before you apply</h3>
-              <p className="mt-1 text-sm text-muted">The form takes about ten minutes. Documents can be uploaded right after you submit, or later from the status page.</p>
+            <div className="card h-full card-p sm:p-7">
+              <h3 className="text-h3 text-navy">Keep this ready before you apply</h3>
+              <p className="mt-2 text-body text-muted">The form takes about ten minutes. Documents can be uploaded right after you submit, or later from the status page.</p>
               <ul className="mt-6 space-y-4">
                 {KEEP_READY.map((k) => {
                   const Icon = k.icon;
                   return (
                     <li key={k.label} className="flex items-start gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lavender text-navy">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">
                         <Icon className="h-5 w-5" aria-hidden />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-navy">{k.label}</p>
-                        <p className="text-sm text-muted">{k.hint}</p>
+                        <p className="text-h4 text-navy">{k.label}</p>
+                        <p className="mt-0.5 text-body-sm text-muted">{k.hint}</p>
                       </div>
                     </li>
                   );
@@ -403,7 +403,7 @@ export default async function OpenACentrePage() {
       </section>
 
       {/* ── The seven steps ── */}
-      <section className="bg-lavender py-16 sm:py-20" aria-labelledby="centre-process-title">
+      <section className="bg-lavender section-y" aria-labelledby="centre-process-title">
         <div className="container-x grid gap-10 lg:grid-cols-12 lg:gap-12">
           <Reveal className="lg:col-span-5">
             <div className="lg:sticky lg:top-28">
@@ -426,7 +426,7 @@ export default async function OpenACentrePage() {
             </div>
           </Reveal>
           <Reveal className="lg:col-span-7" delay={90}>
-            <div className="card p-6 sm:p-8">
+            <div className="card card-p sm:p-8">
               <CentreSteps steps={CENTRE_STEPS} />
             </div>
           </Reveal>
@@ -434,27 +434,27 @@ export default async function OpenACentrePage() {
       </section>
 
       {/* ── Good to know ── */}
-      <section className="bg-white py-16 sm:py-20" aria-labelledby="centre-notes-title">
+      <section className="bg-white section-y" aria-labelledby="centre-notes-title">
         <div className="container-x">
           <Reveal>
             <SectionHeading id="centre-notes-title" label="Good to know" title="Questions Applicants [[Ask Us]]" align="center" />
           </Reveal>
           <Reveal className="mx-auto mt-10 max-w-3xl space-y-3">
             {NOTES.map((n) => (
-              <details key={n.q} className="group card overflow-hidden open:shadow-card-hover">
-                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left text-[15px] font-semibold text-navy marker:content-none [&::-webkit-details-marker]:hidden">
+              <details key={n.q} className="group card overflow-hidden transition-shadow duration-micro open:shadow-e2 motion-reduce:transition-none">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left text-body font-semibold text-navy marker:content-none ring-focus [&::-webkit-details-marker]:hidden">
                   {n.q}
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-light text-orange transition-transform group-open:rotate-45" aria-hidden>
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-light text-orange transition-transform duration-micro group-open:rotate-45 motion-reduce:transition-none" aria-hidden>
                     <span className="text-lg leading-none font-bold">+</span>
                   </span>
                 </summary>
-                <div className="border-t border-line px-5 py-4 text-[15px] leading-relaxed text-muted">{n.a}</div>
+                <div className="border-t border-line px-5 py-4 text-body text-muted">{n.a}</div>
               </details>
             ))}
           </Reveal>
-          <p className="mt-8 text-center text-sm text-muted">
+          <p className="mt-8 text-center text-body text-muted">
             Still have a question?{" "}
-            <Link href="/contact" className="font-semibold text-orange hover:underline">
+            <Link href="/contact" className="font-semibold text-orange underline-offset-4 ring-focus hover:underline">
               Contact the Foundation
             </Link>
             .

@@ -119,7 +119,7 @@ export function ScholarshipDecisionForm({ endpoint, extraBody, originalFee, disc
         <Select id="sch-program" value={programId} onChange={(e) => setProgramId(e.target.value)} options={programs.map((p) => ({ value: p.id, label: p.name }))} placeholder={programs.length ? "No program (ad-hoc award)" : "No active programs"} disabled={disabled} />
       </Field>
       <div className="space-y-2">
-        <span className="block text-sm font-medium text-ink">Scholarship amount</span>
+        <span className="block text-body-sm font-medium text-ink">Scholarship amount</span>
         <SegmentedControl items={modeItems} value={mode} onChange={(v) => setMode(v as Mode)} />
         {mode !== "program" && (
           <Field htmlFor="sch-value" error={localError ?? fieldErrors.scholarshipAmount ?? fieldErrors.percentage}>
@@ -127,22 +127,22 @@ export function ScholarshipDecisionForm({ endpoint, extraBody, originalFee, disc
           </Field>
         )}
         {mode === "program" && localError && (
-          <p className="text-xs font-medium text-danger" role="alert">
+          <p className="text-caption font-medium text-danger" role="alert">
             {localError}
           </p>
         )}
       </div>
-      <dl className={`grid gap-2 rounded-xl bg-surface p-3 text-sm ${compact ? "grid-cols-2" : "grid-cols-3"}`}>
+      <dl className={`grid gap-2 rounded-md bg-surface p-3 text-body-sm ${compact ? "grid-cols-2" : "grid-cols-3"}`}>
         <div>
-          <dt className="text-[11px] font-medium text-muted uppercase">Original fee</dt>
+          <dt className="text-caption font-medium text-muted uppercase">Original fee</dt>
           <dd className="font-semibold tabular-nums">{formatINR(originalFee)}</dd>
         </div>
         <div>
-          <dt className="text-[11px] font-medium text-muted uppercase">Scholarship</dt>
-          <dd className={`font-semibold tabular-nums ${overflow ? "text-danger" : "text-green-700"}`}>− {formatINR(amount)}</dd>
+          <dt className="text-caption font-medium text-muted uppercase">Scholarship</dt>
+          <dd className={`font-semibold tabular-nums ${overflow ? "text-danger" : "text-success-dark"}`}>− {formatINR(amount)}</dd>
         </div>
         <div>
-          <dt className="text-[11px] font-medium text-muted uppercase">Payable{discountAmount > 0 ? ` (after ${formatINR(discountAmount)} discount)` : ""}</dt>
+          <dt className="text-caption font-medium text-muted uppercase">Payable{discountAmount > 0 ? ` (after ${formatINR(discountAmount)} discount)` : ""}</dt>
           <dd className="font-semibold text-navy tabular-nums">{formatINR(payable)}</dd>
         </div>
       </dl>
@@ -197,43 +197,43 @@ export function ScholarshipPanel({ applicationId, originalFee, discountAmount, p
           {reason ? <span className="whitespace-pre-line">{reason}</span> : "No reason was given."}
         </Alert>
       ) : (
-        <p className="text-sm text-muted">The student did not request a scholarship{courseAllows ? ", but one can still be awarded" : ""}.</p>
+        <p className="text-body-sm text-muted">The student did not request a scholarship{courseAllows ? ", but one can still be awarded" : ""}.</p>
       )}
       {award && (
-        <dl className="grid grid-cols-2 gap-3 rounded-xl border border-line p-3 text-sm">
+        <dl className="grid grid-cols-2 gap-3 rounded-md border border-line p-3 text-body-sm">
           <div>
-            <dt className="text-[11px] font-medium text-muted uppercase">Decision</dt>
-            <dd className={`font-semibold ${award.status === "APPROVED" ? "text-green-700" : award.status === "REJECTED" ? "text-danger" : "text-amber-700"}`}>{titleCase(award.status)}</dd>
+            <dt className="text-caption font-medium text-muted uppercase">Decision</dt>
+            <dd className={`font-semibold ${award.status === "APPROVED" ? "text-success-dark" : award.status === "REJECTED" ? "text-danger" : "text-amber-700"}`}>{titleCase(award.status)}</dd>
           </div>
           <div>
-            <dt className="text-[11px] font-medium text-muted uppercase">Amount</dt>
+            <dt className="text-caption font-medium text-muted uppercase">Amount</dt>
             <dd className="font-semibold tabular-nums">{formatINR(award.scholarshipAmount)}</dd>
           </div>
           <div>
-            <dt className="text-[11px] font-medium text-muted uppercase">Program</dt>
+            <dt className="text-caption font-medium text-muted uppercase">Program</dt>
             <dd>{award.programName ?? "Ad-hoc award"}</dd>
           </div>
           <div>
-            <dt className="text-[11px] font-medium text-muted uppercase">Decided by</dt>
+            <dt className="text-caption font-medium text-muted uppercase">Decided by</dt>
             <dd>
               {award.approvedByName ?? "—"}
-              {award.approvedAt ? <span className="block text-xs text-muted">{new Date(award.approvedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span> : null}
+              {award.approvedAt ? <span className="block text-caption text-muted">{new Date(award.approvedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span> : null}
             </dd>
           </div>
           {award.remarks && (
             <div className="col-span-2">
-              <dt className="text-[11px] font-medium text-muted uppercase">Remarks</dt>
+              <dt className="text-caption font-medium text-muted uppercase">Remarks</dt>
               <dd className="whitespace-pre-line text-muted">{award.remarks}</dd>
             </div>
           )}
         </dl>
       )}
       {noFee ? (
-        <p className="text-sm text-muted">This course has no fee, so no scholarship applies.</p>
+        <p className="text-body-sm text-muted">This course has no fee, so no scholarship applies.</p>
       ) : !decidable ? (
-        <p className="text-sm text-muted">A scholarship decision can no longer be changed for this application (fee fully paid, admitted, or closed).</p>
+        <p className="text-body-sm text-muted">A scholarship decision can no longer be changed for this application (fee fully paid, admitted, or closed).</p>
       ) : !canDecide ? (
-        <p className="text-sm text-muted">You do not have permission to decide scholarships.</p>
+        <p className="text-body-sm text-muted">You do not have permission to decide scholarships.</p>
       ) : editing ? (
         <ScholarshipDecisionForm endpoint={`/api/admin/applications/${applicationId}/scholarship`} originalFee={originalFee} discountAmount={discountAmount} programs={programs} initial={award ? { amount: award.scholarshipAmount, remarks: award.remarks } : undefined} onDone={() => setEditing(false)} onCancel={award ? () => setEditing(false) : undefined} compact />
       ) : (

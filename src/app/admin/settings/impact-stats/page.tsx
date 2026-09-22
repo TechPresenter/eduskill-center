@@ -14,7 +14,8 @@ export default async function ImpactStatsPage() {
   const user = await requireAdmin("settings.view");
   const rows = await listImpactStats();
   return (
-    <div>
+    // One rhythm between the page title, the group tabs and the panel — settings used to have none.
+    <div className="space-y-5">
       <PageHeader title="Settings" mobileTitle="Impact stats" description="Impact numbers shown on the website home page." />
       <SettingsTabs groups={SETTING_GROUPS} />
       <Card>

@@ -71,11 +71,14 @@ export function WizardShell({
     <div className={cn("flex flex-col gap-5", className)}>
       <div
         className={cn(
-          "sticky top-[calc(var(--header-h)_+_env(safe-area-inset-top,0px))] z-20 -mx-4 bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none",
+          // No backdrop-blur: a filtered ancestor becomes the containing block for every position:fixed
+          // descendant (that is what clamped the mobile menu and hid the Fab), and blur on a surface that
+          // scrolls costs frames on the cheap Android phones most of our students use. Opaque instead.
+          "sticky top-[calc(var(--header-h)_+_env(safe-area-inset-top,0px))] z-sticky -mx-4 border-b border-line bg-surface px-4 py-3 sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0",
           headerClassName
         )}
       >
-        {title && <h2 className="mb-2 text-lg font-bold text-navy">{title}</h2>}
+        {title && <h2 className="mb-2 text-h3 text-navy">{title}</h2>}
         <WizardProgress steps={steps} current={current} />
       </div>
 
@@ -86,9 +89,13 @@ export function WizardShell({
           <div className="flex w-full flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
             {(onSaveLater || footerNote) && (
               <div className="flex items-center justify-center gap-3 lg:mr-auto lg:justify-start">
-                {footerNote && <span className="text-meta text-muted">{footerNote}</span>}
+                {footerNote && <span className="text-body-sm text-muted">{footerNote}</span>}
                 {onSaveLater && (
-                  <button type="button" onClick={onSaveLater} className="inline-flex min-h-11 items-center justify-center px-3 text-sm font-semibold text-navy underline-offset-4 tap-highlight-none hover:underline">
+                  <button
+                    type="button"
+                    onClick={onSaveLater}
+                    className="inline-flex min-h-11 items-center justify-center rounded-md px-3 text-sm font-semibold text-navy underline-offset-4 tap-highlight-none ring-focus hover:underline focus-visible:ring-0 focus-visible:ring-offset-0"
+                  >
                     {saveLaterLabel}
                   </button>
                 )}

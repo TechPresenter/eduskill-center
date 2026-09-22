@@ -1,10 +1,9 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { Award, CalendarDays, CheckCircle2, PauseCircle, PlayCircle, RefreshCw, UserCog, UserX } from "lucide-react";
 import { api } from "@/lib/api-client";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog, Drawer, Modal } from "@/components/ui/modal";
 import { Field } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/input";
@@ -117,9 +116,9 @@ export function AdmissionActions(p: AdmissionActionsProps) {
         </Gate>
       )}
       {p.certificate ? (
-        <Link href={`/admin/certificates?q=${encodeURIComponent(p.certificate.certificateNo)}`} className="inline-flex h-9 items-center gap-2 rounded-lg bg-success-light px-3.5 text-sm font-semibold text-green-700 hover:bg-success/20">
-          <Award className="h-4 w-4" /> {p.certificate.certificateNo}
-        </Link>
+        <ButtonLink href={`/admin/certificates?q=${encodeURIComponent(p.certificate.certificateNo)}`} size="sm" variant="outline" className="border-success/25 bg-success-light text-success-dark hover:border-success/40 hover:bg-success/20" leftIcon={<Award className="h-4 w-4" aria-hidden />}>
+          {p.certificate.certificateNo}
+        </ButtonLink>
       ) : p.certificateEligible ? (
         <Gate allowed={p.can.issue} reason={NO_PERM}>
           <Button size="sm" leftIcon={<Award className="h-4 w-4" />} onClick={() => setDialog("issue")}>
@@ -127,15 +126,15 @@ export function AdmissionActions(p: AdmissionActionsProps) {
           </Button>
         </Gate>
       ) : (
-        <Link href={`/admin/certificates?tab=force&admissionId=${p.admissionId}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-line bg-white px-3.5 text-sm font-semibold text-muted hover:bg-surface" title="Not eligible yet – open the Certificates module to force-issue">
-          <Award className="h-4 w-4" /> Certificate (not eligible)
-        </Link>
+        <ButtonLink href={`/admin/certificates?tab=force&admissionId=${p.admissionId}`} size="sm" variant="outline" className="text-muted" title="Not eligible yet – open the Certificates module to force-issue" leftIcon={<Award className="h-4 w-4" aria-hidden />}>
+          Certificate (not eligible)
+        </ButtonLink>
       )}
 
       {dialog === "batch" && (
         <Drawer open onClose={close} title="Change batch" description="Moves the student (and their seat) to another open batch of the same course at this center. Progress is recomputed." className="max-w-xl">
           <form
-            className="space-y-5"
+            className="space-y-6"
             onSubmit={async (e) => {
               e.preventDefault();
               if (!batchId) return;

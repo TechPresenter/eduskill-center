@@ -18,7 +18,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
   };
   return (
     <div>
-      <PageHeader title="Attendance" description="Mark daily attendance for a batch, review batch reports and look up any student's record." />
+      <PageHeader title="Attendance" mobileTitle="Attendance" description="Mark daily attendance for a batch, review batch reports and look up any student's record." />
       <AttendanceWorkspace
         centers={lookups.centers}
         batches={lookups.batches}

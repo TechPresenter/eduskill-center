@@ -22,7 +22,7 @@ export default async function StudentPaymentsPage() {
   const totalDue = applications.reduce((s, a) => s + a.due, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       <PageHeader title="Fees & Payments" mobileTitle="Fees & Payments" description={totalDue > 0 ? `Total due: ${formatINR(totalDue)}` : "No fees are due right now."} />
 
       {applications.length === 0 ? (
@@ -35,7 +35,7 @@ export default async function StudentPaymentsPage() {
                 title={a.course.name}
                 description={
                   <span className="flex flex-wrap items-center gap-2">
-                    <Link href={`/student/applications/${a.id}`} className="font-mono text-xs font-semibold text-navy hover:underline">
+                    <Link href={`/student/applications/${a.id}`} className="font-mono text-caption font-semibold text-navy hover:underline">
                       {a.applicationNo}
                     </Link>
                     <StatusBadge status={a.status} />
@@ -44,7 +44,7 @@ export default async function StudentPaymentsPage() {
                 }
                 action={a.canPay ? <ButtonLink href={`/student/payments/${a.id}`} size="sm" leftIcon={<CreditCard className="h-4 w-4" />}>Pay {formatINR(a.due)}</ButtonLink> : undefined}
               />
-              <CardBody className="space-y-3 text-sm">
+              <CardBody className="space-y-3 text-body-sm">
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <Stat label="Original" value={formatINR(a.originalFee)} />
                   <Stat label="Scholarship" value={a.scholarshipAmount > 0 ? `− ${formatINR(a.scholarshipAmount)}` : "—"} />
@@ -52,9 +52,9 @@ export default async function StudentPaymentsPage() {
                   <Stat label="Due" value={formatINR(a.due)} strong />
                 </div>
                 <ProgressBar value={a.paidAmount} max={a.payableAmount || 1} tone={a.due > 0 ? "orange" : "success"} label={`Paid ${formatINR(a.paidAmount)} of ${formatINR(a.payableAmount)}`} />
-                {a.installmentsAllowed && a.due > 0 && <p className="text-xs text-green-700">Installments are allowed for this application.</p>}
+                {a.installmentsAllowed && a.due > 0 && <p className="text-caption text-green-700">Installments are allowed for this application.</p>}
                 {a.installments.length > 0 && (
-                  <ul className="space-y-1 rounded-lg bg-surface p-3 text-xs">
+                  <ul className="space-y-1 rounded-md bg-surface p-3 text-caption">
                     {a.installments.map((i) => (
                       <li key={i.id} className="flex justify-between">
                         <span>
@@ -67,7 +67,7 @@ export default async function StudentPaymentsPage() {
                     ))}
                   </ul>
                 )}
-                {!a.canPay && a.due > 0 && <p className="text-xs text-muted">Payment opens once the application is approved.</p>}
+                {!a.canPay && a.due > 0 && <p className="text-caption text-muted">Payment opens once the application is approved.</p>}
               </CardBody>
             </Card>
           ))}
@@ -77,11 +77,16 @@ export default async function StudentPaymentsPage() {
       {/* Payment history – cards on phones, table from md up. */}
       <section aria-label="Payment history" className="space-y-3 md:hidden">
         <div className="flex items-baseline justify-between gap-3 px-1">
-          <h2 className="text-[13px] font-bold tracking-[0.14em] text-muted uppercase">Payment history</h2>
-          <span className="text-[12px] text-muted tabular-nums">{payments.length}</span>
+          <h2 className="text-overline text-muted">Payment history</h2>
+          <span className="text-caption text-muted tabular-nums">{payments.length}</span>
         </div>
         {payments.length === 0 ? (
-          <p className="card p-4 text-[13px] text-muted">No payments yet. Receipts appear here once a payment is made.</p>
+          <EmptyState
+            size="sm"
+            icon={<Receipt className="h-6 w-6" />}
+            title="No payments yet"
+            description="Once you pay a course fee, the payment and its receipt appear here to download any time."
+          />
         ) : (
           <ul className="space-y-3">
             {payments.map((p) => (
@@ -113,33 +118,33 @@ export default async function StudentPaymentsPage() {
                 payments.map((p) => (
                   <TR key={p.id}>
                     <TD>
-                      <span className="font-mono text-sm">{p.paymentNo}</span>
-                      {p.receiptNo && <p className="font-mono text-[11px] text-muted">Receipt {p.receiptNo}</p>}
+                      <span className="font-mono text-body-sm">{p.paymentNo}</span>
+                      {p.receiptNo && <p className="font-mono text-caption text-muted">Receipt {p.receiptNo}</p>}
                     </TD>
-                    <TD className="text-sm">{formatDate(p.paidAt ?? p.createdAt)}</TD>
-                    <TD className="text-sm">
+                    <TD className="text-body-sm">{formatDate(p.paidAt ?? p.createdAt)}</TD>
+                    <TD className="text-body-sm">
                       <Link href={`/student/applications/${p.application.id}`} className="font-mono text-navy hover:underline">
                         {p.application.applicationNo}
                       </Link>
-                      <p className="text-xs text-muted">{p.application.course.name}</p>
+                      <p className="text-caption text-muted">{p.application.course.name}</p>
                     </TD>
                     <TD className="text-right font-semibold tabular-nums">{formatINR(p.amount)}</TD>
-                    <TD className="text-sm">
+                    <TD className="text-body-sm">
                       {titleCase(p.method)}
-                      {p.referenceNo && <p className="text-xs text-muted">Ref {p.referenceNo}</p>}
+                      {p.referenceNo && <p className="text-caption text-muted">Ref {p.referenceNo}</p>}
                     </TD>
                     <TD>
                       <StatusBadge status={p.status} />
-                      {p.status === "FAILED" && p.failureReason && <p className="mt-0.5 max-w-56 text-xs text-danger">{p.failureReason}</p>}
+                      {p.status === "FAILED" && p.failureReason && <p className="mt-0.5 max-w-56 text-caption text-danger">{p.failureReason}</p>}
                     </TD>
                     <TD>
                       {["COMPLETED", "PENDING", "PROCESSING"].includes(p.status) ? (
-                        <a href={withBasePath(`/api/student/payments/${p.id}/receipt`)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-semibold text-orange hover:underline">
+                        <a href={withBasePath(`/api/student/payments/${p.id}/receipt`)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-body-sm font-semibold text-orange hover:underline">
                           {p.status === "COMPLETED" ? <Download className="h-4 w-4" /> : <Receipt className="h-4 w-4" />}
                           {p.status === "COMPLETED" ? "Receipt" : "Invoice"}
                         </a>
                       ) : (
-                        <span className="text-xs text-muted">—</span>
+                        <span className="text-caption text-muted">—</span>
                       )}
                     </TD>
                   </TR>
@@ -156,8 +161,8 @@ export default async function StudentPaymentsPage() {
 function Stat({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold tracking-wide text-muted uppercase">{label}</p>
-      <p className={`tabular-nums ${strong ? "text-base font-bold text-navy" : "font-medium text-ink"}`}>{value}</p>
+      <p className="text-caption font-semibold tracking-wide text-muted uppercase">{label}</p>
+      <p className={`tabular-nums ${strong ? "text-body font-bold text-navy" : "font-medium text-ink"}`}>{value}</p>
     </div>
   );
 }

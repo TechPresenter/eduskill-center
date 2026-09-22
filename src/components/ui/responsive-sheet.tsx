@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { cn } from "@/lib/utils";
 import { BottomSheet, type BottomSheetHeight, type BottomSheetSize } from "@/components/ui/bottom-sheet";
 import type { DrawerProps } from "@/components/ui/modal";
@@ -37,6 +36,9 @@ const DRAWER_WIDTHS: Record<string, string> = {
  * Drop-in replacement for `Drawer` in the portals: a bottom sheet on phones, the familiar right-hand
  * drawer (or a centered dialog with `desktop="modal"`) from `sm` up. Same props as `Drawer`
  * (`open, onClose, title, description, children, footer, className, side`).
+ *
+ * Both routes end in the same overlay core (bottom-sheet.tsx), so the backdrop, focus trap, scroll
+ * lock, radius, elevation and motion are identical to every other overlay in the product.
  */
 export function ResponsiveSheet({ className, size = "md", desktop = "drawer", side = "right", ...rest }: ResponsiveSheetProps) {
   const mapped = (className ?? "")

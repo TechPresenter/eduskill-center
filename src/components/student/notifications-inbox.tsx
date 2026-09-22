@@ -144,12 +144,12 @@ export function NotificationsInbox({ items, unread, unreadOnly, category, unread
               href={chipHref(c, unreadOnly)}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold whitespace-nowrap tap-highlight-none transition-colors",
+                "text-body-sm duration-micro inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3.5 font-semibold whitespace-nowrap transition-colors tap-highlight-none motion-reduce:transition-none",
                 active ? "border-navy bg-navy text-white" : "border-line bg-white text-ink active:bg-surface"
               )}
             >
               {c}
-              {count > 0 && <span className={cn("rounded-full px-1.5 text-[12px] font-bold tabular-nums", active ? "bg-white/20 text-white" : "bg-orange text-white")}>{count}</span>}
+              {count > 0 && <span className={cn("rounded-full px-1.5 text-caption font-bold tabular-nums", active ? "bg-white/20 text-white" : "bg-orange text-white")}>{count}</span>}
             </Link>
           );
         })}
@@ -158,7 +158,7 @@ export function NotificationsInbox({ items, unread, unreadOnly, category, unread
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
           href={chipHref(category ?? "All", !unreadOnly)}
-          className={cn("inline-flex min-h-11 items-center rounded-xl border px-3.5 text-[13px] font-semibold", unreadOnly ? "border-navy bg-navy text-white" : "border-line bg-white text-ink")}
+          className={cn("inline-flex min-h-11 items-center rounded-md border px-3.5 text-body-sm font-semibold", unreadOnly ? "border-navy bg-navy text-white" : "border-line bg-white text-ink")}
         >
           {unreadOnly ? "Showing unread only" : `Unread only${unread ? ` (${unread})` : ""}`}
         </Link>
@@ -182,16 +182,16 @@ export function NotificationsInbox({ items, unread, unreadOnly, category, unread
             const Icon = CATEGORY_ICONS[cat];
             const body = (
               <>
-                <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", isUnread ? "bg-orange-light text-orange" : "bg-lavender text-navy")}>
+                <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-md", isUnread ? "bg-orange-light text-orange" : "bg-lavender text-navy")}>
                   <Icon className="h-5 w-5" aria-hidden />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className={cn("truncate text-[14px]", isUnread ? "font-bold text-navy" : "font-semibold text-ink")}>{n.title}</span>
+                    <span className={cn("truncate text-body", isUnread ? "font-bold text-navy" : "font-semibold text-ink")}>{n.title}</span>
                     {isUnread && <span className="h-2 w-2 shrink-0 rounded-full bg-orange" aria-label="Unread" />}
                   </span>
-                  <span className="mt-0.5 line-clamp-2 block text-[13px] text-muted">{n.body}</span>
-                  <span className="mt-0.5 block text-[12px] text-muted">
+                  <span className="mt-0.5 line-clamp-2 block text-body-sm text-muted">{n.body}</span>
+                  <span className="mt-0.5 block text-caption text-muted">
                     {cat} · {formatDateTime(n.createdAt)}
                   </span>
                 </span>

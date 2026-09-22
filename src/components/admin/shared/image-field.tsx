@@ -16,9 +16,9 @@ export function ImageField({ value, onChange, folder, disabled, hint, className,
 
   if (value) {
     return (
-      <div className={cn("flex items-center gap-3 rounded-xl border border-line bg-white p-3", className)}>
+      <div className={cn("flex items-center gap-3 rounded-card border border-line bg-white p-3", className)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={value} alt="" className={cn("h-14 w-20 rounded-lg border border-line object-cover sm:h-16 sm:w-24", previewClassName)} />
+        <img src={value} alt="" className={cn("h-14 w-20 rounded-md border border-line object-cover sm:h-16 sm:w-24", previewClassName)} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-ink">{shown?.name ?? value.split("/").pop()}</p>
           <p className="truncate text-xs text-muted" title={value}>{value}</p>

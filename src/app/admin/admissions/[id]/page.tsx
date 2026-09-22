@@ -40,7 +40,7 @@ export default async function AdmissionDetailPage({ params }: { params: Promise<
         title={
           <span className="flex flex-wrap items-center gap-3">
             <span className="font-mono">{a.admissionNo}</span>
-            <StatusBadge status={a.status} className="text-sm" />
+            <StatusBadge status={a.status} className="text-body-sm" />
           </span>
         }
         description={`${s.name} · ${a.course.name} · ${a.center.name} · admitted ${formatDate(a.admittedAt)}${a.approvedByName ? ` by ${a.approvedByName}` : ""}`}
@@ -67,19 +67,19 @@ export default async function AdmissionDetailPage({ params }: { params: Promise<
         {a.certificate && <Badge tone="success">Certified</Badge>}
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <div className="space-y-5 xl:col-span-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
           <Card>
             <CardHeader title="Student" />
             <CardBody className="flex flex-col gap-4 sm:flex-row sm:items-start">
               <Avatar name={s.name} src={s.photoUrl} size={64} />
               <div className="min-w-0 flex-1">
-                <p className="text-lg font-bold text-navy">
+                <p className="text-h3 text-navy">
                   <Link href={`/admin/students/${s.id}`} className="hover:underline">
                     {s.name}
                   </Link>
                 </p>
-                <p className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+                <p className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-body-sm text-muted">
                   <span className="font-mono text-navy">{s.studentId ?? "No Student ID"}</span>
                   <span className="inline-flex items-center gap-1">
                     <Phone className="h-3.5 w-3.5" /> {s.mobile}
@@ -102,46 +102,46 @@ export default async function AdmissionDetailPage({ params }: { params: Promise<
 
           <Card>
             <CardHeader title="Course, center, batch & trainer" />
-            <CardBody className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+            <CardBody className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-1">
-                <p className="text-xs font-medium tracking-wide text-muted uppercase">Course</p>
+                <p className="text-caption font-medium tracking-wide text-muted uppercase">Course</p>
                 <p className="font-semibold text-ink">{a.course.name}</p>
-                <p className="text-xs text-muted">
+                <p className="text-caption text-muted">
                   {a.course.code} · {a.course.durationText}
                 </p>
-                <p className="text-xs text-muted">
+                <p className="text-caption text-muted">
                   Min attendance {a.course.minAttendancePct}% · Passing {a.course.passingMarksPct}%
                 </p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-medium tracking-wide text-muted uppercase">Center</p>
+                <p className="text-caption font-medium tracking-wide text-muted uppercase">Center</p>
                 <p className="font-semibold text-ink">{a.center.name}</p>
-                <p className="text-xs text-muted">{a.center.code}</p>
-                <p className="text-xs text-muted">{[a.center.block?.name, a.center.district?.name, a.center.state?.name].filter(Boolean).join(", ")}</p>
+                <p className="text-caption text-muted">{a.center.code}</p>
+                <p className="text-caption text-muted">{[a.center.block?.name, a.center.district?.name, a.center.state?.name].filter(Boolean).join(", ")}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-medium tracking-wide text-muted uppercase">Batch</p>
+                <p className="text-caption font-medium tracking-wide text-muted uppercase">Batch</p>
                 <p className="font-semibold text-ink">{a.batch.name}</p>
-                <p className="text-xs text-muted">
+                <p className="text-caption text-muted">
                   {a.batch.code} · <StatusBadge status={a.batch.status} />
                 </p>
-                <p className="text-xs text-muted">
+                <p className="text-caption text-muted">
                   {formatDate(a.batch.startDate)} – {formatDate(a.batch.endDate)}
                 </p>
-                <p className="text-xs text-muted">{formatSchedule(a.batch)}{a.batch.room ? ` · ${a.batch.room}` : ""}</p>
+                <p className="text-caption text-muted">{formatSchedule(a.batch)}{a.batch.room ? ` · ${a.batch.room}` : ""}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-medium tracking-wide text-muted uppercase">Trainer</p>
+                <p className="text-caption font-medium tracking-wide text-muted uppercase">Trainer</p>
                 {effectiveTrainer ? (
                   <>
                     <p className="font-semibold text-ink">{effectiveTrainer.user.name}</p>
-                    <p className="text-xs text-muted">
+                    <p className="text-caption text-muted">
                       {effectiveTrainer.trainerId} · {titleCase(effectiveTrainer.level)} level
                     </p>
                     {a.trainer && a.trainer.id !== a.batch.trainerId && <Badge tone="info">Overrides batch trainer</Badge>}
                   </>
                 ) : (
-                  <p className="text-sm text-amber-700">No trainer assigned</p>
+                  <p className="text-body-sm text-amber-700">No trainer assigned</p>
                 )}
               </div>
             </CardBody>
@@ -163,27 +163,27 @@ export default async function AdmissionDetailPage({ params }: { params: Promise<
                     <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 sm:gap-3">
                       {[
                         { label: "Held", value: a.attendance.held, cls: "text-ink" },
-                        { label: "Present", value: a.attendance.present, cls: "text-green-700" },
+                        { label: "Present", value: a.attendance.present, cls: "text-success-dark" },
                         { label: "Late", value: a.attendance.late, cls: "text-amber-700" },
                         { label: "Absent", value: a.attendance.absent, cls: "text-danger" },
                         { label: "Leave", value: a.attendance.leave, cls: "text-blue-700" },
                       ].map((x) => (
-                        <div key={x.label} className="rounded-xl bg-surface p-3 text-center">
-                          <p className={`text-lg font-bold tabular-nums ${x.cls}`}>{x.value}</p>
-                          <p className="text-[11px] font-medium text-muted uppercase">{x.label}</p>
+                        <div key={x.label} className="rounded-md bg-surface p-3 text-center">
+                          <p className={`text-h3 tabular-nums ${x.cls}`}>{x.value}</p>
+                          <p className="text-caption font-medium text-muted uppercase">{x.label}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted">Use “Recompute progress” to compute attendance and assessment metrics.</p>
+                <p className="text-body-sm text-muted">Use “Recompute progress” to compute attendance and assessment metrics.</p>
               )}
             </CardBody>
           </Card>
 
           <Card>
-            <CardHeader title="Fee & payments" description={app.originalFee === 0 ? "Free course" : `${formatINR(app.paidAmount)} received of ${formatINR(app.payableAmount)} payable${due > 0 ? ` · ${formatINR(due)} due` : ""}`} action={<Link href={`/admin/applications/${app.id}`} className="text-sm font-semibold text-navy hover:underline">Application {app.applicationNo}</Link>} />
+            <CardHeader title="Fee & payments" description={app.originalFee === 0 ? "Free course" : `${formatINR(app.paidAmount)} received of ${formatINR(app.payableAmount)} payable${due > 0 ? ` · ${formatINR(due)} due` : ""}`} action={<Link href={`/admin/applications/${app.id}`} className="text-body-sm font-semibold text-navy hover:underline">Application {app.applicationNo}</Link>} />
             <TableWrap className="rounded-none border-0">
               <THead>
                 <tr>
@@ -202,10 +202,10 @@ export default async function AdmissionDetailPage({ params }: { params: Promise<
                     <TD primary>
                       <span className="flex items-start justify-between gap-2">
                         <span className="min-w-0">
-                          <Link href={`/admin/payments/${pm.id}`} className="font-mono text-xs font-semibold text-navy hover:underline">
+                          <Link href={`/admin/payments/${pm.id}`} className="font-mono text-caption font-semibold text-navy hover:underline">
                             {pm.paymentNo}
                           </Link>
-                          {pm.receiptNo && <span className="block text-[11px] font-normal text-muted">Receipt {pm.receiptNo}</span>}
+                          {pm.receiptNo && <span className="block text-caption font-normal text-muted">Receipt {pm.receiptNo}</span>}
                         </span>
                         <span className="shrink-0 text-right md:hidden">
                           <span className="block tabular-nums">{formatINR(pm.amount)}</span>
@@ -228,7 +228,7 @@ export default async function AdmissionDetailPage({ params }: { params: Promise<
                         href={withBasePath(`/api/admin/payments/${pm.id}/document`)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex min-h-11 items-center text-xs font-semibold text-orange hover:underline md:min-h-0"
+                        className="inline-flex min-h-11 items-center text-caption font-semibold text-orange hover:underline md:min-h-0"
                       >
                         {pm.status === "COMPLETED" ? "Receipt" : "Invoice"}
                       </a>
@@ -241,7 +241,7 @@ export default async function AdmissionDetailPage({ params }: { params: Promise<
         </div>
 
         {/* Eligibility and the workflow actions lead on phones. */}
-        <div className="order-first space-y-5 xl:order-none">
+        <div className="order-first space-y-6 xl:order-none">
           <Card>
             <CardHeader title="Certificate eligibility" />
             <CardBody>

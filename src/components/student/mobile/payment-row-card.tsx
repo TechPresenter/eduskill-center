@@ -27,15 +27,15 @@ export function PaymentRowCard({ payment: p }: { payment: PaymentRow }) {
     <li className="card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-mono text-[13px] font-semibold text-navy">{p.paymentNo}</p>
-          <p className="text-[12px] text-muted">{formatDate(p.paidAt ?? p.createdAt)}</p>
+          <p className="font-mono text-body-sm font-semibold text-navy">{p.paymentNo}</p>
+          <p className="text-caption text-muted">{formatDate(p.paidAt ?? p.createdAt)}</p>
         </div>
         <StatusBadge status={p.status} />
       </div>
 
-      <p className="mt-2 font-heading text-xl font-extrabold text-navy tabular-nums">{formatINR(p.amount)}</p>
+      <p className="mt-2 text-h3 text-navy tabular-nums">{formatINR(p.amount)}</p>
 
-      <dl className="mt-2 space-y-1 text-[13px]">
+      <dl className="mt-2 space-y-1 text-body-sm">
         <div className="flex justify-between gap-3">
           <dt className="text-muted">Application</dt>
           <dd className="min-w-0 truncate text-right">
@@ -55,25 +55,25 @@ export function PaymentRowCard({ payment: p }: { payment: PaymentRow }) {
         {p.referenceNo && (
           <div className="flex justify-between gap-3">
             <dt className="text-muted">Reference</dt>
-            <dd className="min-w-0 truncate text-right font-mono text-[12px] text-ink">{p.referenceNo}</dd>
+            <dd className="min-w-0 truncate text-right font-mono text-caption text-ink">{p.referenceNo}</dd>
           </div>
         )}
         {p.receiptNo && (
           <div className="flex justify-between gap-3">
             <dt className="text-muted">Receipt no.</dt>
-            <dd className="min-w-0 truncate text-right font-mono text-[12px] text-ink">{p.receiptNo}</dd>
+            <dd className="min-w-0 truncate text-right font-mono text-caption text-ink">{p.receiptNo}</dd>
           </div>
         )}
       </dl>
 
-      {p.status === "FAILED" && p.failureReason && <p className="mt-2 rounded-lg bg-danger-light p-2 text-[12px] text-red-900">{p.failureReason}</p>}
+      {p.status === "FAILED" && p.failureReason && <p className="mt-2 rounded-md bg-danger-light p-2 text-caption text-red-900">{p.failureReason}</p>}
 
       {RECEIPTABLE.includes(p.status) && (
         <a
           href={withBasePath(`/api/student/payments/${p.id}/receipt`)}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line px-4 text-[14px] font-semibold text-navy tap-highlight-none active:bg-surface"
+          className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-line px-4 text-body font-semibold text-navy tap-highlight-none active:bg-surface"
         >
           {done ? <Download className="h-4 w-4" aria-hidden /> : <Receipt className="h-4 w-4" aria-hidden />}
           {done ? "Download receipt" : "Proforma invoice"}

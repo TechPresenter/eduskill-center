@@ -84,10 +84,10 @@ export function PermissionMatrix({ value, onChange, inherited = [], disabled, cl
         </span>
         {!disabled && (
           <div className="-mr-2 flex items-center gap-1">
-            <button type="button" className="inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold text-navy tap-highlight-none active:bg-surface hover:underline lg:min-h-0" onClick={() => toggleModule(allKeys, true)} disabled={everything}>
+            <button type="button" className="ring-focus inline-flex min-h-11 items-center rounded-md px-2 text-body-sm font-semibold text-navy tap-highlight-none active:bg-surface hover:underline lg:min-h-0" onClick={() => toggleModule(allKeys, true)} disabled={everything}>
               Select all
             </button>
-            <button type="button" className="inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold text-navy tap-highlight-none active:bg-surface hover:underline lg:min-h-0" onClick={() => onChange([])} disabled={selected.size === 0}>
+            <button type="button" className="ring-focus inline-flex min-h-11 items-center rounded-md px-2 text-body-sm font-semibold text-navy tap-highlight-none active:bg-surface hover:underline lg:min-h-0" onClick={() => onChange([])} disabled={selected.size === 0}>
               Clear
             </button>
           </div>
@@ -97,7 +97,7 @@ export function PermissionMatrix({ value, onChange, inherited = [], disabled, cl
       {/* Phones / tablets: one collapsible card per module with 56px action cards. */}
       <div className="space-y-2 lg:hidden">
         {modules.map((m) => (
-          <details key={m.key} className="group rounded-2xl border border-line bg-white open:shadow-card">
+          <details key={m.key} className="group rounded-card border border-line bg-white open:shadow-e1">
             <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 tap-highlight-none active:bg-surface">
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold text-navy">{m.label}</span>
@@ -111,10 +111,10 @@ export function PermissionMatrix({ value, onChange, inherited = [], disabled, cl
             <div className="space-y-3 border-t border-line px-4 py-3">
               {!disabled && m.editable.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => toggleModule(m.editable, true)} className="inline-flex min-h-11 items-center rounded-xl border border-line px-3 text-xs font-semibold text-navy tap-highlight-none active:bg-surface">
+                  <button type="button" onClick={() => toggleModule(m.editable, true)} className="ring-focus inline-flex min-h-11 items-center rounded-md border border-line px-3 text-body-sm font-semibold text-navy tap-highlight-none active:bg-surface">
                     Grant all
                   </button>
-                  <button type="button" onClick={() => toggleModule(m.editable, false)} className="inline-flex min-h-11 items-center rounded-xl border border-line px-3 text-xs font-semibold text-muted tap-highlight-none active:bg-surface">
+                  <button type="button" onClick={() => toggleModule(m.editable, false)} className="ring-focus inline-flex min-h-11 items-center rounded-md border border-line px-3 text-body-sm font-semibold text-muted tap-highlight-none active:bg-surface">
                     Clear module
                   </button>
                 </div>
@@ -142,7 +142,7 @@ export function PermissionMatrix({ value, onChange, inherited = [], disabled, cl
           const allOn = m.editable.length > 0 && m.editable.every((k) => selected.has(k));
           const someOn = m.editable.some((k) => selected.has(k));
           return (
-            <fieldset key={m.key} className="rounded-xl border border-line bg-white p-3">
+            <fieldset key={m.key} className="rounded-card border border-line bg-white p-3">
               <legend className="sr-only">{m.label}</legend>
               <div className="mb-2 flex items-start justify-between gap-2 border-b border-line pb-2">
                 <p className="text-sm font-semibold text-navy">{m.label}</p>
@@ -172,8 +172,8 @@ export function PermissionMatrix({ value, onChange, inherited = [], disabled, cl
                       checked={isInherited || selected.has(k)}
                       disabled={disabled || isInherited}
                       onChange={(e) => toggle(k, e.target.checked)}
-                      label={<span className={cn("text-xs", isInherited && "text-muted")}>{actionLabel(k)}</span>}
-                      description={isInherited ? <span className="text-[10px]">via role</span> : undefined}
+                      label={<span className={cn("text-body-sm", isInherited && "text-muted")}>{actionLabel(k)}</span>}
+                      description={isInherited ? <span className="text-caption">via role</span> : undefined}
                       className="items-center"
                     />
                   );

@@ -147,7 +147,7 @@ export function EndAssignmentButton({ assignmentId, label }: { assignmentId: str
   };
   return (
     <>
-      <Button size="xs" variant="ghost" className="text-danger hover:bg-danger-light" onClick={() => setOpen(true)} leftIcon={<XCircle className="h-3.5 w-3.5" />}>
+      <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-light" onClick={() => setOpen(true)} leftIcon={<XCircle className="h-3.5 w-3.5" />}>
         End
       </Button>
       <ConfirmDialog open={open} onClose={() => !busy && setOpen(false)} onConfirm={end} title="End this assignment?" description={`The assignment at ${label} will be closed today. If a batch is linked, it will no longer have this trainer.`} confirmLabel="End assignment" danger loading={busy} />

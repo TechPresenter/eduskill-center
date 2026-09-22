@@ -52,7 +52,8 @@ export default async function SettingsGroupPage({ params }: { params: Promise<{ 
   const note = GROUP_NOTES[def.key];
 
   return (
-    <div>
+    // One rhythm between the page title, the group tabs and the panel — settings used to have none.
+    <div className="space-y-5">
       <PageHeader title="Settings" mobileTitle={def.label} description="Branding, contact details, ID formats, admissions, payments, communication and more – all stored in the database, no deployment needed." />
       <SettingsTabs groups={SETTING_GROUPS} />
       <Card className="max-w-4xl">

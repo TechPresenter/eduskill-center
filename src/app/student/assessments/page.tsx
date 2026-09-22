@@ -15,7 +15,7 @@ export default async function StudentAssessmentsPage() {
   const assessments = await listStudentAssessments(user.student.id);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       <PageHeader title="Assessments" description="Quizzes, practicals and exams for your batch, with your results once evaluated." />
       {assessments.length === 0 ? (
         <EmptyState icon={<ListChecks className="h-7 w-7" />} title="No assessments yet" description="Assessments scheduled by your trainer will be listed here." />
@@ -27,13 +27,13 @@ export default async function StudentAssessmentsPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-bold text-navy">{a.title}</p>
-                    <p className="text-xs text-muted">
+                    <p className="text-caption text-muted">
                       {a.batch.course.name} · {titleCase(a.type)} · {formatDate(a.date)}
                     </p>
                   </div>
                   <ResultBadge a={a} />
                 </div>
-                <p className="mt-2 text-sm text-ink">
+                <p className="mt-2 text-body-sm text-ink">
                   Max {a.maxMarks} · Pass {a.passingMarks}
                   {a.result && (
                     <>
@@ -43,7 +43,7 @@ export default async function StudentAssessmentsPage() {
                     </>
                   )}
                 </p>
-                {a.result?.remarks && <p className="mt-1 text-xs text-muted">Remarks: {a.result.remarks}</p>}
+                {a.result?.remarks && <p className="mt-1 text-caption text-muted">Remarks: {a.result.remarks}</p>}
               </li>
             ))}
           </ul>
@@ -66,20 +66,20 @@ export default async function StudentAssessmentsPage() {
                   <TR key={a.id}>
                     <TD>
                       <p className="font-medium">{a.title}</p>
-                      <p className="text-xs text-muted">{titleCase(a.type)}</p>
+                      <p className="text-caption text-muted">{titleCase(a.type)}</p>
                     </TD>
-                    <TD className="text-sm">
+                    <TD className="text-body-sm">
                       {a.batch.course.name}
-                      <p className="text-xs text-muted">{a.batch.name}</p>
+                      <p className="text-caption text-muted">{a.batch.name}</p>
                     </TD>
-                    <TD className="text-sm">{formatDate(a.date)}</TD>
+                    <TD className="text-body-sm">{formatDate(a.date)}</TD>
                     <TD className="text-right tabular-nums">{a.maxMarks}</TD>
                     <TD className="text-right tabular-nums">{a.passingMarks}</TD>
                     <TD className="text-right font-semibold tabular-nums">{a.result ? a.result.marks : "—"}</TD>
-                    <TD className="text-sm">{a.result?.grade ?? "—"}</TD>
+                    <TD className="text-body-sm">{a.result?.grade ?? "—"}</TD>
                     <TD>
                       <ResultBadge a={a} />
-                      {a.result?.remarks && <p className="mt-0.5 max-w-[14rem] text-xs text-muted">{a.result.remarks}</p>}
+                      {a.result?.remarks && <p className="mt-0.5 max-w-[14rem] text-caption text-muted">{a.result.remarks}</p>}
                     </TD>
                   </TR>
                 ))}

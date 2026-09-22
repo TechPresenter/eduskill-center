@@ -126,7 +126,7 @@ export function AssignTrainerDrawer({ centerId, trainers, courses, batches, disa
 
 export function EndAssignmentButton({ centerId, assignmentId, trainerName }: { centerId: string; assignmentId: string; trainerName: string }) {
   return (
-    <ConfirmAction size="xs" method="delete" url={`/api/admin/centers/${centerId}/trainers/${assignmentId}`} title={`End ${trainerName}'s assignment?`} description="The assignment is closed. If it was for a batch, that batch no longer has a trainer." confirmLabel="End assignment" danger successMessage="Assignment ended" icon={<UserMinus className="h-3.5 w-3.5" />}>
+    <ConfirmAction method="delete" url={`/api/admin/centers/${centerId}/trainers/${assignmentId}`} title={`End ${trainerName}'s assignment?`} description="The assignment is closed. If it was for a batch, that batch no longer has a trainer." confirmLabel="End assignment" danger successMessage="Assignment ended" icon={<UserMinus className="h-3.5 w-3.5" />}>
       End
     </ConfirmAction>
   );

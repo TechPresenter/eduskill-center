@@ -45,13 +45,27 @@ export function EnquiryForm({ defaultType }: { defaultType?: string }) {
     }
   };
 
+  /*
+   * Success replaces the form rather than sitting above it: the job is done, and leaving forty
+   * filled-in fields on screen invites a second accidental submit. `role="status"` announces it.
+   */
   if (status === "done") {
+    const firstName = form.name.trim().split(" ")[0];
     return (
-      <div className="flex flex-col items-center rounded-card-lg bg-success-light px-6 py-14 text-center" role="status">
-        <CheckCircle2 className="h-12 w-12 text-success" aria-hidden />
-        <h3 className="mt-4 text-xl font-extrabold text-navy">Thank you, {form.name.split(" ")[0]}!</h3>
-        <p className="mt-2 max-w-md text-sm text-muted">We have received your message. Our team usually replies within 2 working days on the mobile number or email you shared.</p>
-        <Button variant="outline" className="mt-6" onClick={() => { setForm({ ...empty }); setStatus("idle"); }}>
+      <div className="flex flex-col items-center rounded-card-lg border border-success/25 bg-success-light px-6 py-14 text-center" role="status">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-success-dark shadow-e1">
+          <CheckCircle2 className="h-8 w-8" aria-hidden />
+        </span>
+        <h3 className="mt-5 text-h2 text-navy">{firstName ? `Thank you, ${firstName}!` : "Thank you!"}</h3>
+        <p className="mt-3 max-w-md text-body text-ink/80">We have received your message. Our team usually replies within two working days, on the mobile number or email you shared.</p>
+        <Button
+          variant="outline"
+          className="mt-7"
+          onClick={() => {
+            setForm({ ...empty });
+            setStatus("idle");
+          }}
+        >
           Send another message
         </Button>
       </div>
@@ -59,7 +73,8 @@ export function EnquiryForm({ defaultType }: { defaultType?: string }) {
   }
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-5" aria-label="Contact form">
+    // `relative` so the honeypot below is positioned against this form and can never widen the page.
+    <form onSubmit={submit} noValidate className="relative space-y-5" aria-label="Contact form">
       {error && <Alert tone="danger">{error}</Alert>}
       <FormGrid>
         <Field label="Full name" htmlFor="enq-name" required error={errors.name}>
@@ -81,14 +96,18 @@ export function EnquiryForm({ defaultType }: { defaultType?: string }) {
       <Field label="Message" htmlFor="enq-message" required error={errors.message}>
         <Textarea id="enq-message" value={form.message} onChange={set("message")} rows={5} required invalid={!!errors.message} maxLength={3000} />
       </Field>
-      {/* Honeypot – hidden from people, filled by bots */}
+      {/* Honeypot – hidden from people, filled by bots. Off to the LEFT: a negative inline-start
+          offset cannot extend document.scrollWidth the way a right-hand one would. */}
       <div className="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden>
         <label htmlFor="enq-website">Website</label>
         <input id="enq-website" tabIndex={-1} autoComplete="off" value={form.website} onChange={set("website")} />
       </div>
-      <Button type="submit" size="lg" loading={status === "busy"} rightIcon={<Send className="h-4 w-4" />}>
-        Send Message
-      </Button>
+      <div className="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-caption text-muted">We never share your details with anyone.</p>
+        <Button type="submit" size="lg" loading={status === "busy"} rightIcon={<Send className="h-4 w-4" />} className="w-full sm:w-auto">
+          Send message
+        </Button>
+      </div>
     </form>
   );
 }

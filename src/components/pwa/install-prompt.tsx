@@ -60,7 +60,7 @@ export function InstallPrompt({ appName = "EduSkill" }: { appName?: string }) {
   };
 
   return (
-    <div className="fixed inset-x-3 z-[60] rounded-2xl border border-line bg-white p-3 shadow-float animate-slide-up lg:left-auto lg:right-6 lg:w-96" style={{ bottom: "calc(4.75rem + env(safe-area-inset-bottom, 0px))" }} role="dialog" aria-label="Install app">
+    <div className="fixed inset-x-3 z-drawer rounded-card border border-line bg-white p-3 shadow-e3 animate-slide-up motion-reduce:animate-none lg:left-auto lg:right-6 lg:w-96" style={{ bottom: "calc(4.75rem + env(safe-area-inset-bottom, 0px))" }} role="dialog" aria-label="Install app">
       <div className="flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={withBasePath("/icons/icon-192.png")} alt="" className="h-11 w-11 rounded-xl" />

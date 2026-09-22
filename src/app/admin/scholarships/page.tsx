@@ -5,12 +5,13 @@ import { hasPermission } from "@/lib/rbac/permissions";
 import { formatDate, formatINR, formatNumber, titleCase } from "@/lib/utils";
 import { awardListSchema, listAwards, listPendingScholarshipRequests, listPrograms, pendingRequestSchema, programListSchema, scholarshipCounts } from "@/server/scholarship-programs";
 import { getAdminLookups } from "@/server/admissions";
-import { PageHeader } from "@/components/ui/misc";
+import { ButtonLink } from "@/components/ui/button";
 import { StatusBadge, Badge } from "@/components/ui/badge";
 import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
 import { Pager } from "@/components/admin/pickers/pager";
 import { EmptyState } from "@/components/ui/feedback";
 import { StatsCard } from "@/components/ui/stats";
+import { AdminListPage } from "@/components/admin/shared/list-page";
 import { FilterBar } from "@/components/admin/pickers/filter-bar";
 import { QueryTabs } from "@/components/admin/pickers/query-tabs";
 import { ExportButton } from "@/components/admin/pickers/export-button";
@@ -84,9 +85,9 @@ export default async function ScholarshipsPage({ searchParams }: { searchParams:
                       <span className="flex items-start justify-between gap-2">
                         <span className="min-w-0">
                           <span className="block font-semibold">{p.name}</span>
-                          <span className="block text-xs font-normal text-muted">{p.slug}</span>
+                          <span className="block text-caption font-normal text-muted">{p.slug}</span>
                           {p.eligibilityCriteria && (
-                            <span className="block truncate text-[11px] font-normal text-muted md:max-w-72" title={p.eligibilityCriteria}>
+                            <span className="block truncate text-caption font-normal text-muted md:max-w-72" title={p.eligibilityCriteria}>
                               {p.eligibilityCriteria}
                             </span>
                           )}
@@ -98,15 +99,15 @@ export default async function ScholarshipsPage({ searchParams }: { searchParams:
                     </TD>
                     <TD label="Type">{titleCase(p.type)}</TD>
                     <TD label="Default award">
-                      {p.fixedAmount !== null ? formatINR(p.fixedAmount) : p.percentage !== null ? `${p.percentage}% of fee` : <span className="text-xs text-muted">Case by case</span>}
-                      {p.maxAmount !== null && <span className="block text-[11px] text-muted">max {formatINR(p.maxAmount)}</span>}
+                      {p.fixedAmount !== null ? formatINR(p.fixedAmount) : p.percentage !== null ? `${p.percentage}% of fee` : <span className="text-caption text-muted">Case by case</span>}
+                      {p.maxAmount !== null && <span className="block text-caption text-muted">max {formatINR(p.maxAmount)}</span>}
                     </TD>
                     <TD label="Budget" className="text-right tabular-nums">
                       {p.budget !== null ? formatINR(p.budget) : "—"}
                     </TD>
                     <TD label="Approved" className="text-right tabular-nums">
                       <span className="block font-semibold">{formatINR(p.awardedTotal)}</span>
-                      <span className="text-[11px] text-muted">
+                      <span className="text-caption text-muted">
                         {p.approvedCount} approved · {p.awardsCount} total
                       </span>
                       {p.budget !== null && p.budget > 0 && p.awardedTotal > p.budget && (
@@ -115,7 +116,7 @@ export default async function ScholarshipsPage({ searchParams }: { searchParams:
                         </Badge>
                       )}
                     </TD>
-                    <TD label="Validity" className="text-xs text-muted md:whitespace-nowrap">
+                    <TD label="Validity" className="text-caption text-muted md:whitespace-nowrap">
                       {p.startDate || p.endDate ? `${p.startDate ? formatDate(p.startDate) : "…"} – ${p.endDate ? formatDate(p.endDate) : "…"}` : "Open-ended"}
                     </TD>
                     <TD mobile="hidden">
@@ -128,7 +129,7 @@ export default async function ScholarshipsPage({ searchParams }: { searchParams:
                 ))}
               </TBody>
             </TableWrap>
-            <Pager className="mt-4" page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} base={base} params={sp} />
+            <Pager page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} base={base} params={sp} />
           </>
         )}
       </>
@@ -178,26 +179,26 @@ export default async function ScholarshipsPage({ searchParams }: { searchParams:
                       <Link href={`/admin/students/${a.student.id}`} className="font-semibold hover:text-navy">
                         {a.student.name}
                       </Link>
-                      <span className="block font-mono text-xs font-normal text-muted">{a.student.studentId ?? a.student.mobile}</span>
+                      <span className="block font-mono text-caption font-normal text-muted">{a.student.studentId ?? a.student.mobile}</span>
                     </span>
                     <span className="shrink-0 text-right md:hidden">
-                      <span className="block text-base font-bold text-green-700 tabular-nums">{formatINR(a.scholarshipAmount)}</span>
+                      <span className="block text-h4 text-success-dark tabular-nums">{formatINR(a.scholarshipAmount)}</span>
                       <StatusBadge status={a.status} className="mt-1" />
                     </span>
                   </span>
                 </TD>
                 <TD label="Application">
-                  <Link href={`/admin/applications/${a.application.id}`} className="font-mono text-xs text-navy hover:underline">
+                  <Link href={`/admin/applications/${a.application.id}`} className="font-mono text-caption text-navy hover:underline">
                     {a.application.applicationNo}
                   </Link>
-                  <span className="block text-xs text-muted">{a.course.name}</span>
-                  <span className="block text-[11px] text-muted">{a.application.center.name}</span>
+                  <span className="block text-caption text-muted">{a.course.name}</span>
+                  <span className="block text-caption text-muted">{a.application.center.name}</span>
                 </TD>
-                <TD label="Program">{a.program ? a.program.name : <span className="text-xs text-muted">Ad-hoc</span>}</TD>
+                <TD label="Program">{a.program ? a.program.name : <span className="text-caption text-muted">Ad-hoc</span>}</TD>
                 <TD label="Fee" className="text-right tabular-nums">
                   {formatINR(a.originalFee)}
                 </TD>
-                <TD mobile="hidden" className="text-right font-semibold text-green-700 tabular-nums">
+                <TD mobile="hidden" className="text-right font-semibold text-success-dark tabular-nums">
                   {formatINR(a.scholarshipAmount)}
                 </TD>
                 <TD label="Payable" className="text-right tabular-nums">
@@ -208,14 +209,14 @@ export default async function ScholarshipsPage({ searchParams }: { searchParams:
                     <StatusBadge status={a.status} />
                   </span>
                   {a.remarks ? (
-                    <span className="block truncate text-[11px] text-muted md:max-w-48" title={a.remarks}>
+                    <span className="block truncate text-caption text-muted md:max-w-48" title={a.remarks}>
                       {a.remarks}
                     </span>
                   ) : (
-                    <span className="text-xs text-muted md:hidden">—</span>
+                    <span className="text-caption text-muted md:hidden">—</span>
                   )}
                 </TD>
-                <TD label="Decided by" className="text-xs text-muted">
+                <TD label="Decided by" className="text-caption text-muted">
                   {a.approvedByName ?? "—"}
                   <span className="block">{formatDate(a.approvedAt ?? a.createdAt)}</span>
                 </TD>
@@ -223,7 +224,7 @@ export default async function ScholarshipsPage({ searchParams }: { searchParams:
             ))}
           </TBody>
         </TableWrap>
-        <Pager className="mt-4" page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} base={base} params={sp} />
+        <Pager page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} base={base} params={sp} />
       </>
     );
   } else {
@@ -262,7 +263,7 @@ export default async function ScholarshipsPage({ searchParams }: { searchParams:
                   <TR key={a.id}>
                     <TD primary>
                       <span className="flex items-start justify-between gap-2">
-                        <Link href={`/admin/applications/${a.id}`} className="font-mono text-xs font-semibold text-navy hover:underline">
+                        <Link href={`/admin/applications/${a.id}`} className="font-mono text-caption font-semibold text-navy hover:underline">
                           {a.applicationNo}
                         </Link>
                         <span className="shrink-0 md:hidden">
@@ -277,11 +278,11 @@ export default async function ScholarshipsPage({ searchParams }: { searchParams:
                       <Link href={`/admin/students/${a.student.id}`} className="font-semibold hover:text-navy">
                         {a.student.name}
                       </Link>
-                      <span className="block text-xs text-muted">{[a.student.familyIncome, titleCase(a.student.areaType), a.student.qualification].filter(Boolean).join(" · ") || a.student.mobile}</span>
+                      <span className="block text-caption text-muted">{[a.student.familyIncome, titleCase(a.student.areaType), a.student.qualification].filter(Boolean).join(" · ") || a.student.mobile}</span>
                     </TD>
                     <TD label="Course & center">
                       <span className="block">{a.course.name}</span>
-                      <span className="text-xs text-muted">{a.center.name}</span>
+                      <span className="text-caption text-muted">{a.center.name}</span>
                       {!a.course.scholarshipAvailable && (
                         <Badge tone="warning" className="mt-1">
                           Course not scholarship-eligible
@@ -290,9 +291,9 @@ export default async function ScholarshipsPage({ searchParams }: { searchParams:
                     </TD>
                     <TD label="Fee" className="text-right tabular-nums">
                       {formatINR(a.originalFee)}
-                      {a.discountAmount > 0 && <span className="block text-[11px] text-muted">discount {formatINR(a.discountAmount)}</span>}
+                      {a.discountAmount > 0 && <span className="block text-caption text-muted">discount {formatINR(a.discountAmount)}</span>}
                     </TD>
-                    <TD label="Reason" className="text-xs text-muted md:max-w-64">
+                    <TD label="Reason" className="text-caption text-muted md:max-w-64">
                       <span className="line-clamp-3" title={a.scholarshipReason ?? undefined}>
                         {a.scholarshipReason ?? "—"}
                       </span>
@@ -303,16 +304,16 @@ export default async function ScholarshipsPage({ searchParams }: { searchParams:
                     <TD actions>
                       <div className="flex flex-wrap items-center justify-end gap-2 md:gap-1.5">
                         <QuickDecideButton applicationId={a.id} applicationNo={a.applicationNo} studentName={a.student.name} courseName={a.course.name} originalFee={a.originalFee} discountAmount={a.discountAmount} reason={a.scholarshipReason} programs={lookups.programs} allowed={can.approve} />
-                        <Link href={`/admin/applications/${a.id}`} className="inline-flex h-11 items-center rounded-lg border border-line bg-white px-4 text-sm font-semibold text-ink hover:bg-surface md:h-8 md:px-2.5 md:text-xs">
+                        <ButtonLink href={`/admin/applications/${a.id}`} variant="outline" size="sm">
                           Open application
-                        </Link>
+                        </ButtonLink>
                       </div>
                     </TD>
                   </TR>
                 ))}
               </TBody>
             </TableWrap>
-            <Pager className="mt-4" page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} base={base} params={sp} />
+            <Pager page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} base={base} params={sp} />
           </>
         )}
       </>
@@ -320,28 +321,30 @@ export default async function ScholarshipsPage({ searchParams }: { searchParams:
   }
 
   return (
-    <div>
-      <PageHeader
-        title="Scholarships"
-        description={`${formatNumber(counts.programs)} program${counts.programs === 1 ? "" : "s"} · ${formatNumber(counts.awards)} award${counts.awards === 1 ? "" : "s"} · ${formatNumber(counts.pending)} pending request${counts.pending === 1 ? "" : "s"}.`}
-        actions={
+    <AdminListPage
+      header={{
+        title: "Scholarships",
+        description: `${formatNumber(counts.programs)} program${counts.programs === 1 ? "" : "s"} · ${formatNumber(counts.awards)} award${counts.awards === 1 ? "" : "s"} · ${formatNumber(counts.pending)} pending request${counts.pending === 1 ? "" : "s"}.`,
+        actions: (
           <>
             {tab === "awards" && <ExportButton href={withParams("/api/admin/scholarships/awards/export", sp, { page: undefined, limit: undefined, tab: undefined })} disabled={!can.export} />}
             {tab === "programs" && <NewProgramButton allowed={can.create} />}
           </>
-        }
-      />
-      <QueryTabs
-        param="tab"
-        defaultValue="programs"
-        className="mb-4"
-        items={[
-          { value: "programs", label: "Programs", count: counts.programs },
-          { value: "awards", label: "Awards", count: counts.awards },
-          { value: "requests", label: "Pending requests", count: counts.pending },
-        ]}
-      />
+        ),
+      }}
+      tabs={
+        <QueryTabs
+          param="tab"
+          defaultValue="programs"
+          items={[
+            { value: "programs", label: "Programs", count: counts.programs },
+            { value: "awards", label: "Awards", count: counts.awards },
+            { value: "requests", label: "Pending requests", count: counts.pending },
+          ]}
+        />
+      }
+    >
       {body}
-    </div>
+    </AdminListPage>
   );
 }

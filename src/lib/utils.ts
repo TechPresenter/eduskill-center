@@ -1,7 +1,56 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
 import { format as formatDateFns, isValid, parseISO, differenceInYears } from "date-fns";
 import { BASE_PATH, stripBasePath, withBasePath } from "@/lib/base-path";
+
+/**
+ * tailwind-merge has no idea what the project's own `@utility` classes in
+ * `src/app/globals.css` are. Left unconfigured it files every unrecognised `text-*` token
+ * under "text colour", so `cn("text-body", "text-muted")` silently drops the type-scale
+ * class and the design system looks like it only applies half the time. The same blind spot
+ * lets `z-overlay z-toast` or `duration-overlay duration-micro` both survive a merge.
+ *
+ * Teaching it the custom groups once here is what makes `cn()` safe to use with the token
+ * layer: a type class and a colour class can share a call again, and the later of two
+ * competing tokens wins the way it does for stock Tailwind utilities.
+ */
+const twMerge = extendTailwindMerge<"focus-ring">({
+  extend: {
+    classGroups: {
+      // Type scale — `@utility text-display` … `text-input` in globals.css.
+      "font-size": [
+        {
+          text: [
+            "display",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "body",
+            "body-lg",
+            "body-sm",
+            "caption",
+            "overline",
+            "input",
+            "meta",
+          ],
+        },
+      ],
+      // Elevation — three steps plus the legacy aliases that point at the same shadows.
+      shadow: ["shadow-e1", "shadow-e2", "shadow-e3", "shadow-card", "shadow-card-hover", "shadow-float"],
+      // Named stacking steps.
+      z: ["z-raised", "z-sticky", "z-header", "z-drawer", "z-overlay", "z-toast"],
+      duration: ["duration-micro", "duration-element", "duration-overlay"],
+      // Project radius aliases, so `rounded-card` and `rounded-full` still conflict.
+      rounded: ["rounded-card", "rounded-card-lg"],
+      p: ["card-p"],
+      py: ["section-y"],
+      // `ring-focus` / `ring-focus-inverse` draw an `outline`, not a ring, so they get their
+      // own group rather than being merged away by (or merging away) a real ring colour.
+      "focus-ring": [{ ring: ["focus", "focus-inverse"] }],
+    },
+  },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

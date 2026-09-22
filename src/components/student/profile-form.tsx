@@ -334,7 +334,7 @@ export function ProfileForm({ initial, profileCompleted, studentCode, welcome }:
           </FormSection>
 
           <FormActions>
-            <Link href="/student/dashboard" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-ink hover:bg-surface">
+            <Link href="/student/dashboard" className="inline-flex min-h-11 items-center justify-center rounded-md border border-line px-5 text-body-sm font-semibold text-ink hover:bg-surface">
               Cancel
             </Link>
             <Button type="submit" loading={saving} size="md">

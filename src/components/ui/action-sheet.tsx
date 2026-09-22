@@ -40,7 +40,7 @@ export interface ActionSheetProps {
 export function ActionSheet({ open, onClose, title, description, items, cancelLabel = "Cancel", size = "sm", className }: ActionSheetProps) {
   const visible = items.filter((it) => !it.hidden);
   return (
-    <BottomSheet open={open} onClose={onClose} title={title} description={description} aria-label="Actions" size={size} desktop="modal" hideClose className={className} bodyClassName="px-3 pb-1 sm:px-3">
+    <BottomSheet open={open} onClose={onClose} title={title} description={description} aria-label="Actions" size={size} desktop="modal" hideClose className={className} bodyClassName="px-3 py-3">
       <SheetActions
         items={visible.map((it) => ({
           label: it.label,
@@ -58,7 +58,7 @@ export function ActionSheet({ open, onClose, title, description, items, cancelLa
       <button
         type="button"
         onClick={onClose}
-        className="mt-2 flex min-h-14 w-full items-center justify-center rounded-2xl bg-surface text-[15px] font-semibold text-navy tap-highlight-none transition-colors active:bg-lavender sm:min-h-12 sm:rounded-xl sm:hover:bg-lavender"
+        className="mt-3 flex min-h-14 w-full items-center justify-center rounded-md bg-surface font-semibold text-navy tap-highlight-none transition-colors duration-micro text-body active:bg-lavender sm:min-h-12 sm:hover:bg-lavender"
       >
         {cancelLabel}
       </button>

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { CheckCircle2, ExternalLink, XCircle } from "lucide-react";
 import { api } from "@/lib/api-client";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/modal";
 import { ReasonDialog } from "@/components/admin/pickers/reason-dialog";
 import { useMutation } from "@/components/admin/pickers/use-mutation";
@@ -24,17 +24,17 @@ export function DocumentActions({ endpoint, url, name, status, canDecide }: Docu
   const [rejectOpen, setRejectOpen] = React.useState(false);
   const disabledTitle = canDecide ? undefined : "You do not have permission to verify documents";
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex h-8 items-center gap-1 rounded-lg border border-line bg-white px-2.5 text-xs font-semibold text-ink hover:bg-surface" aria-label={`View ${name}`}>
-        <ExternalLink className="h-3.5 w-3.5" /> View
+    <div className="flex flex-wrap items-center gap-2">
+      <a href={url} target="_blank" rel="noopener noreferrer" className={buttonClasses({ variant: "outline", size: "sm" })} aria-label={`View ${name}`}>
+        <ExternalLink className="h-4 w-4" aria-hidden /> View
       </a>
       {status !== "VERIFIED" && (
-        <Button size="xs" variant="secondary" leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />} onClick={() => setVerifyOpen(true)} disabled={!canDecide || busy} title={disabledTitle}>
+        <Button size="sm" variant="secondary" leftIcon={<CheckCircle2 className="h-4 w-4" />} onClick={() => setVerifyOpen(true)} disabled={!canDecide || busy} title={disabledTitle}>
           Verify
         </Button>
       )}
       {status !== "REJECTED" && (
-        <Button size="xs" variant="ghost" className="text-danger hover:bg-danger-light" leftIcon={<XCircle className="h-3.5 w-3.5" />} onClick={() => setRejectOpen(true)} disabled={!canDecide || busy} title={disabledTitle}>
+        <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-light" leftIcon={<XCircle className="h-4 w-4" />} onClick={() => setRejectOpen(true)} disabled={!canDecide || busy} title={disabledTitle}>
           Reject
         </Button>
       )}

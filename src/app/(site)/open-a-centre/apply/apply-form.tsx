@@ -445,16 +445,16 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
     return (
       <div ref={topRef} className="mx-auto max-w-3xl scroll-mt-24 space-y-6">
         <Card>
-          <CardBody className="p-6 text-center sm:p-8">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success-light text-success">
+          <CardBody className="card-p text-center sm:p-8">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success-light text-success-dark">
               <CheckCircle2 className="h-9 w-9" aria-hidden />
             </div>
-            <h2 className="mt-5 font-heading text-2xl font-extrabold text-navy">Application received</h2>
-            <p className="mx-auto mt-2 max-w-lg text-sm text-muted">
+            <h2 className="mt-5 text-h2">Application received</h2>
+            <p className="mx-auto mt-2 max-w-lg text-body text-muted">
               Thank you. Save your application number — you will need it, along with your registered mobile number, to track the seven-step process.
             </p>
-            <p className="mt-6 text-xs font-semibold tracking-[0.2em] text-muted uppercase">Application number</p>
-            <p className="mt-1 font-heading text-3xl font-extrabold tracking-wide text-orange sm:text-4xl">{submitted.applicationNo}</p>
+            <p className="mt-6 text-overline text-muted">Application number</p>
+            <p className="mt-1 font-heading text-h1 tracking-wide text-orange">{submitted.applicationNo}</p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <ButtonLink href={`/open-a-centre/status?no=${encodeURIComponent(submitted.applicationNo)}`} variant="navy" leftIcon={<Search className="h-4 w-4" />} fullWidth className="sm:w-auto">
                 Track application status
@@ -555,7 +555,7 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
             )}
 
             <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <button type="button" onClick={startNew} className="min-h-11 text-sm font-medium text-muted hover:text-navy">
+              <button type="button" onClick={startNew} className="inline-flex min-h-11 items-center rounded-md text-body-sm font-semibold text-muted underline-offset-4 ring-focus hover:text-navy hover:underline">
                 Start a new application
               </button>
               <ButtonLink href={`/open-a-centre/status?no=${encodeURIComponent(submitted.applicationNo)}`} size="lg" fullWidth className="sm:w-auto">
@@ -823,9 +823,9 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
                       ],
                     },
                   ].map((group) => (
-                    <div key={group.step} className="rounded-2xl border border-line bg-surface/60 p-4 sm:p-5">
+                    <div key={group.step} className="rounded-card border border-line bg-surface/60 p-4 sm:p-5">
                       <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-base font-bold text-navy">{group.title}</h3>
+                        <h3 className="text-h4 text-navy">{group.title}</h3>
                         <Button type="button" variant="ghost" size="sm" onClick={() => goTo(group.step)} leftIcon={<Pencil className="h-4 w-4" />}>
                           Edit
                         </Button>
@@ -833,17 +833,17 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
                       <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
                         {group.rows.map((r) => (
                           <div key={r.label} className="min-w-0">
-                            <dt className="text-xs font-semibold tracking-wide text-muted uppercase">{r.label}</dt>
-                            <dd className="mt-0.5 text-sm break-words whitespace-pre-line text-ink">{r.value || "—"}</dd>
+                            <dt className="text-overline text-muted">{r.label}</dt>
+                            <dd className="mt-0.5 text-body break-words whitespace-pre-line text-ink">{r.value || "—"}</dd>
                           </div>
                         ))}
                       </dl>
                     </div>
                   ))}
 
-                  <div className="flex items-start gap-3 rounded-2xl border border-orange/20 bg-orange-light/50 p-4">
+                  <div className="flex items-start gap-3 rounded-card border border-orange/20 bg-orange-light/50 p-4">
                     <FileText className="mt-0.5 h-5 w-5 shrink-0 text-orange" aria-hidden />
-                    <p className="text-sm text-navy">
+                    <p className="text-body text-navy">
                       After you submit we show your application number and ask for your photograph, identity proof and address proof. Photos of the proposed space are optional but help the
                       centre verification.
                     </p>

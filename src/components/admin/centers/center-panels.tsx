@@ -45,12 +45,12 @@ export function CenterCoursesEditor({ centerId, courses, selected, canEdit }: { 
       {error && <Alert tone="danger">{error}</Alert>}
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {courses.map((c) => (
-          <Checkbox key={c.id} checked={ids.includes(c.id)} disabled={!canEdit} onChange={() => setIds((cur) => (cur.includes(c.id) ? cur.filter((x) => x !== c.id) : [...cur, c.id]))} label={c.name} description={`${c.code} · ${c.durationText}${c.status !== "ACTIVE" ? ` · ${titleCase(c.status)}` : ""}`} className="rounded-xl border border-line bg-white p-3" />
+          <Checkbox key={c.id} checked={ids.includes(c.id)} disabled={!canEdit} onChange={() => setIds((cur) => (cur.includes(c.id) ? cur.filter((x) => x !== c.id) : [...cur, c.id]))} label={c.name} description={`${c.code} · ${c.durationText}${c.status !== "ACTIVE" ? ` · ${titleCase(c.status)}` : ""}`} className="rounded-md border border-line bg-white p-3" />
         ))}
       </div>
       {canEdit && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-          <p className="text-xs text-muted">A course with upcoming or ongoing batches at this center cannot be removed.</p>
+          <p className="text-caption text-muted">A course with upcoming or ongoing batches at this center cannot be removed.</p>
           <div className="flex gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => setIds(selected)} disabled={!dirty || loading}>
               Reset
@@ -110,9 +110,9 @@ export function CenterGalleryManager({ centerId, images, canEdit }: { centerId: 
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={img.url} alt={img.caption ?? "Center photo"} className="aspect-[4/3] w-full object-cover" />
               <div className="flex items-center justify-between gap-2 px-3 py-2">
-                <p className="truncate text-xs text-muted">{img.caption || "No caption"}</p>
+                <p className="truncate text-caption text-muted">{img.caption || "No caption"}</p>
                 {canEdit && (
-                  <ConfirmAction method="delete" url={`/api/admin/centers/${centerId}/gallery/${img.id}`} title="Remove this photo?" description="The photo is removed from the gallery on the website." confirmLabel="Remove" danger successMessage="Photo removed" size="xs" icon={<Trash2 className="h-3.5 w-3.5" />}>
+                  <ConfirmAction method="delete" url={`/api/admin/centers/${centerId}/gallery/${img.id}`} title="Remove this photo?" description="The photo is removed from the gallery on the website." confirmLabel="Remove" danger successMessage="Photo removed" icon={<Trash2 className="h-3.5 w-3.5" />}>
                     Remove
                   </ConfirmAction>
                 )}

@@ -90,7 +90,7 @@ export function StatusActions(p: StatusActionsProps) {
           tone="success"
           title={`Admission ${p.admission.admissionNo}`}
           action={
-            <Link href={`/admin/admissions/${p.admission.id}`} className="self-center text-sm font-semibold text-navy hover:underline">
+            <Link href={`/admin/admissions/${p.admission.id}`} className="self-center text-body-sm font-semibold text-navy hover:underline">
               Open
             </Link>
           }
@@ -191,7 +191,7 @@ export function StatusActions(p: StatusActionsProps) {
         }}
       >
         {p.missingDocuments.length > 0 && (
-          <p className="text-xs text-muted">
+          <p className="text-caption text-muted">
             Currently missing: <span className="font-semibold text-amber-700">{p.missingDocuments.join(", ")}</span>
           </p>
         )}
@@ -331,7 +331,7 @@ function ApproveDrawer({
   return (
     <ResponsiveSheet open onClose={onClose} title="Approve application" description={`${applicationNo} – choose the batch the student will join.`} className="max-w-xl" size="lg">
       <form
-        className="space-y-5"
+        className="space-y-6"
         onSubmit={(e) => {
           e.preventDefault();
           void onSubmit({ batchId, note: note.trim() || undefined });
@@ -407,13 +407,13 @@ function ConfirmAdmissionModal({
         }}
         noValidate
       >
-        <dl className="grid grid-cols-2 gap-3 rounded-xl bg-surface p-3 text-sm">
+        <dl className="grid grid-cols-2 gap-3 rounded-md bg-surface p-3 text-body-sm">
           <div>
-            <dt className="text-xs font-medium text-muted uppercase">Batch</dt>
+            <dt className="text-caption font-medium text-muted uppercase">Batch</dt>
             <dd className="font-semibold text-ink">{batchLabel ?? <span className="text-danger">Not assigned</span>}</dd>
           </div>
           <div>
-            <dt className="text-xs font-medium text-muted uppercase">Fee</dt>
+            <dt className="text-caption font-medium text-muted uppercase">Fee</dt>
             <dd className="font-semibold text-ink tabular-nums">
               {formatINR(paidAmount)} paid of {formatINR(payableAmount)}
               {hasDue && (

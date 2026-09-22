@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Markdown } from "@/components/site/markdown";
 
 export interface FaqItem {
@@ -8,7 +8,14 @@ export interface FaqItem {
   category: string | null;
 }
 
-/** Accessible accordion built on native <details>/<summary>, grouped by category. */
+/**
+ * Accessible accordion built on native <details>/<summary>, grouped by category.
+ *
+ * Native elements on purpose: it opens with no JavaScript, it is already keyboard- and
+ * screen-reader-correct, and on a slow Android phone the first question is interactive the moment
+ * the HTML lands. The marker is a rotating plus (a plus reads as "expand" where a chevron can read
+ * as "next"), and the whole 56px summary row is the target.
+ */
 export function FaqAccordion({ faqs }: { faqs: FaqItem[] }) {
   const groups = new Map<string, FaqItem[]>();
   for (const f of faqs) {
@@ -16,26 +23,33 @@ export function FaqAccordion({ faqs }: { faqs: FaqItem[] }) {
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(f);
   }
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-12">
       {[...groups.entries()].map(([category, items]) => (
-        <section key={category} id={faqCategoryId(category)} aria-labelledby={`${faqCategoryId(category)}-title`} className="scroll-mt-24">
-          <h2 id={`${faqCategoryId(category)}-title`} className="mb-4 text-xl font-extrabold text-navy sm:text-2xl">
+        <section key={category} id={faqCategoryId(category)} aria-labelledby={`${faqCategoryId(category)}-title`} className="scroll-mt-28">
+          <h2 id={`${faqCategoryId(category)}-title`} className="mb-5 flex items-center gap-3 text-h3 text-navy">
             {category}
+            <span aria-hidden className="h-px flex-1 bg-line" />
+            <span className="text-caption font-semibold text-muted tabular-nums">{items.length}</span>
           </h2>
-          <div className="space-y-3">
+          <ul className="space-y-3">
             {items.map((f) => (
-              <details key={f.id} className="group card overflow-hidden open:shadow-card-hover">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left text-[15px] font-semibold text-navy marker:content-none [&::-webkit-details-marker]:hidden">
-                  {f.question}
-                  <ChevronDown className="h-5 w-5 shrink-0 text-orange transition-transform group-open:rotate-180" aria-hidden />
-                </summary>
-                <div className="border-t border-line px-5 py-4">
-                  <Markdown source={f.answer} className="text-[15px]" />
-                </div>
-              </details>
+              <li key={f.id}>
+                <details className="group card overflow-hidden transition-shadow duration-micro ease-soft open:shadow-e2 motion-reduce:transition-none">
+                  <summary className="ring-focus flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left text-h4 text-navy transition-colors duration-micro marker:content-none hover:bg-surface group-open:bg-surface motion-reduce:transition-none [&::-webkit-details-marker]:hidden">
+                    <span className="min-w-0">{f.question}</span>
+                    <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-light text-orange">
+                      <Plus className="h-4 w-4 transition-transform duration-micro ease-soft group-open:rotate-45 motion-reduce:transition-none" />
+                    </span>
+                  </summary>
+                  <div className="border-t border-line px-5 py-4">
+                    <Markdown source={f.answer} className="text-body" />
+                  </div>
+                </details>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       ))}
     </div>

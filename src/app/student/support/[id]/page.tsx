@@ -50,8 +50,8 @@ export default async function StudentTicketPage({ params }: { params: Promise<{ 
             const mine = m.userId === user.id;
             return (
               <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${mine ? "rounded-br-sm bg-navy text-white" : "rounded-bl-sm bg-lavender text-ink"}`}>
-                  <p className={`mb-1 text-[11px] font-semibold ${mine ? "text-white/70" : "text-navy/70"}`}>
+                <div className={`max-w-[85%] rounded-card px-4 py-3 text-body-sm ${mine ? "rounded-br-sm bg-navy text-white" : "rounded-bl-sm bg-lavender text-ink"}`}>
+                  <p className={`mb-1 text-caption font-semibold ${mine ? "text-white/70" : "text-navy/70"}`}>
                     {mine ? "You" : `${m.user.name} · ${m.isStaff ? "Foundation" : titleCase(m.user.role)}`} · {formatDateTime(m.createdAt)}
                   </p>
                   <p className="whitespace-pre-line">{m.message}</p>

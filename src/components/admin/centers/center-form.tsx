@@ -158,7 +158,7 @@ export function CenterForm({ initial, courses, canVerify, codeFormat }: { initia
               errors={locErrors}
               className="grid grid-cols-1 gap-4 sm:grid-cols-3"
             />
-            {initial && (initial.stateId !== loc.stateId || initial.districtId !== loc.districtId) && <p className="mt-2 text-xs text-amber-700">Changing the state or district does not change the existing center code.</p>}
+            {initial && (initial.stateId !== loc.stateId || initial.districtId !== loc.districtId) && <p className="mt-2 text-caption text-amber-700">Changing the state or district does not change the existing center code.</p>}
           </div>
           <Field label="Address" htmlFor="cf-address" required error={fieldErrors.address} className="sm:col-span-2">
             <Textarea id="cf-address" value={address} onChange={(e) => { setAddress(e.target.value); clearField("address"); }} rows={2} required maxLength={500} invalid={!!fieldErrors.address} />
@@ -215,7 +215,7 @@ export function CenterForm({ initial, courses, canVerify, codeFormat }: { initia
                 <option key={p} value={p} />
               ))}
             </datalist>
-            <Button type="button" variant="outline" size="xs" leftIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setHours((h) => [...h, newRow()])} disabled={hours.length >= 7}>
+            <Button type="button" variant="outline" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setHours((h) => [...h, newRow()])} disabled={hours.length >= 7}>
               Add row
             </Button>
           </div>
@@ -241,15 +241,15 @@ export function CenterForm({ initial, courses, canVerify, codeFormat }: { initia
 
       <FormSection title="Courses offered" description="Only courses selected here can have batches at this center.">
         {courses.length === 0 ? (
-          <p className="text-sm text-muted">No courses exist yet. Create courses first, then add them to this center.</p>
+          <p className="text-body-sm text-muted">No courses exist yet. Create courses first, then add them to this center.</p>
         ) : (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {courses.map((c) => (
-              <Checkbox key={c.id} checked={courseIds.includes(c.id)} onChange={() => toggleCourse(c.id)} label={`${c.name}`} description={`${c.code} · ${c.durationText}${c.category ? ` · ${c.category.name}` : ""}${c.status !== "ACTIVE" ? ` · ${titleCase(c.status)}` : ""}`} className="rounded-xl border border-line bg-white p-3" />
+              <Checkbox key={c.id} checked={courseIds.includes(c.id)} onChange={() => toggleCourse(c.id)} label={`${c.name}`} description={`${c.code} · ${c.durationText}${c.category ? ` · ${c.category.name}` : ""}${c.status !== "ACTIVE" ? ` · ${titleCase(c.status)}` : ""}`} className="rounded-md border border-line bg-white p-3" />
             ))}
           </div>
         )}
-        {fieldErrors.courseIds && <p className="text-xs font-medium text-danger">{fieldErrors.courseIds}</p>}
+        {fieldErrors.courseIds && <p className="text-caption font-medium text-danger">{fieldErrors.courseIds}</p>}
       </FormSection>
 
       <FormSection title="Status">

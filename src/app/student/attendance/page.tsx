@@ -22,7 +22,7 @@ export default async function StudentAttendancePage() {
   const batchInfo = new Map(batches.map((b) => [b.id, b]));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       <PageHeader title="Attendance" mobileTitle="Attendance" description="Attendance is marked by your trainer after each class. Late arrivals count as present." />
 
       {summary.length === 0 ? (
@@ -39,15 +39,15 @@ export default async function StudentAttendancePage() {
                 <CardBody className="space-y-4">
                   <div className="flex items-end justify-between">
                     <div>
-                      <p className="font-heading text-3xl font-extrabold text-navy tabular-nums">{s.pct}%</p>
-                      <p className="text-xs text-muted">
+                      <p className="text-h1 text-navy tabular-nums">{s.pct}%</p>
+                      <p className="text-caption text-muted">
                         {s.present + s.late} of {s.held} classes attended · required {required}%
                       </p>
                     </div>
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${ok ? "bg-success-light text-green-700" : "bg-warning-light text-amber-700"}`}>{ok ? "On track" : `Below ${required}%`}</span>
+                    <span className={`rounded-full px-2.5 py-1 text-caption font-semibold ${ok ? "bg-success-light text-green-700" : "bg-warning-light text-amber-700"}`}>{ok ? "On track" : `Below ${required}%`}</span>
                   </div>
                   <ProgressBar value={s.pct} tone={ok ? "success" : "warning"} />
-                  <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                  <div className="grid grid-cols-4 gap-2 text-center text-caption">
                     <Stat label="Present" value={s.present} tone="text-green-700" />
                     <Stat label="Late" value={s.late} tone="text-amber-700" />
                     <Stat label="Leave" value={s.leave} tone="text-blue-700" />
@@ -63,8 +63,8 @@ export default async function StudentAttendancePage() {
       {/* Records – month-grouped cards on phones, table from md up. */}
       <section aria-label="Attendance records" className="md:hidden">
         <div className="mb-2 flex items-baseline justify-between gap-3 px-1">
-          <h2 className="text-[13px] font-bold tracking-[0.14em] text-muted uppercase">Attendance records</h2>
-          <span className="text-[12px] text-muted tabular-nums">{records.length}</span>
+          <h2 className="text-overline text-muted">Attendance records</h2>
+          <span className="text-caption text-muted tabular-nums">{records.length}</span>
         </div>
         <AttendanceRecordsList
           records={records.map((r) => ({ id: r.id, date: r.date.toISOString(), status: r.status, remarks: r.remarks, courseName: r.batch.course.name, batchName: r.batch.name }))}
@@ -88,15 +88,15 @@ export default async function StudentAttendancePage() {
             ) : (
               records.map((r) => (
                 <TR key={r.id}>
-                  <TD className="text-sm">{formatDate(r.date, "EEE, dd MMM yyyy")}</TD>
-                  <TD className="text-sm">
+                  <TD className="text-body-sm">{formatDate(r.date, "EEE, dd MMM yyyy")}</TD>
+                  <TD className="text-body-sm">
                     {r.batch.course.name}
-                    <p className="text-xs text-muted">{r.batch.name}</p>
+                    <p className="text-caption text-muted">{r.batch.name}</p>
                   </TD>
                   <TD>
                     <StatusBadge status={r.status} />
                   </TD>
-                  <TD className="text-sm text-muted">{r.remarks ?? "—"}</TD>
+                  <TD className="text-body-sm text-muted">{r.remarks ?? "—"}</TD>
                 </TR>
               ))
             )}
@@ -109,9 +109,9 @@ export default async function StudentAttendancePage() {
 
 function Stat({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
-    <div className="rounded-lg bg-surface py-2">
-      <p className={`text-lg font-bold tabular-nums ${tone}`}>{value}</p>
-      <p className="text-[12px] font-semibold tracking-wide text-muted uppercase">{label}</p>
+    <div className="rounded-md bg-surface py-2">
+      <p className={`text-h4 tabular-nums ${tone}`}>{value}</p>
+      <p className="text-caption font-semibold tracking-wide text-muted uppercase">{label}</p>
     </div>
   );
 }

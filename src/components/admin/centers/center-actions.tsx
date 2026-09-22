@@ -74,7 +74,7 @@ export function CenterHeaderActions({ center, perms }: { center: CenterActionTar
         </ButtonLink>
       )}
       {perms.verify && (
-        <ConfirmAction size="sm" variant={center.isVerified ? "outline" : "navy"} icon={center.isVerified ? <ShieldOff className="h-4 w-4" /> : <BadgeCheck className="h-4 w-4" />} method="patch" url={`/api/admin/centers/${center.id}/verify`} body={{ verified: !center.isVerified }} title={center.isVerified ? `Remove verification from ${center.code}?` : `Verify ${center.code}?`} description={center.isVerified ? "The verified badge is removed from the website." : "The center gets the verified badge. A pending center is activated at the same time."} confirmLabel={center.isVerified ? "Remove verification" : "Verify"} successMessage={center.isVerified ? "Verification removed" : "Center verified"}>
+        <ConfirmAction variant={center.isVerified ? "outline" : "navy"} icon={center.isVerified ? <ShieldOff className="h-4 w-4" /> : <BadgeCheck className="h-4 w-4" />} method="patch" url={`/api/admin/centers/${center.id}/verify`} body={{ verified: !center.isVerified }} title={center.isVerified ? `Remove verification from ${center.code}?` : `Verify ${center.code}?`} description={center.isVerified ? "The verified badge is removed from the website." : "The center gets the verified badge. A pending center is activated at the same time."} confirmLabel={center.isVerified ? "Remove verification" : "Verify"} successMessage={center.isVerified ? "Verification removed" : "Center verified"}>
           {center.isVerified ? "Unverify" : "Verify"}
         </ConfirmAction>
       )}

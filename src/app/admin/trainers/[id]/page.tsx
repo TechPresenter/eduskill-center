@@ -43,7 +43,7 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
   const pastAssignments = t.assignments.filter((a) => !a.isActive);
 
   const profile = (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <Card className="lg:col-span-2">
         <CardHeader title="Profile" />
         <CardBody className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 md:grid-cols-3">
@@ -92,7 +92,7 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
           <KeyValue label="Bio" value={t.bio ? <span className="whitespace-pre-line">{t.bio}</span> : "—"} className="sm:col-span-2 md:col-span-3" />
         </CardBody>
       </Card>
-      <div className="space-y-5">
+      <div className="space-y-6">
         <Card>
           <CardHeader title="Account" />
           <CardBody className="space-y-4">
@@ -136,7 +136,7 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
                 />
               </>
             ) : (
-              <p className="text-sm text-muted">This trainer was not created from a volunteer application.</p>
+              <p className="text-body-sm text-muted">This trainer was not created from a volunteer application.</p>
             )}
           </CardBody>
         </Card>
@@ -150,20 +150,20 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
         <TD mobile="full">
           <Link href={`/admin/centers/${a.center.id}`} className="block tap-highlight-none md:inline md:font-medium md:text-ink md:hover:text-navy">
             {a.center.name}
-            <span className="block font-mono text-xs font-normal text-muted">{a.center.code}</span>
+            <span className="block font-mono text-caption font-normal text-muted">{a.center.code}</span>
           </Link>
         </TD>
-        <TD label="Course">{a.course?.name ?? <span className="text-xs text-muted">Any course</span>}</TD>
+        <TD label="Course">{a.course?.name ?? <span className="text-caption text-muted">Any course</span>}</TD>
         <TD label="Batch">
           {a.batch ? (
-            <Link href={`/admin/batches/${a.batch.id}`} className="text-sm hover:text-navy">
-              {a.batch.name} <span className="font-mono text-xs text-muted">{a.batch.code}</span> <StatusBadge status={a.batch.status} className="ml-1" />
+            <Link href={`/admin/batches/${a.batch.id}`} className="text-body-sm hover:text-navy">
+              {a.batch.name} <span className="font-mono text-caption text-muted">{a.batch.code}</span> <StatusBadge status={a.batch.status} className="ml-1" />
             </Link>
           ) : (
-            <span className="text-xs text-muted">No specific batch</span>
+            <span className="text-caption text-muted">No specific batch</span>
           )}
         </TD>
-        <TD label="Notes" className="text-xs text-muted md:max-w-[14rem]">
+        <TD label="Notes" className="text-caption text-muted md:max-w-[14rem]">
           {a.notes ?? "—"}
         </TD>
         <TD label="Assigned" className="text-muted md:whitespace-nowrap">
@@ -177,9 +177,9 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
     ));
 
   const assignments = (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted">
+        <p className="text-body-sm text-muted">
           {activeAssignments.length} active assignment{activeAssignments.length === 1 ? "" : "s"} · {pastAssignments.length} ended
         </p>
         {canAssign && <AssignDrawer trainerId={t.id} trainerName={t.user.name} active={t.status === "ACTIVE"} />}
@@ -227,14 +227,14 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
             <TD mobile="full">
               <Link href={`/admin/batches/${b.id}`} className="block tap-highlight-none md:inline md:font-medium md:text-ink md:hover:text-navy">
                 {b.name}
-                <span className="block font-mono text-xs font-normal text-muted">{b.code}</span>
+                <span className="block font-mono text-caption font-normal text-muted">{b.code}</span>
               </Link>
             </TD>
             <TD label="Course">{b.course.name}</TD>
             <TD label="Center">
-              {b.center.name} <span className="text-xs text-muted">({b.center.code})</span>
+              {b.center.name} <span className="text-caption text-muted">({b.center.code})</span>
             </TD>
-            <TD label="Schedule" className="text-xs">
+            <TD label="Schedule" className="text-caption">
               <span className="block">
                 {formatDate(b.startDate)} – {formatDate(b.endDate)}
               </span>
@@ -276,18 +276,18 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
                 <Avatar name={a.student.name} src={a.student.photoUrl} size={40} />
                 <span className="min-w-0">
                   <span className="block truncate font-semibold">{a.student.name}</span>
-                  <span className="block text-xs font-normal text-muted tabular-nums">{a.student.mobile}</span>
+                  <span className="block text-caption font-normal text-muted tabular-nums">{a.student.mobile}</span>
                 </span>
               </Link>
             </TD>
-            <TD label="Student ID">{a.student.studentId ? <span className="font-mono text-xs font-semibold text-navy">{a.student.studentId}</span> : <span className="text-xs text-muted">—</span>}</TD>
+            <TD label="Student ID">{a.student.studentId ? <span className="font-mono text-caption font-semibold text-navy">{a.student.studentId}</span> : <span className="text-caption text-muted">—</span>}</TD>
             <TD label="Course">{a.course.name}</TD>
-            <TD label="Batch" className="text-xs">
+            <TD label="Batch" className="text-caption">
               {a.batch.code} <StatusBadge status={a.batch.status} className="ml-1" />
             </TD>
             <TD label="Center">{a.center.name}</TD>
             <TD label="Admission">
-              <Link href={`/admin/admissions/${a.id}`} className="font-mono text-xs font-semibold text-navy hover:underline">
+              <Link href={`/admin/admissions/${a.id}`} className="font-mono text-caption font-semibold text-navy hover:underline">
                 {a.admissionNo}
               </Link>
               <StatusBadge status={a.status} className="ml-1" />
@@ -327,19 +327,19 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
                   {docName.get(d.type) ?? titleCase(d.type)}
                 </TD>
                 <TD label="File">
-                  <a href={d.url} target="_blank" rel="noopener noreferrer" className="block truncate text-xs font-semibold text-orange hover:underline md:max-w-[14rem]">
+                  <a href={d.url} target="_blank" rel="noopener noreferrer" className="block truncate text-caption font-semibold text-orange hover:underline md:max-w-[14rem]">
                     {d.name}
                   </a>
-                  <span className="text-xs text-muted">
+                  <span className="text-caption text-muted">
                     {d.mimeType ?? ""}
                     {d.size ? ` · ${(d.size / 1024).toFixed(0)} KB` : ""}
                   </span>
                 </TD>
                 <TD label="Status">
                   <StatusBadge status={d.status} />
-                  {d.verifiedAt && <span className="block text-xs text-muted">{formatDate(d.verifiedAt)}</span>}
+                  {d.verifiedAt && <span className="block text-caption text-muted">{formatDate(d.verifiedAt)}</span>}
                 </TD>
-                <TD label="Remarks" className="text-xs text-muted md:max-w-[16rem]">
+                <TD label="Remarks" className="text-caption text-muted md:max-w-[16rem]">
                   {d.remarks ?? "—"}
                 </TD>
                 <TD label="Uploaded" className="text-muted md:whitespace-nowrap">
@@ -347,7 +347,7 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
                 </TD>
                 <TD mobile="actions">
                   <div className="flex items-center gap-2 max-md:w-full max-md:justify-end">
-                    <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold text-navy hover:underline md:min-h-0 md:px-0">
+                    <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-md px-2 text-caption font-semibold text-navy hover:underline md:min-h-0 md:px-0">
                       View
                     </a>
                     <DocumentActions docId={d.id} status={d.status} canUpdate={canUpdate} />
@@ -372,7 +372,7 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
             <Avatar name={t.user.name} src={t.user.avatarUrl} size={56} />
             <span>
               {t.user.name}
-              <span className="mt-1 flex flex-wrap items-center gap-2 text-sm font-medium text-muted">
+              <span className="mt-1 flex flex-wrap items-center gap-2 text-body-sm font-medium text-muted">
                 <span className="font-mono text-navy">{t.trainerId}</span>
                 <StatusBadge status={t.status} />
                 <Badge tone="navy">{titleCase(t.level)} level</Badge>
@@ -405,10 +405,22 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
         }
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* The app bar shows only the Trainer ID on phones – keep the face, name and status in the page. */}
+      <div className="mb-4 flex items-center gap-3 lg:hidden">
+        <Avatar name={t.user.name} src={t.user.avatarUrl} size={44} />
+        <div className="min-w-0">
+          <h2 className="text-h4 truncate text-navy">{t.user.name}</h2>
+          <span className="mt-1 flex flex-wrap items-center gap-2">
+            <StatusBadge status={t.status} />
+            <Badge tone="navy">{titleCase(t.level)} level</Badge>
+          </span>
+        </div>
+      </div>
+
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         <StatsCard label="Active assignments" value={activeAssignments.length} icon={<MapPinned className="h-5 w-5" />} tone="navy" />
         <StatsCard label="Batches" value={t.batches.length} icon={<CalendarDays className="h-5 w-5" />} tone="orange" hint={`${t.batches.filter((b) => b.status === "ONGOING").length} ongoing`} />
-        <StatsCard label="Active students" value={t.studentCount} icon={<GraduationCap className="h-5 w-5" />} tone="success" />
+        <StatsCard label="Active students" value={t.studentCount} icon={<GraduationCap className="h-5 w-5" />} tone="success" className="max-sm:col-span-2" />
       </div>
 
       <TabbedPanels

@@ -161,7 +161,7 @@ export function BatchForm({ options, initial, lockCenterId, onSaved, onCancel, c
             {DAYS.map((d) => {
               const on = days.includes(d);
               return (
-                <button key={d} type="button" onClick={() => toggleDay(d)} aria-pressed={on} className={cn("h-9 rounded-lg border px-3 text-sm font-semibold transition-colors", on ? "border-orange bg-orange-light text-orange" : "border-line bg-white text-muted hover:border-navy/40 hover:text-ink")}>
+                <button key={d} type="button" onClick={() => toggleDay(d)} aria-pressed={on} className={cn("h-11 rounded-md border px-3.5 text-body-sm font-semibold transition-colors duration-micro motion-reduce:transition-none sm:h-9 sm:px-3", on ? "border-orange bg-orange-light text-orange" : "border-line bg-white text-muted hover:border-navy/40 hover:text-ink")}>
                   {d}
                 </button>
               );

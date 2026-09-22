@@ -108,7 +108,7 @@ export function BatchTabs({ batch, roster, report, assignments, assessments, mat
           <Card className="lg:col-span-2">
             <CardHeader title="Batch details" />
             <CardBody>
-              <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <KeyValue label="Batch code" value={batch.code} />
                 <KeyValue label="Status" value={<StatusBadge status={batch.status} />} />
                 <KeyValue label="Course" value={`${batch.course.name} (${batch.course.code})`} />
@@ -119,7 +119,7 @@ export function BatchTabs({ batch, roster, report, assignments, assessments, mat
                 <KeyValue label="Seats" value={`${batch.admitted} admitted / ${batch.capacity} capacity`} />
                 <KeyValue label="Center" value={`${batch.center.name} (${batch.center.code})`} className="sm:col-span-2" />
                 <KeyValue label="Address" value={batch.center.address} className="sm:col-span-2" />
-              </dl>
+              </div>
             </CardBody>
           </Card>
           <div className="space-y-4">
@@ -128,7 +128,7 @@ export function BatchTabs({ batch, roster, report, assignments, assessments, mat
             <Card>
               <CardHeader title="Trainer notes" />
               <CardBody>
-                <p className="text-sm whitespace-pre-wrap text-muted">{batch.notes || "No notes from the Foundation for this batch."}</p>
+                <p className="text-body-sm whitespace-pre-wrap text-muted">{batch.notes || "No notes from the Foundation for this batch."}</p>
               </CardBody>
             </Card>
           </div>
@@ -153,13 +153,13 @@ export function BatchTabs({ batch, roster, report, assignments, assessments, mat
             ) : (
               roster.map((r) => (
                 <TR key={r.admissionId}>
-                  <TD>
+                  <TD mobile="full">
                     <div className="flex items-center gap-3">
                       <Avatar name={r.student.name} src={r.student.photoUrl} size={36} />
                       <span className="font-medium">{r.student.name}</span>
                     </div>
                   </TD>
-                  <TD className="font-mono text-xs">{r.student.studentId ?? "—"}</TD>
+                  <TD className="font-mono text-caption">{r.student.studentId ?? "—"}</TD>
                   <TD>{r.student.mobile}</TD>
                   <TD>
                     <StatusBadge status={r.status} />
@@ -180,14 +180,14 @@ export function BatchTabs({ batch, roster, report, assignments, assessments, mat
       {tab === "attendance" && (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted">
+            <p className="text-body-sm text-muted">
               {report.held} class{report.held === 1 ? "" : "es"} held so far.
             </p>
             <div className="flex gap-2">
               <ButtonLink href={`/trainer/attendance?batchId=${batch.id}`} size="sm" variant="navy">
                 Mark attendance
               </ButtonLink>
-              <a href={withBasePath(`/api/trainer/attendance/report?batchId=${batch.id}&range=all&format=csv`)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-line bg-white px-3.5 text-sm font-semibold text-ink hover:bg-surface">
+              <a href={withBasePath(`/api/trainer/attendance/report?batchId=${batch.id}&range=all&format=csv`)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line bg-white px-3.5 text-body-sm font-semibold text-ink ring-focus transition-colors duration-micro hover:border-navy/40 hover:bg-surface motion-reduce:transition-none sm:min-h-9">
                 <Download className="h-4 w-4" /> CSV
               </a>
             </div>
@@ -209,16 +209,16 @@ export function BatchTabs({ batch, roster, report, assignments, assessments, mat
               ) : (
                 report.rows.map((r) => (
                   <TR key={r.studentId}>
-                    <TD>
+                    <TD mobile="full">
                       <span className="font-medium">{r.name}</span>
-                      <span className="ml-2 font-mono text-xs text-muted">{r.studentCode}</span>
+                      <span className="ml-2 font-mono text-caption text-muted">{r.studentCode}</span>
                     </TD>
                     <TD>{r.present}</TD>
                     <TD>{r.late}</TD>
                     <TD>{r.absent}</TD>
                     <TD>{r.leave}</TD>
                     <TD>
-                      <span className={cn("font-semibold", r.pct >= 75 ? "text-green-700" : r.pct >= 60 ? "text-amber-700" : "text-danger")}>{r.pct}%</span>
+                      <span className={cn("font-semibold tabular-nums", r.pct >= 75 ? "text-success-dark" : r.pct >= 60 ? "text-amber-700" : "text-danger")}>{r.pct}%</span>
                     </TD>
                   </TR>
                 ))
@@ -242,7 +242,7 @@ export function BatchTabs({ batch, roster, report, assignments, assessments, mat
                   <TBody>
                     {[...report.daily].reverse().slice(0, 30).map((d) => (
                       <TR key={d.date}>
-                        <TD>{formatDate(d.date, "EEE, dd MMM yyyy")}</TD>
+                        <TD mobile="full">{formatDate(d.date, "EEE, dd MMM yyyy")}</TD>
                         <TD>{d.present}</TD>
                         <TD>{d.late}</TD>
                         <TD>{d.absent}</TD>
@@ -263,17 +263,17 @@ export function BatchTabs({ batch, roster, report, assignments, assessments, mat
             <CardHeader title="Assignments" action={<ButtonLink href={`/trainer/coursework?batchId=${batch.id}`} size="xs" variant="outline">Manage</ButtonLink>} />
             <CardBody className="p-0">
               {assignments.length === 0 ? (
-                <p className="px-5 py-8 text-center text-sm text-muted">No assignments yet.</p>
+                <EmptyState title="No assignments yet" size="sm" bare className="px-5 py-8" />
               ) : (
                 <ul className="divide-y divide-line">
                   {assignments.map((a) => (
                     <li key={a.id} className="px-5 py-3">
-                      <p className="text-sm font-semibold text-ink">{a.title}</p>
-                      <p className="text-xs text-muted">
+                      <p className="text-body font-semibold text-ink">{a.title}</p>
+                      <p className="text-caption text-muted">
                         {a.dueDate ? `Due ${formatDateTime(a.dueDate)}` : "No due date"} · {a.maxMarks} marks · {a.submissions} submitted
                       </p>
                       {a.attachmentUrl && (
-                        <a href={a.attachmentUrl} className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-navy hover:underline">
+                        <a href={a.attachmentUrl} className="mt-1 inline-flex min-h-11 items-center gap-1 text-caption font-semibold text-navy hover:underline">
                           <Paperclip className="h-3 w-3" /> Attachment
                         </a>
                       )}
@@ -287,16 +287,16 @@ export function BatchTabs({ batch, roster, report, assignments, assessments, mat
             <CardHeader title="Assessments" action={<ButtonLink href={`/trainer/assessments?batchId=${batch.id}`} size="xs" variant="outline">Manage</ButtonLink>} />
             <CardBody className="p-0">
               {assessments.length === 0 ? (
-                <p className="px-5 py-8 text-center text-sm text-muted">No assessments yet.</p>
+                <EmptyState title="No assessments yet" size="sm" bare className="px-5 py-8" />
               ) : (
                 <ul className="divide-y divide-line">
                   {assessments.map((a) => (
                     <li key={a.id} className="px-5 py-3">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-ink">{a.title}</p>
+                        <p className="text-body font-semibold text-ink">{a.title}</p>
                         <Badge tone="navy">{titleCase(a.type)}</Badge>
                       </div>
-                      <p className="text-xs text-muted">
+                      <p className="text-caption text-muted">
                         {a.date ? formatDate(a.date) : "Date TBA"} · {a.maxMarks} marks (pass {a.passingMarks}) · {a.results} results
                       </p>
                     </li>
@@ -309,7 +309,7 @@ export function BatchTabs({ batch, roster, report, assignments, assessments, mat
             <CardHeader title="Study materials" action={<ButtonLink href={`/trainer/materials?batchId=${batch.id}`} size="xs" variant="outline">Manage</ButtonLink>} />
             <CardBody className="p-0">
               {materials.length === 0 ? (
-                <p className="px-5 py-8 text-center text-sm text-muted">No materials yet.</p>
+                <EmptyState title="No materials yet" size="sm" bare className="px-5 py-8" />
               ) : (
                 <ul className="divide-y divide-line">
                   {materials.map((m) => (
@@ -318,10 +318,10 @@ export function BatchTabs({ batch, roster, report, assignments, assessments, mat
                         <FileText className="h-4 w-4" />
                       </span>
                       <div className="min-w-0">
-                        <a href={m.fileUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-ink hover:text-navy hover:underline">
+                        <a href={m.fileUrl} target="_blank" rel="noreferrer" className="text-body font-semibold text-ink hover:text-navy hover:underline">
                           {m.title}
                         </a>
-                        <p className="text-xs text-muted">
+                        <p className="text-caption text-muted">
                           {(m.fileType ?? "file").toUpperCase()} · {formatDate(m.createdAt)}
                           {m.mine ? " · Uploaded by you" : ""}
                         </p>
@@ -337,17 +337,17 @@ export function BatchTabs({ batch, roster, report, assignments, assessments, mat
 
       {tab === "announcements" &&
         (announcements.length === 0 ? (
-          <EmptyState title="No announcements for this batch" action={<Link href={`/trainer/announcements?batchId=${batch.id}`} className="text-sm font-semibold text-orange hover:underline">Post an announcement</Link>} />
+          <EmptyState title="No announcements for this batch" action={<Link href={`/trainer/announcements?batchId=${batch.id}`} className="inline-flex min-h-11 items-center text-body-sm font-semibold text-orange hover:underline">Post an announcement</Link>} />
         ) : (
           <div className="space-y-3">
             {announcements.map((a) => (
               <Card key={a.id}>
                 <CardBody>
                   <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-base font-bold text-navy">{a.title}</h3>
-                    <span className="shrink-0 text-xs text-muted">{formatDateTime(a.createdAt)}</span>
+                    <h3 className="min-w-0 flex-1 text-h4 text-navy">{a.title}</h3>
+                    <span className="shrink-0 text-caption text-muted">{formatDateTime(a.createdAt)}</span>
                   </div>
-                  <p className="mt-2 text-sm whitespace-pre-wrap text-ink">{a.body}</p>
+                  <p className="mt-2 text-body whitespace-pre-wrap text-ink">{a.body}</p>
                 </CardBody>
               </Card>
             ))}

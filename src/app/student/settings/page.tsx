@@ -23,7 +23,7 @@ export default async function StudentSettingsPage() {
   const others = sessions.filter((s) => s.id !== user.sessionId).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       <PageHeader title="Settings" mobileTitle="Settings" description="Manage your password and the devices logged in to your account." />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="self-start">
@@ -42,15 +42,15 @@ export default async function StudentSettingsPage() {
                 return (
                   <li key={s.id} className="flex flex-col gap-1 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+                      <p className="flex items-center gap-2 text-body-sm font-semibold text-ink">
                         {describeAgent(s.userAgent)}
                         {current && <Badge tone="success">This device</Badge>}
                       </p>
-                      <p className="text-xs text-muted">
+                      <p className="text-caption text-muted">
                         IP {s.ip ?? "—"} · Signed in {formatDateTime(s.createdAt)} · Last active {formatDateTime(s.lastSeenAt)}
                       </p>
                     </div>
-                    <p className="text-xs text-muted">Expires {formatDateTime(s.expiresAt)}</p>
+                    <p className="text-caption text-muted">Expires {formatDateTime(s.expiresAt)}</p>
                   </li>
                 );
               })}
@@ -62,14 +62,14 @@ export default async function StudentSettingsPage() {
             {/* Phones: a plain list (the 4-column table would need horizontal scrolling). */}
             <ul className="divide-y divide-line md:hidden">
               {history.length === 0 ? (
-                <li className="px-4 py-6 text-center text-[13px] text-muted">No login history.</li>
+                <li className="px-4 py-6 text-center text-body-sm text-muted">No login history.</li>
               ) : (
                 history.map((h) => (
                   <li key={h.id} className="flex items-start justify-between gap-3 px-4 py-3">
                     <div className="min-w-0">
-                      <p className="text-[14px] font-semibold text-ink">{formatDateTime(h.createdAt)}</p>
-                      <p className="truncate text-[13px] text-muted">{describeAgent(h.userAgent)}</p>
-                      <p className="font-mono text-[12px] text-muted">IP {h.ip ?? "—"}</p>
+                      <p className="text-body font-semibold text-ink">{formatDateTime(h.createdAt)}</p>
+                      <p className="truncate text-body-sm text-muted">{describeAgent(h.userAgent)}</p>
+                      <p className="font-mono text-caption text-muted">IP {h.ip ?? "—"}</p>
                     </div>
                     {h.success ? <Badge tone="success">Success</Badge> : <Badge tone="danger">Failed</Badge>}
                   </li>
@@ -91,12 +91,12 @@ export default async function StudentSettingsPage() {
                 ) : (
                   history.map((h) => (
                     <TR key={h.id}>
-                      <TD className="text-sm">{formatDateTime(h.createdAt)}</TD>
+                      <TD className="text-body-sm">{formatDateTime(h.createdAt)}</TD>
                       <TD>
                         {h.success ? <Badge tone="success">Success</Badge> : <Badge tone="danger">Failed{h.reason ? ` · ${h.reason}` : ""}</Badge>}
                       </TD>
-                      <TD className="text-sm">{describeAgent(h.userAgent)}</TD>
-                      <TD className="font-mono text-xs text-muted">{h.ip ?? "—"}</TD>
+                      <TD className="text-body-sm">{describeAgent(h.userAgent)}</TD>
+                      <TD className="font-mono text-caption text-muted">{h.ip ?? "—"}</TD>
                     </TR>
                   ))
                 )}

@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Ban, Download, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/api-client";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { ReasonDialog } from "@/components/admin/pickers/reason-dialog";
 import { Gate } from "@/components/admin/pickers/permission-gate";
 import { useMutation } from "@/components/admin/pickers/use-mutation";
@@ -15,16 +15,17 @@ export function CertificateRowActions({ certificateId, certificateNo, status, ca
   const [revoke, setRevoke] = React.useState(false);
   const { busy, fieldErrors, run, clearErrors } = useMutation();
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <a href={withBasePath(`/api/admin/certificates/${certificateId}/download?download=1`)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-line bg-white px-2.5 text-xs font-semibold text-ink hover:bg-surface" aria-label={`Download certificate ${certificateNo}`}>
-        <Download className="h-3.5 w-3.5" /> PDF
+    <div className="flex flex-wrap items-center gap-2">
+      {/* A real <a> (not next/link) so the browser streams the PDF instead of navigating. */}
+      <a href={withBasePath(`/api/admin/certificates/${certificateId}/download?download=1`)} className={buttonClasses({ variant: "outline", size: "sm" })} aria-label={`Download certificate ${certificateNo}`}>
+        <Download className="h-4 w-4" aria-hidden /> PDF
       </a>
-      <Link href={`/verify-certificate/${certificateNo}`} target="_blank" className="inline-flex h-8 items-center gap-1 rounded-lg border border-line bg-white px-2.5 text-xs font-semibold text-navy hover:bg-surface" aria-label={`Open public verification page for ${certificateNo}`}>
-        <ShieldCheck className="h-3.5 w-3.5" /> Verify
+      <Link href={`/verify-certificate/${certificateNo}`} target="_blank" className={buttonClasses({ variant: "outline", size: "sm", className: "text-navy" })} aria-label={`Open public verification page for ${certificateNo}`}>
+        <ShieldCheck className="h-4 w-4" aria-hidden /> Verify
       </Link>
       {status === "ISSUED" && (
         <Gate allowed={canRevoke} reason="You do not have permission to revoke certificates">
-          <Button size="xs" variant="ghost" className="text-danger hover:bg-danger-light" leftIcon={<Ban className="h-3.5 w-3.5" />} onClick={() => setRevoke(true)}>
+          <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-light" leftIcon={<Ban className="h-4 w-4" />} onClick={() => setRevoke(true)}>
             Revoke
           </Button>
         </Gate>

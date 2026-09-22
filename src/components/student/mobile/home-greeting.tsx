@@ -17,8 +17,8 @@ export function HomeGreeting({ name, now }: HomeGreetingProps) {
   const firstName = name.split(" ")[0] || name;
   return (
     <div className="min-w-0">
-      <p className="text-[13px] font-medium text-muted">{greeting(now ?? new Date())},</p>
-      <h1 className="truncate font-heading text-xl font-extrabold text-navy">{firstName}</h1>
+      <p className="text-body-sm font-medium text-muted">{greeting(now ?? new Date())},</p>
+      <h1 className="truncate text-h3 text-navy">{firstName}</h1>
     </div>
   );
 }

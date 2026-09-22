@@ -18,7 +18,7 @@ export default async function StudentApplicationsPage() {
   const applications = await listStudentApplications(user.student.id);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       <PageHeader title="My Applications" description="Track every application, upload documents and pay fees." actions={<ButtonLink href="/student/apply">New application</ButtonLink>} />
 
       {applications.length === 0 ? (
@@ -33,17 +33,17 @@ export default async function StudentApplicationsPage() {
                 <li key={a.id} className="card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <Link href={`/student/applications/${a.id}`} className="font-mono text-sm font-semibold text-navy hover:underline">
+                      <Link href={`/student/applications/${a.id}`} className="font-mono text-body-sm font-semibold text-navy hover:underline">
                         {a.applicationNo}
                       </Link>
                       <p className="mt-0.5 font-semibold text-ink">{a.course.name}</p>
-                      <p className="text-sm text-muted">
+                      <p className="text-body-sm text-muted">
                         {a.center.name} · {a.batch ? a.batch.name : "Batch to be allocated"}
                       </p>
                     </div>
                     <StatusBadge status={a.status} />
                   </div>
-                  <div className="mt-3 flex items-center justify-between text-xs text-muted">
+                  <div className="mt-3 flex items-center justify-between text-caption text-muted">
                     <span>
                       Payable {formatINR(a.payableAmount)} · Paid {formatINR(a.paidAmount)}
                     </span>
@@ -77,17 +77,17 @@ export default async function StudentApplicationsPage() {
                   return (
                     <TR key={a.id}>
                       <TD>
-                        <Link href={`/student/applications/${a.id}`} className="font-mono text-sm font-semibold text-navy hover:underline">
+                        <Link href={`/student/applications/${a.id}`} className="font-mono text-body-sm font-semibold text-navy hover:underline">
                           {a.applicationNo}
                         </Link>
                       </TD>
                       <TD>
                         <p className="font-medium">{a.course.name}</p>
-                        <p className="text-xs text-muted">
+                        <p className="text-caption text-muted">
                           {a.center.name} <span className="font-mono">({a.center.code})</span>
                         </p>
                       </TD>
-                      <TD className="text-sm">{a.batch ? `${a.batch.name}` : <span className="text-muted">To be allocated</span>}</TD>
+                      <TD className="text-body-sm">{a.batch ? `${a.batch.name}` : <span className="text-muted">To be allocated</span>}</TD>
                       <TD>
                         <StatusBadge status={a.status} />
                       </TD>
@@ -95,7 +95,7 @@ export default async function StudentApplicationsPage() {
                         {formatINR(a.payableAmount)}
                         <span className="text-muted"> / {formatINR(a.paidAmount)}</span>
                       </TD>
-                      <TD className="text-sm text-muted">{formatDate(a.createdAt)}</TD>
+                      <TD className="text-body-sm text-muted">{formatDate(a.createdAt)}</TD>
                       <TD>
                         <ButtonLink href={action.href} size="xs" variant={action.actionable ? "primary" : "outline"}>
                           {action.label}

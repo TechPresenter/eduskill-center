@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/guards";
 import { formatDateTime, titleCase } from "@/lib/utils";
 import { accountOverview } from "@/app/admin/account/queries";
-import { PageHeader, KeyValue, Avatar } from "@/components/ui/misc";
+import { PageHeader, Avatar } from "@/components/ui/misc";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { StatusBadge, Badge } from "@/components/ui/badge";
-import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
+import { DataList, TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
 import { ChangePasswordForm, RevokeOtherSessionsButton } from "@/app/admin/account/account-forms";
 
 export const metadata: Metadata = { title: "My Account · Foundation Admin" };
@@ -40,16 +40,22 @@ export default async function AccountPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader title="Profile" description="Contact the Super Admin to change your name or email." />
-            <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-1">
-              <KeyValue label="Email" value={user.email ?? "—"} />
-              <KeyValue label="Mobile" value={user.mobile ?? "—"} />
-              <KeyValue label="Role" value={user.role === "SUPER_ADMIN" ? "Super Admin (all permissions)" : (user.staff?.role?.name ?? "Staff without role")} />
-              {user.staff && <KeyValue label="Employee code" value={<span className="font-mono">{user.staff.employeeCode}</span>} />}
-              {user.staff?.designation && <KeyValue label="Designation" value={user.staff.designation} />}
-              {user.staff?.department && <KeyValue label="Department" value={user.staff.department} />}
-              <KeyValue label="Account status" value={<StatusBadge status={user.status} />} />
-              <KeyValue label="Last login" value={user.lastLoginAt ? formatDateTime(user.lastLoginAt) : "—"} />
-              <KeyValue label="Member since" value={formatDateTime(user.createdAt)} />
+            <CardBody>
+              {/* One description list, not nine: the profile is a single set of term/value pairs. */}
+              <DataList
+                className="xl:grid-cols-1"
+                items={[
+                  { label: "Email", value: user.email ?? "—" },
+                  { label: "Mobile", value: user.mobile ?? "—" },
+                  { label: "Role", value: user.role === "SUPER_ADMIN" ? "Super Admin (all permissions)" : (user.staff?.role?.name ?? "Staff without role") },
+                  ...(user.staff ? [{ label: "Employee code", value: <span className="font-mono">{user.staff.employeeCode}</span> }] : []),
+                  ...(user.staff?.designation ? [{ label: "Designation", value: user.staff.designation }] : []),
+                  ...(user.staff?.department ? [{ label: "Department", value: user.staff.department }] : []),
+                  { label: "Account status", value: <StatusBadge status={user.status} /> },
+                  { label: "Last login", value: user.lastLoginAt ? formatDateTime(user.lastLoginAt) : "—" },
+                  { label: "Member since", value: formatDateTime(user.createdAt) },
+                ]}
+              />
             </CardBody>
           </Card>
           <Card>
@@ -82,11 +88,11 @@ export default async function AccountPage() {
                         {deviceLabel(s.userAgent)}
                         {s.current && <Badge tone="success">This device</Badge>}
                       </span>
-                      <span className="block truncate text-xs font-normal text-muted md:max-w-xs" title={s.userAgent ?? undefined}>
+                      <span className="block truncate text-body-sm font-normal text-muted md:max-w-xs" title={s.userAgent ?? undefined}>
                         {s.userAgent ?? "—"}
                       </span>
                     </TD>
-                    <TD label="IP" className="font-mono text-xs">{s.ip ?? "—"}</TD>
+                    <TD label="IP" className="font-mono text-body-sm">{s.ip ?? "—"}</TD>
                     <TD label="Signed in" className="text-muted md:whitespace-nowrap">{formatDateTime(s.createdAt)}</TD>
                     <TD label="Last active" className="text-muted md:whitespace-nowrap">{formatDateTime(s.lastSeenAt)}</TD>
                     <TD label="Expires" className="text-muted md:whitespace-nowrap">{formatDateTime(s.expiresAt)}</TD>
@@ -118,9 +124,9 @@ export default async function AccountPage() {
                         {h.success ? "Success" : `Failed${h.reason ? ` · ${titleCase(h.reason)}` : ""}`}
                       </Badge>
                     </TD>
-                    <TD label="Identifier" className="text-xs break-all">{h.identifier}</TD>
-                    <TD label="IP" className="font-mono text-xs">{h.ip ?? "—"}</TD>
-                    <TD label="Device" className="text-xs text-muted">{deviceLabel(h.userAgent)}</TD>
+                    <TD label="Identifier" className="text-body-sm break-all">{h.identifier}</TD>
+                    <TD label="IP" className="font-mono text-body-sm">{h.ip ?? "—"}</TD>
+                    <TD label="Device" className="text-body-sm text-muted">{deviceLabel(h.userAgent)}</TD>
                   </TR>
                 ))}
               </TBody>

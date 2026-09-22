@@ -159,12 +159,12 @@ export function BatchHeaderActions({ batch, perms, trainers, centerId }: { batch
       )}
       {(perms.update || perms.assign) && <AssignTrainerButton batch={batch} trainers={trainers} centerId={centerId} />}
       {perms.update && batch.status === "UPCOMING" && (
-        <ConfirmAction size="sm" icon={<PlayCircle className="h-4 w-4" />} method="patch" url={`/api/admin/batches/${batch.id}/status`} body={{ status: "ONGOING" }} title={`Mark ${batch.code} as ongoing?`} description="Classes have started. Attendance can be marked for ongoing batches." confirmLabel="Mark ongoing" successMessage="Batch is now ongoing">
+        <ConfirmAction icon={<PlayCircle className="h-4 w-4" />} method="patch" url={`/api/admin/batches/${batch.id}/status`} body={{ status: "ONGOING" }} title={`Mark ${batch.code} as ongoing?`} description="Classes have started. Attendance can be marked for ongoing batches." confirmLabel="Mark ongoing" successMessage="Batch is now ongoing">
           Mark ongoing
         </ConfirmAction>
       )}
       {perms.update && batch.status === "ONGOING" && (
-        <ConfirmAction size="sm" icon={<CheckCircle2 className="h-4 w-4" />} method="post" url={`/api/admin/batches/${batch.id}/complete`} title={`Complete ${batch.code}?`} description={<span>All {batch.activeStudents} active admission{batch.activeStudents === 1 ? "" : "s"} will be marked <strong>completed</strong>, progress and certificate eligibility are recomputed and the trainer assignment ends. This cannot be undone.</span>} confirmLabel="Complete batch" successMessage="Batch completed">
+        <ConfirmAction icon={<CheckCircle2 className="h-4 w-4" />} method="post" url={`/api/admin/batches/${batch.id}/complete`} title={`Complete ${batch.code}?`} description={<span>All {batch.activeStudents} active admission{batch.activeStudents === 1 ? "" : "s"} will be marked <strong>completed</strong>, progress and certificate eligibility are recomputed and the trainer assignment ends. This cannot be undone.</span>} confirmLabel="Complete batch" successMessage="Batch completed">
           Complete batch
         </ConfirmAction>
       )}

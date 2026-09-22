@@ -36,7 +36,7 @@ export default async function ExplorePage({ searchParams }: PageProps<"/admin/da
       <nav aria-label="Hierarchy path" className="card no-scrollbar overflow-x-auto px-4 py-1 sm:py-3">
         <Breadcrumbs collapse={result.breadcrumb.length > 1} items={[...result.breadcrumb.map((b) => ({ label: b.label, href: b.href })), { label: result.childLabel }]} className="flex-nowrap whitespace-nowrap" />
       </nav>
-      <p className="text-[13px] text-muted lg:text-xs">
+      <p className="text-body-sm text-muted">
         Path: {EXPLORE_LEVELS.map((l) => LEVEL_LABELS[l]).join(" → ")} → Student. Tap a row to drill into its {LEVEL_LABELS[nextLevel]?.toLowerCase() ?? "students"}.
       </p>
       <TableWrap>
@@ -79,12 +79,12 @@ export default async function ExplorePage({ searchParams }: PageProps<"/admin/da
               {showCol("admissions") && <TD label="Admissions" className="text-right tabular-nums">{formatNumber(r.admissions ?? 0)}</TD>}
               <TD actions className="text-right whitespace-nowrap">
                 {r.nextHref && (
-                  <Link href={r.nextHref} className="mr-2 inline-flex min-h-11 items-center gap-1 text-[13px] font-semibold text-orange hover:underline md:min-h-0 md:text-xs">
+                  <Link href={r.nextHref} className="ring-focus mr-2 inline-flex min-h-11 items-center gap-1 rounded-xs text-body-sm font-semibold text-orange hover:underline md:min-h-0">
                     Drill down <ArrowRight className="h-4 w-4 md:h-3.5 md:w-3.5" aria-hidden />
                   </Link>
                 )}
                 {r.detailHref && (
-                  <Link href={r.detailHref} className="inline-flex min-h-11 items-center gap-1 text-[13px] font-semibold text-navy hover:underline md:min-h-0 md:text-xs">
+                  <Link href={r.detailHref} className="ring-focus inline-flex min-h-11 items-center gap-1 rounded-xs text-body-sm font-semibold text-navy hover:underline md:min-h-0">
                     Open <ExternalLink className="h-4 w-4 md:h-3.5 md:w-3.5" aria-hidden />
                   </Link>
                 )}

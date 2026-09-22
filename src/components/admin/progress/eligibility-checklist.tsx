@@ -30,24 +30,24 @@ export function EligibilityChecklist({ progress, admissionStatus, batchStatus, m
     <div className="space-y-3">
       <ul className="space-y-2">
         {items.map((it) => (
-          <li key={it.label} className="flex items-start gap-2 text-sm">
+          <li key={it.label} className="flex items-start gap-2 text-body-sm">
             {it.ok ? it.pending ? <Circle className="mt-0.5 h-4 w-4 shrink-0 text-muted" /> : <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" /> : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />}
             <span>
               <span className="font-medium text-ink">{it.label}</span>
-              <span className="block text-xs text-muted">{it.detail}</span>
+              <span className="block text-caption text-muted">{it.detail}</span>
             </span>
           </li>
         ))}
       </ul>
       {certificate ? (
-        <div className="rounded-xl bg-success-light/60 p-3 text-sm">
-          <p className="font-semibold text-green-800">Certificate issued {formatDate(certificate.issuedAt)}</p>
+        <div className="rounded-md bg-success-light/60 p-3 text-body-sm">
+          <p className="font-semibold text-success-dark">Certificate issued {formatDate(certificate.issuedAt)}</p>
           <p className="mt-1 flex flex-wrap items-center gap-2">
             <Link href={`/verify-certificate/${certificate.certificateNo}`} target="_blank" className="font-mono text-navy hover:underline">
               {certificate.certificateNo}
             </Link>
             <StatusBadge status={certificate.status} />
-            <a href={withBasePath(`/api/admin/certificates/${certificate.id}/download`)} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-orange hover:underline">
+            <a href={withBasePath(`/api/admin/certificates/${certificate.id}/download`)} target="_blank" rel="noopener noreferrer" className="text-caption font-semibold text-orange hover:underline">
               Download PDF
             </a>
           </p>

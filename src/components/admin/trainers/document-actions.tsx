@@ -41,12 +41,12 @@ export function DocumentActions({ docId, status, canUpdate }: { docId: string; s
   return (
     <div className="flex items-center gap-1">
       {status !== "VERIFIED" && (
-        <Button size="xs" variant="outline" onClick={() => void send("VERIFIED")} loading={busy && !rejectOpen} leftIcon={<Check className="h-3.5 w-3.5" />}>
+        <Button size="sm" variant="outline" onClick={() => void send("VERIFIED")} loading={busy && !rejectOpen} leftIcon={<Check className="h-3.5 w-3.5" />}>
           Verify
         </Button>
       )}
       {status !== "REJECTED" && (
-        <Button size="xs" variant="ghost" className="text-danger hover:bg-danger-light" onClick={() => setRejectOpen(true)} leftIcon={<X className="h-3.5 w-3.5" />}>
+        <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-light" onClick={() => setRejectOpen(true)} leftIcon={<X className="h-3.5 w-3.5" />}>
           Reject
         </Button>
       )}

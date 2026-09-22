@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow, DataList } from "@/components/ui/table";
+import { EmptyContent } from "@/components/ui/feedback";
 
 /*
  * Server-component safe (no "use client"): columns/cells are evaluated wherever ResponsiveTable renders, so
@@ -111,7 +112,11 @@ export function ResponsiveTable<T>({ columns, rows, rowKey, rowHref, actions, re
                         <span className="inline-flex items-center justify-end gap-1">
                           {actions?.(row)}
                           {href && (
-                            <Link href={href} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-navy" aria-label="Open">
+                            <Link
+                              href={href}
+                              className="duration-micro ring-focus inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-navy motion-reduce:transition-none"
+                              aria-label="Open"
+                            >
                               <ChevronRight className="h-4 w-4" />
                             </Link>
                           )}
@@ -138,6 +143,18 @@ export function ResponsiveTable<T>({ columns, rows, rowKey, rowHref, actions, re
   );
 }
 
+/*
+ * THE phone card. There are two ways a row becomes a card in this codebase — the CSS-only
+ * `.table-cards` mode in globals.css (TableWrap) and this component — and the audit found them
+ * rendering the same row as two different-looking cards. They now share ONE visual contract:
+ *
+ *   shape      rounded-card · 1px border-line · bg-white · p-4 · shadow-e1 · 0.75rem apart
+ *   title      text-h4 text-navy, full width, separated by a border-b border-line/70 pb-3
+ *   details    DataList variant="rows" — 12px uppercase label in a 38% left column, value right
+ *   actions    right-aligned footer above a border-t border-line/70 pt-3
+ *
+ * If you change one, change the other (`@utility table-cards`) in the same commit.
+ */
 function DefaultCard<T>({ row, columns, href, actions, className }: { row: T; columns: ResponsiveColumn<T>[]; href?: string; actions?: React.ReactNode; className?: string }) {
   const primary = columns.find((c) => c.primary);
   const secondary = columns.find((c) => c.secondary);
@@ -147,29 +164,29 @@ function DefaultCard<T>({ row, columns, href, actions, className }: { row: T; co
   const header = (
     <>
       <div className="min-w-0 flex-1">
-        {primary ? <p className="text-base font-semibold text-navy">{primary.cell(row)}</p> : null}
-        {secondary ? <p className="mt-0.5 text-[13px] text-muted">{secondary.cell(row)}</p> : null}
+        {primary ? <p className="text-h4 text-navy">{primary.cell(row)}</p> : null}
+        {secondary ? <p className="text-body-sm mt-0.5 text-muted">{secondary.cell(row)}</p> : null}
       </div>
       {status && <div className="shrink-0">{status.cell(row)}</div>}
       {href && <ChevronRight className="mt-0.5 h-5 w-5 shrink-0 text-muted" aria-hidden />}
     </>
   );
   const hasHeader = Boolean(primary || secondary || status);
+  // The title is separated from the detail rows exactly the way `.table-cards` separates them.
+  const headerCls = cn("flex items-start gap-3", (rest.length > 0 || actions) && "border-b border-line/70 pb-3");
 
   return (
-    <article className={cn("card p-4", className)}>
+    <article className={cn("rounded-card border border-line bg-white p-4 shadow-e1", className)}>
       {hasHeader &&
         (href ? (
-          <Link href={href} className="-m-4 mb-0 flex items-start gap-3 rounded-t-card p-4 tap-highlight-none active:bg-surface/70">
+          <Link href={href} className={cn("duration-micro ring-focus tap-highlight-none -m-4 mb-0 rounded-t-card p-4 transition-colors active:bg-surface/70 motion-reduce:transition-none", headerCls)}>
             {header}
           </Link>
         ) : (
-          <div className="flex items-start gap-3">{header}</div>
+          <div className={headerCls}>{header}</div>
         ))}
-      {rest.length > 0 && (
-        <DataList className={cn(hasHeader && "mt-3 border-t border-line/70 pt-3", "sm:grid-cols-2")} items={rest.map((c) => ({ label: headerLabel(c), value: c.cell(row) }))} />
-      )}
-      {actions && <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-line/70 pt-3">{actions}</div>}
+      {rest.length > 0 && <DataList variant="rows" className={cn(hasHeader && "mt-2")} items={rest.map((c) => ({ label: headerLabel(c), value: c.cell(row) }))} />}
+      {actions && <div className="mt-2 flex flex-wrap items-center justify-end gap-2 border-t border-line/70 pt-3">{actions}</div>}
     </article>
   );
 }
@@ -189,13 +206,11 @@ export interface CardListProps<T> {
 export function CardList<T>({ rows, rowKey, render, empty, hideFrom = "md", className }: CardListProps<T>) {
   const hide = hideFrom === "md" ? "md:hidden" : hideFrom === "lg" ? "lg:hidden" : undefined;
   if (rows.length === 0) {
+    // One empty state for the whole product: a plain string becomes the shared EmptyState, a node is
+    // rendered as given. No second dashed-div implementation lives here any more.
     return (
       <div className={cn(hide, className)}>
-        {typeof empty === "string" || empty === undefined ? (
-          <div className="rounded-card border border-dashed border-line bg-surface/50 px-6 py-12 text-center text-sm text-muted">{empty ?? "No records found."}</div>
-        ) : (
-          empty
-        )}
+        <EmptyContent content={empty} size="sm" />
       </div>
     );
   }

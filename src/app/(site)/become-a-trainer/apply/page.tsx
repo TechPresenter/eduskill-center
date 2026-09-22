@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Search } from "lucide-react";
 import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
 import { Alert } from "@/components/ui/feedback";
 import { ButtonLink } from "@/components/ui/button";
+import { PageHero } from "@/components/site/page-hero";
 import { TrainerApplyForm } from "./apply-form";
 
 export const metadata: Metadata = {
@@ -21,22 +22,20 @@ export default async function TrainerApplyPage() {
 
   return (
     <>
-      <section className="bg-navy text-white">
-        <div className="container-x py-12 sm:py-16">
-          <p className="eyebrow text-orange">Volunteer with us</p>
-          <h1 className="mt-3 font-heading text-3xl font-extrabold text-white sm:text-4xl">Become a Volunteer Trainer</h1>
-          <p className="mt-3 max-w-2xl text-white/80">
-            Share your skills with learners in your block, district or state. The application takes about ten minutes — you can upload your documents right after
-            submitting, or later from the{" "}
-            <Link href="/become-a-trainer/status" className="font-semibold text-white underline underline-offset-4">
-              application status page
-            </Link>
-            .
-          </p>
-        </div>
-      </section>
+      <PageHero
+        compact
+        eyebrow="Volunteer with us"
+        title="Become a [[Volunteer Trainer]]"
+        description="Share your skills with learners in your block, district or state. The application takes about ten minutes, and you can upload your documents right after submitting — or later, from the status page."
+        breadcrumbs={[{ label: "Home", href: "/" }, { label: "Become a Trainer", href: "/become-a-trainer" }, { label: "Apply" }]}
+      >
+        <ButtonLink href="/become-a-trainer/status" variant="white" leftIcon={<Search className="h-4 w-4" />}>
+          Track an existing application
+        </ButtonLink>
+      </PageHero>
+
       <section className="bg-surface">
-        <div className="container-x py-10 sm:py-14">
+        <div className="container-x section-y">
           {open ? (
             <TrainerApplyForm documentTypes={documentTypes} />
           ) : (
@@ -44,7 +43,7 @@ export default async function TrainerApplyPage() {
               <Alert tone="warning" title="Volunteer trainer applications are currently closed">
                 We are not accepting new volunteer trainer applications at the moment. Please check back soon or track an existing application.
               </Alert>
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <ButtonLink href="/become-a-trainer/status" variant="navy">
                   Track my application
                 </ButtonLink>

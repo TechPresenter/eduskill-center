@@ -61,11 +61,11 @@ export default async function StudentTrainingPage() {
             <section className="card p-4" aria-label="Current batch">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="truncate font-heading text-[16px] font-extrabold text-navy">{primary.course.name}</h2>
-                  <p className="truncate text-[13px] text-muted">
+                  <h2 className="truncate text-h4 text-navy">{primary.course.name}</h2>
+                  <p className="truncate text-body-sm text-muted">
                     {primary.batch.name} · {formatSchedule(primary.batch)}
                   </p>
-                  <p className="truncate text-[12px] text-muted">
+                  <p className="truncate text-caption text-muted">
                     {primary.center.name} · {formatDate(primary.batch.startDate)} – {formatDate(primary.batch.endDate)}
                   </p>
                 </div>
@@ -74,7 +74,7 @@ export default async function StudentTrainingPage() {
               {progress && (
                 <div className="mt-3 space-y-2">
                   <ProgressBar label={`Course progress ${Math.round(progress.completionPct)}%`} value={progress.completionPct} tone="orange" />
-                  <p className="text-[12px] text-muted">
+                  <p className="text-caption text-muted">
                     {progress.classesAttended} of {progress.classesHeld} classes attended
                     {primary.batch.trainer?.user.name ? ` · Trainer ${primary.batch.trainer.user.name}` : ""}
                   </p>
@@ -84,15 +84,15 @@ export default async function StudentTrainingPage() {
           )}
 
           <section aria-label="Classes this week">
-            <h2 className="mb-2 px-1 text-[13px] font-bold tracking-[0.14em] text-muted uppercase">Classes this week</h2>
+            <h2 className="mb-2 px-1 text-overline text-muted">Classes this week</h2>
             {classDays.length === 0 ? (
-              <p className="card p-4 text-[13px] text-muted">No more classes scheduled this week.</p>
+              <p className="card p-4 text-body-sm text-muted">No more classes scheduled this week.</p>
             ) : (
               <ul className="hscroll gap-2 py-0.5">
                 {classDays.map((d) => (
                   <li key={`${d.batch}-${d.iso}`} className="card min-w-[10.5rem] p-3">
-                    <p className="text-[13px] font-bold text-navy">{d.label}</p>
-                    <p className="mt-0.5 truncate text-[12px] text-muted">{d.course}</p>
+                    <p className="text-body-sm font-bold text-navy">{d.label}</p>
+                    <p className="mt-0.5 truncate text-caption text-muted">{d.course}</p>
                   </li>
                 ))}
               </ul>
@@ -100,12 +100,12 @@ export default async function StudentTrainingPage() {
           </section>
 
           <section aria-label="Training sections">
-            <h2 className="mb-2 px-1 text-[13px] font-bold tracking-[0.14em] text-muted uppercase">Sections</h2>
+            <h2 className="mb-2 px-1 text-overline text-muted">Sections</h2>
             <QuickActions items={tiles} label="Training sections" className="lg:grid-cols-4" />
           </section>
 
           {pendingAssignments > 0 && (
-            <Link href="/student/assignments" className="flex min-h-14 items-center gap-3 rounded-2xl bg-warning-light px-4 text-[14px] font-semibold text-amber-900">
+            <Link href="/student/assignments" className="flex min-h-14 items-center gap-3 rounded-card bg-warning-light px-4 text-body font-semibold text-amber-900">
               <FileText className="h-5 w-5 shrink-0" aria-hidden />
               {pendingAssignments} assignment{pendingAssignments === 1 ? "" : "s"} waiting for your submission
             </Link>

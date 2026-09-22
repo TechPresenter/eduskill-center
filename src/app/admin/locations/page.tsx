@@ -7,8 +7,7 @@ import { formatNumber } from "@/lib/utils";
 import { locationOverview } from "@/server/locations";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/ui/misc";
-import { StatsCard } from "@/components/ui/stats";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { buttonClasses } from "@/components/ui/button";
 import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
 import { LocationImportDialog } from "@/components/admin/locations/import-dialog";
@@ -58,28 +57,44 @@ export default async function LocationsPage() {
         }
       />
 
+      {/*
+        One card per level instead of the old stat row + duplicate blurb row: the number, what the level
+        is for and the way in all read as a single object, and the whole card is the tap target.
+      */}
       <div className="grid gap-4 sm:grid-cols-3">
         {levels.map((l) => (
-          <StatsCard key={l.href} label={l.label} value={l.total} hint={`${formatNumber(l.active)} active · ${formatNumber(l.total - l.active)} inactive · ${formatNumber(l.withCenters)} with active centers`} icon={l.icon} tone="navy" href={l.href} />
-        ))}
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        {levels.map((l) => (
-          <Card key={l.href} hover>
-            <CardBody className="flex h-full flex-col">
-              <h3 className="text-base font-bold text-navy">{l.label}</h3>
-              <p className="mt-1 flex-1 text-sm text-muted">{l.blurb}</p>
-              <Link href={l.href} className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-orange hover:underline">
-                Manage {l.label.toLowerCase()} <ArrowRight className="h-4 w-4" />
-              </Link>
-            </CardBody>
-          </Card>
+          <Link key={l.href} href={l.href} className="card card-hover card-p ring-focus group flex flex-col">
+            <span className="flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-navy-soft text-navy">{l.icon}</span>
+              <span className="min-w-0">
+                <span className="text-overline block text-muted">{l.label}</span>
+                <span className="text-h2 block text-navy tabular-nums">{formatNumber(l.total)}</span>
+              </span>
+            </span>
+            <span className="text-body-sm mt-3 flex-1 text-muted">{l.blurb}</span>
+            {/* The breakdown the old hint ran together on one line, now three labelled figures. */}
+            <span className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3">
+              {[
+                { k: "Active", v: l.active },
+                { k: "Inactive", v: l.total - l.active },
+                { k: "With centres", v: l.withCenters },
+              ].map((x) => (
+                <span key={x.k} className="min-w-0">
+                  <span className="text-caption block truncate text-muted">{x.k}</span>
+                  <span className="text-h4 block text-ink tabular-nums">{formatNumber(x.v)}</span>
+                </span>
+              ))}
+            </span>
+            <span className="text-body-sm mt-4 inline-flex items-center gap-1 font-semibold text-orange">
+              Manage {l.label.toLowerCase()}
+              <ArrowRight className="duration-micro h-4 w-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden />
+            </span>
+          </Link>
         ))}
       </div>
 
       <Card>
-        <CardHeader title="Coverage by state" description="States ordered by number of training centers." action={<Link href="/admin/reports/states" className="text-xs font-semibold text-orange hover:underline">Full state report</Link>} />
+        <CardHeader title="Coverage by state" description="The ten states with the most training centres." action={<Link href="/admin/reports/states" className="text-body-sm font-semibold text-orange hover:underline">Full state report</Link>} />
         <TableWrap className="max-md:px-4 max-md:pb-4 md:rounded-none md:border-0">
           <THead>
             <tr>
@@ -92,16 +107,16 @@ export default async function LocationsPage() {
             </tr>
           </THead>
           <TBody>
-            {topStates.length === 0 && <EmptyRow colSpan={6}>No states yet. Import a CSV or add states manually.</EmptyRow>}
+            {topStates.length === 0 && <EmptyRow colSpan={6}>No states yet — import the hierarchy as CSV, or add states one at a time.</EmptyRow>}
             {topStates.map((s) => (
               <TR key={s.id}>
                 <TD mobile="full">
                   <Link href={`/admin/districts?stateId=${s.id}`} className="block tap-highlight-none md:inline">
-                    <span className="mr-2 font-mono text-xs font-bold text-orange md:hidden">{s.code}</span>
+                    <span className="mr-2 font-mono text-caption font-bold text-orange md:hidden">{s.code}</span>
                     <span className="font-semibold text-navy md:font-medium md:hover:underline">{s.name}</span>
                   </Link>
                 </TD>
-                <TD label="Code" mobile="hidden" className="font-mono text-xs">
+                <TD label="Code" mobile="hidden" className="font-mono text-caption">
                   {s.code}
                 </TD>
                 <TD label="Districts" className="text-right tabular-nums">

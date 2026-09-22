@@ -73,7 +73,7 @@ export function JsonDiff({ oldValue, newValue, showUnchanged = false, className 
   );
 
   return (
-    <div className={cn("overflow-hidden rounded-xl border border-line", className)}>
+    <div className={cn("overflow-hidden rounded-card border border-line", className)}>
       {/* Phones: stacked blocks. */}
       <ul className="divide-y divide-line md:hidden">
         {visible.length === 0 && <li className="px-3 py-4 text-center text-sm text-muted">No changes between the recorded values.</li>}

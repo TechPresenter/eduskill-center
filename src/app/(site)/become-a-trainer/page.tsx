@@ -54,7 +54,7 @@ export default async function BecomeTrainerPage() {
               Apply Now
             </ButtonLink>
           ) : (
-            <span className="inline-flex h-12 items-center rounded-xl bg-white/10 px-6 text-sm font-semibold text-white">Applications are currently closed</span>
+            <span className="inline-flex min-h-12 items-center rounded-md bg-white/10 px-6 text-sm font-semibold text-white ring-1 ring-white/20">Applications are currently closed</span>
           )}
           <ButtonLink href="/become-a-trainer/status" size="lg" variant="white" leftIcon={<Search className="h-4 w-4" />}>
             Track application
@@ -63,19 +63,19 @@ export default async function BecomeTrainerPage() {
       </PageHero>
 
       {(section.benefits ?? []).length > 0 && (
-        <section className="bg-white py-16 sm:py-20" aria-labelledby="trainer-benefits-title">
+        <section className="bg-white section-y" aria-labelledby="trainer-benefits-title">
           <div className="container-x">
             <Reveal>
               <SectionHeading id="trainer-benefits-title" label="Why volunteer" title="What You [[Gain]] as a Trainer" align="center" />
             </Reveal>
             <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {(section.benefits ?? []).map((b, i) => (
-                <Reveal as="li" key={i} delay={i * 70} className="card card-hover p-6">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-light text-orange">
+                <Reveal as="li" key={i} delay={i * 70} className="card card-hover card-p">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-md bg-orange-light text-orange">
                     <DynamicIcon name={b.icon} className="h-6 w-6" aria-hidden />
                   </span>
-                  <h3 className="mt-4 text-base font-bold text-navy">{b.title}</h3>
-                  {b.description && <p className="mt-1.5 text-sm leading-relaxed text-muted">{b.description}</p>}
+                  <h3 className="mt-4 text-h4 text-navy">{b.title}</h3>
+                  {b.description && <p className="mt-2 text-body text-muted">{b.description}</p>}
                 </Reveal>
               ))}
             </ul>
@@ -83,7 +83,7 @@ export default async function BecomeTrainerPage() {
         </section>
       )}
 
-      <section className="bg-lavender py-16 sm:py-20" aria-labelledby="trainer-levels-title">
+      <section className="bg-lavender section-y" aria-labelledby="trainer-levels-title">
         <div className="container-x">
           <Reveal>
             <SectionHeading id="trainer-levels-title" label="Volunteer levels" title="Choose the Level That [[Fits You]]" description="Trainers are registered at block, district or state level. Location details required in the application depend on the level you choose." align="center" />
@@ -93,16 +93,16 @@ export default async function BecomeTrainerPage() {
               const lvl = levels[i];
               const Icon = meta.icon;
               return (
-                <Reveal as="li" key={meta.key} delay={i * 90} className="card card-hover flex h-full flex-col p-7">
+                <Reveal as="li" key={meta.key} delay={i * 90} className="card card-hover flex h-full flex-col card-p sm:p-7">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-navy text-white">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-navy text-white">
                       <Icon className="h-6 w-6" aria-hidden />
                     </span>
-                    <h3 className="text-xl font-extrabold text-navy">{lvl?.title ?? `${meta.key.charAt(0)}${meta.key.slice(1).toLowerCase()} Level`}</h3>
+                    <h3 className="text-h3 text-navy">{lvl?.title ?? `${meta.key.charAt(0)}${meta.key.slice(1).toLowerCase()} Level`}</h3>
                   </div>
-                  {lvl?.description && <p className="mt-4 text-sm leading-relaxed text-muted">{lvl.description}</p>}
-                  <h4 className="mt-5 text-xs font-bold tracking-wide text-orange uppercase">Typical requirements</h4>
-                  <ul className="mt-2 space-y-1.5 text-sm text-ink">
+                  {lvl?.description && <p className="mt-4 text-body text-muted">{lvl.description}</p>}
+                  <h4 className="mt-6 text-overline text-orange">Typical requirements</h4>
+                  <ul className="mt-2.5 space-y-2 text-body text-ink">
                     {meta.requirements.map((r) => (
                       <li key={r} className="flex items-start gap-2">
                         <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-orange" aria-hidden />
@@ -117,7 +117,7 @@ export default async function BecomeTrainerPage() {
         </div>
       </section>
 
-      <section className="bg-white py-16 sm:py-20" aria-labelledby="trainer-process-title">
+      <section className="bg-white section-y" aria-labelledby="trainer-process-title">
         <div className="container-x">
           <Reveal>
             <SectionHeading id="trainer-process-title" label="How it works" title="From Application to [[Assignment]]" align="center" />
@@ -125,9 +125,9 @@ export default async function BecomeTrainerPage() {
           <ol className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
             {PROCESS_STEPS.map((s, i) => (
               <Reveal as="li" key={s.title} delay={i * 60} className="relative flex flex-col items-center text-center">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange font-heading text-base font-extrabold text-white shadow-card">{i + 1}</span>
-                <h3 className="mt-4 text-base font-bold text-navy">{s.title}</h3>
-                <p className="mt-1 text-xs leading-relaxed text-muted">{s.description}</p>
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange font-heading text-base font-extrabold text-white shadow-e1 tabular-nums">{i + 1}</span>
+                <h3 className="mt-4 text-h4 text-navy">{s.title}</h3>
+                <p className="mt-1.5 text-body-sm text-muted">{s.description}</p>
               </Reveal>
             ))}
           </ol>

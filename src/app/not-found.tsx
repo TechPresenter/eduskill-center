@@ -22,7 +22,7 @@ export default async function NotFound() {
 
   return (
     <>
-      <a href="#main-content" className="sr-only z-[100] rounded-lg bg-orange px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
+      <a href="#main-content" className="sr-only z-toast rounded-md bg-orange px-4 py-2 text-body-sm font-semibold text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
         Skip to content
       </a>
       <SiteHeader branding={branding} dashboardHref={user ? portalHome(user.role) : null} registrationOpen={registrationOpen !== false} />

@@ -72,7 +72,7 @@ export function ForceIssueForm({ initialAdmissionId, canIssue }: { initialAdmiss
   const eligible = !!preview?.progress?.certificateEligible;
 
   return (
-    <div className="max-w-3xl space-y-5">
+    <div className="max-w-3xl space-y-6">
       <Alert tone="warning" title="Bypasses eligibility checks">
         Use only when the Foundation has verified completion outside the system (e.g. attendance kept on paper). The action is audited as a forced issue.
       </Alert>
@@ -95,16 +95,16 @@ export function ForceIssueForm({ initialAdmissionId, canIssue }: { initialAdmiss
         <div className="card space-y-4 p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-lg font-bold text-navy">
+              <p className="text-h3 text-navy">
                 <Link href={`/admin/students/${preview.student.id}`} className="hover:underline">
                   {preview.student.name}
                 </Link>{" "}
-                <span className="font-mono text-sm text-muted">{preview.student.studentId ?? ""}</span>
+                <span className="font-mono text-body-sm text-muted">{preview.student.studentId ?? ""}</span>
               </p>
-              <p className="text-sm text-muted">
+              <p className="text-body-sm text-muted">
                 {preview.course.name} · {preview.center.name} ({preview.center.code}) · batch {preview.batch.code}
               </p>
-              <p className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+              <p className="mt-1 flex flex-wrap items-center gap-2 text-caption">
                 <Link href={`/admin/admissions/${preview.id}`} className="font-mono text-navy hover:underline">
                   {preview.admissionNo}
                 </Link>
@@ -121,23 +121,23 @@ export function ForceIssueForm({ initialAdmissionId, canIssue }: { initialAdmiss
               <Badge tone="warning">Not eligible</Badge>
             )}
           </div>
-          <dl className="grid grid-cols-2 gap-3 rounded-xl bg-surface p-3 text-sm sm:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-3 rounded-md bg-surface p-3 text-body-sm sm:grid-cols-4">
             <div>
-              <dt className="text-[11px] font-medium text-muted uppercase">Attendance</dt>
-              <dd className={`font-semibold tabular-nums ${(preview.progress?.attendancePct ?? 0) >= preview.course.minAttendancePct ? "text-green-700" : "text-danger"}`}>
-                {preview.progress?.attendancePct ?? 0}% <span className="text-xs font-normal text-muted">/ {preview.course.minAttendancePct}%</span>
+              <dt className="text-caption font-medium text-muted uppercase">Attendance</dt>
+              <dd className={`font-semibold tabular-nums ${(preview.progress?.attendancePct ?? 0) >= preview.course.minAttendancePct ? "text-success-dark" : "text-danger"}`}>
+                {preview.progress?.attendancePct ?? 0}% <span className="text-caption font-normal text-muted">/ {preview.course.minAttendancePct}%</span>
               </dd>
             </div>
             <div>
-              <dt className="text-[11px] font-medium text-muted uppercase">Assessment</dt>
-              <dd className="font-semibold tabular-nums">{preview.progress?.assessmentAvgPct ? `${preview.progress.assessmentAvgPct}%` : "—"} <span className="text-xs font-normal text-muted">/ {preview.course.passingMarksPct}%</span></dd>
+              <dt className="text-caption font-medium text-muted uppercase">Assessment</dt>
+              <dd className="font-semibold tabular-nums">{preview.progress?.assessmentAvgPct ? `${preview.progress.assessmentAvgPct}%` : "—"} <span className="text-caption font-normal text-muted">/ {preview.course.passingMarksPct}%</span></dd>
             </div>
             <div>
-              <dt className="text-[11px] font-medium text-muted uppercase">Training</dt>
+              <dt className="text-caption font-medium text-muted uppercase">Training</dt>
               <dd className="font-semibold">{preview.progress?.isCompleted || preview.status === "COMPLETED" ? "Completed" : titleCase(preview.status)}</dd>
             </div>
             <div>
-              <dt className="text-[11px] font-medium text-muted uppercase">Batch ends</dt>
+              <dt className="text-caption font-medium text-muted uppercase">Batch ends</dt>
               <dd className="font-semibold">{formatDate(preview.batch.endDate)}</dd>
             </div>
           </dl>

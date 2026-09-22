@@ -2,6 +2,7 @@ import * as React from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyContent } from "@/components/ui/feedback";
 
 /*
  * Server-safe table primitives. Only `TableWrap` (card mode + data-label hydration) is a client
@@ -10,7 +11,7 @@ import { cn } from "@/lib/utils";
 export { TableWrap } from "@/components/ui/table-wrap";
 
 export function THead({ children }: { children: React.ReactNode }) {
-  return <thead className="bg-surface text-xs font-semibold tracking-wide text-muted uppercase">{children}</thead>;
+  return <thead className="text-caption bg-surface font-semibold tracking-wide text-muted uppercase">{children}</thead>;
 }
 
 export function TH({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
@@ -22,7 +23,7 @@ export function TBody({ children }: { children: React.ReactNode }) {
 }
 
 export function TR({ className, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn("transition-colors hover:bg-surface/60", className)} {...props} />;
+  return <tr className={cn("duration-micro transition-colors hover:bg-surface/60 motion-reduce:transition-none", className)} {...props} />;
 }
 
 export interface TDProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
@@ -49,11 +50,16 @@ export function TD({ className, label, mobile, primary, actions, ...props }: TDP
   );
 }
 
+/**
+ * The "nothing here" row. A plain string (or nothing) renders the shared `EmptyState` in its compact,
+ * frameless step — the same mark, title and rhythm a phone card list and a standalone panel use.
+ * A caller-supplied node (e.g. a full `<EmptyState>` with an action) is rendered untouched.
+ */
 export function EmptyRow({ colSpan, children }: { colSpan: number; children?: React.ReactNode }) {
   return (
     <tr>
-      <td colSpan={colSpan} className="px-4 py-12 text-center text-sm text-muted">
-        {children ?? "No records found."}
+      <td colSpan={colSpan} className="px-4">
+        <EmptyContent content={children} size="sm" bare />
       </td>
     </tr>
   );
@@ -80,7 +86,7 @@ export function Pagination({ page, totalPages, total, limit, hrefFor, onPageChan
 
   return (
     <nav className={cn("flex flex-col items-center justify-between gap-3 sm:flex-row", className)} aria-label="Pagination">
-      <p className="text-xs text-muted">
+      <p className="text-caption text-muted">
         {from !== undefined && to !== undefined ? `Showing ${from}–${to} of ${total}` : `Page ${page} of ${totalPages}`}
       </p>
       <div className="flex items-center gap-1">
@@ -125,8 +131,8 @@ function PageButton({
 }) {
   // 36px on desktop; 44px on phones (< sm) and on coarse pointers.
   const cls = cn(
-    "inline-flex h-9 min-w-9 items-center justify-center rounded-lg border px-2 text-sm font-medium transition-colors tap-highlight-none max-sm:h-11 max-sm:min-w-11 pointer-coarse:h-11 pointer-coarse:min-w-11",
-    p === current ? "border-navy bg-navy text-white" : "border-line bg-white text-ink hover:bg-surface",
+    "text-body-sm duration-micro ring-focus tap-highlight-none inline-flex h-9 min-w-9 items-center justify-center rounded-md border px-2 font-semibold transition-colors motion-reduce:transition-none max-sm:h-11 max-sm:min-w-11 pointer-coarse:h-11 pointer-coarse:min-w-11",
+    p === current ? "border-navy bg-navy text-white shadow-e1" : "border-line bg-white text-ink hover:border-navy/30 hover:bg-surface",
     disabled && "pointer-events-none opacity-40"
   );
   if (hrefFor) {
@@ -163,14 +169,38 @@ function pageWindow(page: number, total: number): (number | "…")[] {
   return out;
 }
 
-/** Mobile-friendly key/value list used when tables collapse into cards. */
-export function DataList({ items, className }: { items: { label: React.ReactNode; value: React.ReactNode }[]; className?: string }) {
+export interface DataListItem {
+  label: React.ReactNode;
+  value: React.ReactNode;
+}
+
+/**
+ * Semantic key/value list (`<dl>`), used wherever a table row becomes a card.
+ *
+ * `variant="rows"` is THE phone-card detail layout: label left in a 38% column, value right —
+ * byte-for-byte the contract `.table-cards` applies in CSS (globals.css), so a row rendered by
+ * TableWrap's card mode and the same row rendered by ResponsiveTable's card look identical.
+ * `variant="grid"` is the roomier two-column form used inside detail panels.
+ */
+export function DataList({ items, className, variant = "grid" }: { items: DataListItem[]; className?: string; variant?: "grid" | "rows" }) {
+  if (variant === "rows") {
+    return (
+      <dl className={cn("flex flex-col", className)}>
+        {items.map((it, i) => (
+          <div key={i} className="flex items-start justify-between gap-3 py-1.5">
+            <dt className="text-caption basis-[38%] shrink-0 pt-0.5 font-semibold tracking-wide text-muted uppercase">{it.label}</dt>
+            <dd className="text-body-sm min-w-0 flex-1 text-right font-medium text-ink">{it.value ?? "—"}</dd>
+          </div>
+        ))}
+      </dl>
+    );
+  }
   return (
     <dl className={cn("grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2", className)}>
       {items.map((it, i) => (
         <div key={i} className="flex flex-col gap-0.5 border-b border-line/70 pb-2 last:border-0">
-          <dt className="text-xs font-medium tracking-wide text-muted uppercase">{it.label}</dt>
-          <dd className="text-sm font-medium text-ink">{it.value ?? "—"}</dd>
+          <dt className="text-caption font-semibold tracking-wide text-muted uppercase">{it.label}</dt>
+          <dd className="text-body-sm font-medium text-ink">{it.value ?? "—"}</dd>
         </div>
       ))}
     </dl>

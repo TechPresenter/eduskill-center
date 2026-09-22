@@ -182,7 +182,7 @@ export function HeaderClient({
     );
 
   return (
-    <header className={cn("sticky top-0 z-50 bg-white/95 backdrop-blur transition-shadow duration-300 pt-safe", scrolled ? "shadow-[0_4px_24px_-8px_rgba(16,24,40,0.18)]" : "shadow-[0_1px_0_0_rgba(228,231,236,1)]")}>
+    <header className={cn("sticky top-0 z-header bg-white transition-shadow duration-element motion-reduce:transition-none pt-safe", scrolled ? "shadow-[0_4px_24px_-8px_rgba(16,24,40,0.18)]" : "shadow-[0_1px_0_0_rgba(228,231,236,1)]")}>
       <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center justify-between gap-3 px-4 sm:h-16 sm:px-6 lg:h-[72px] lg:px-8">
         <Link href="/" aria-label={`${siteName} – home`} className="shrink-0 rounded-lg">
           <span className="hidden sm:block">{logo}</span>
@@ -217,7 +217,7 @@ export function HeaderClient({
                   <ChevronDown className={cn("h-4 w-4 transition-transform", moreOpen && "rotate-180")} aria-hidden />
                 </button>
                 {moreOpen && (
-                  <ul role="menu" className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-line bg-white p-1.5 shadow-card-hover animate-pop">
+                  <ul role="menu" className="absolute right-0 z-raised mt-2 w-56 overflow-hidden rounded-xl border border-line bg-white p-1.5 shadow-e2 animate-pop motion-reduce:animate-none">
                     {overflow.map((item, i) => {
                       const active = isActive(item.href);
                       const idx = INLINE_AT_LG + i;
@@ -274,10 +274,13 @@ export function HeaderClient({
       </div>
 
       {/*
-        The sheet is portalled to <body> on purpose. This <header> carries `backdrop-blur`, and a
-        non-none backdrop-filter is a containing block for fixed descendants - rendered inside the
-        header, `fixed inset-0` resolves against the 56px-tall header box and clips the sheet to a
-        transparent sliver. Same class of bug CLAUDE.md documents for transforms / animate-page.
+        The sheet is portalled to <body> on purpose, and stays portalled. The header used to carry
+        `backdrop-blur`, and a non-none backdrop-filter is a containing block for fixed descendants -
+        rendered inside the header, `fixed inset-0` resolved against the 56px-tall header box and
+        clipped the sheet to a transparent sliver. The blur is gone (opaque bg-white, same look over
+        content, no per-frame GPU pass on cheap Androids) but any future filter, transform or
+        `animate-*` on this header would bring the bug straight back. Same class of bug CLAUDE.md
+        documents for transforms / animate-page.
       */}
       <MobileMenu
         open={open}

@@ -1,48 +1,31 @@
 "use client";
 
 import * as React from "react";
-import { CheckCheck, Download, MessageSquarePlus, Save } from "lucide-react";
+import { CheckCheck, Download, Save } from "lucide-react";
 import { api, ApiClientError, errorMessage } from "@/lib/api-client";
 import { cn, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Field } from "@/components/ui/form";
-import { SegmentedControl, Tabs } from "@/components/ui/tabs";
+import { SegmentedControl } from "@/components/ui/tabs";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { Avatar } from "@/components/ui/misc";
-import { Badge, StatusBadge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { StatsCard } from "@/components/ui/stats";
+import { StickyActionBar } from "@/components/ui/sticky-action-bar";
 import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
-import { Alert, EmptyState, ErrorState, SkeletonTable } from "@/components/ui/feedback";
+import { Alert, EmptyState, ErrorState, SkeletonList, SkeletonTable } from "@/components/ui/feedback";
 import { toast } from "@/components/ui/toast";
 import { BatchPicker } from "@/components/trainer/batch-picker";
 import { useApi } from "@/components/trainer/use-api";
+import { AttendanceRoster, ATTENDANCE_STATUSES, type AttendanceMark, type AttendanceStatus, type AttendanceStudent } from "@/components/trainer/mobile";
 import type { BatchOption } from "@/components/trainer/types";
 
-type Status = "PRESENT" | "ABSENT" | "LATE" | "LEAVE";
 type Range = "week" | "month" | "all";
 
-const STATUSES: { value: Status; label: string; short: string; active: string }[] = [
-  { value: "PRESENT", label: "Present", short: "P", active: "border-success bg-success text-white" },
-  { value: "ABSENT", label: "Absent", short: "A", active: "border-danger bg-danger text-white" },
-  { value: "LATE", label: "Late", short: "L", active: "border-warning bg-warning text-white" },
-  { value: "LEAVE", label: "Leave", short: "LV", active: "border-info bg-info text-white" },
-];
-
-interface SheetStudent {
-  admissionId: string;
-  studentId: string;
-  studentCode: string | null;
-  name: string;
-  photoUrl: string | null;
-  admissionStatus: string;
-  status: Status | null;
-  remarks: string | null;
-}
 interface Sheet {
   batch: { id: string; code: string; name: string; course: string; center: { name: string; code: string }; startDate: string; endDate: string; days: string[]; status: string };
   date: string;
-  students: SheetStudent[];
+  students: AttendanceStudent[];
   marked: boolean;
 }
 interface ReportRow {
@@ -65,10 +48,10 @@ interface Report {
   rows: ReportRow[];
   daily: { date: string; present: number; absent: number; late: number; leave: number }[];
 }
-type Marks = Record<string, { status: Status | null; remarks: string }>;
+type Marks = Record<string, AttendanceMark>;
 
 function pctClass(p: number) {
-  return p >= 75 ? "text-green-700" : p >= 60 ? "text-amber-700" : "text-danger";
+  return p >= 75 ? "text-success-dark" : p >= 60 ? "text-amber-700" : "text-danger";
 }
 
 function csvCell(v: unknown) {
@@ -99,20 +82,23 @@ export function AttendanceClient({ batches, initialBatchId, today, disabled }: {
   const [batchId, setBatchId] = React.useState(defaultBatch);
   const batch = batches.find((b) => b.id === batchId);
 
+  if (batches.length === 0) {
+    return <EmptyState title="No batches to mark attendance for" description="Attendance opens once the Foundation assigns you to a batch." />;
+  }
+
   return (
     <>
-      <Tabs
+      <SegmentedControl
         value={tab}
         onChange={(v) => setTab(v as "mark" | "reports")}
-        className="mb-6"
+        fullWidth
+        className="mb-5 sm:max-w-sm"
         items={[
           { value: "mark", label: "Mark attendance" },
           { value: "reports", label: "Reports" },
         ]}
       />
-      {batches.length === 0 ? (
-        <EmptyState title="No batches to mark attendance for" description="Attendance opens once the Foundation assigns you to a batch." />
-      ) : tab === "mark" ? (
+      {tab === "mark" ? (
         <MarkTab batches={batches} batch={batch} batchId={batchId} onBatchChange={setBatchId} today={today} disabled={disabled} />
       ) : (
         <ReportsTab batches={batches} batch={batch} batchId={batchId} onBatchChange={setBatchId} today={today} />
@@ -126,7 +112,6 @@ export function AttendanceClient({ batches, initialBatchId, today, disabled }: {
 function MarkTab({ batches, batch, batchId, onBatchChange, today, disabled }: { batches: BatchOption[]; batch: BatchOption | undefined; batchId: string; onBatchChange: (id: string) => void; today: string; disabled: boolean }) {
   const [rawDate, setRawDate] = React.useState(today);
   const [marks, setMarks] = React.useState<Marks>({});
-  const [remarkOpen, setRemarkOpen] = React.useState<Record<string, boolean>>({});
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
 
@@ -136,32 +121,33 @@ function MarkTab({ batches, batch, batchId, onBatchChange, today, disabled }: { 
   const canLoad = !!batchId && !!date && !notStarted;
   const url = canLoad ? `/api/trainer/attendance?batchId=${encodeURIComponent(batchId)}&date=${encodeURIComponent(date)}` : null;
 
-  const { data: sheet, error, loading, reload } = useApi<Sheet>(url, (s) => {
+  const {
+    data: sheet,
+    error,
+    loading,
+    reload,
+  } = useApi<Sheet>(url, (s) => {
     const next: Marks = {};
-    const open: Record<string, boolean> = {};
-    for (const st of s.students) {
-      next[st.studentId] = { status: st.status, remarks: st.remarks ?? "" };
-      if (st.remarks) open[st.studentId] = true;
-    }
+    for (const st of s.students) next[st.studentId] = { status: st.status, remarks: st.remarks ?? "" };
     setMarks(next);
-    setRemarkOpen(open);
     setSaveError(null);
   });
 
   const readOnly = disabled || sheet?.batch.status === "COMPLETED" || sheet?.batch.status === "CANCELLED";
-  const markable = sheet?.students.filter((s) => s.admissionStatus !== "COMPLETED") ?? [];
+  const markable = React.useMemo(() => sheet?.students.filter((s) => s.admissionStatus !== "COMPLETED") ?? [], [sheet]);
   const markedCount = markable.filter((s) => marks[s.studentId]?.status).length;
-  const counts = STATUSES.map((s) => ({ ...s, n: markable.filter((st) => marks[st.studentId]?.status === s.value).length }));
+  const counts = ATTENDANCE_STATUSES.map((s) => ({ ...s, n: markable.filter((st) => marks[st.studentId]?.status === s.value).length }));
+  const remaining = markable.length - markedCount;
 
-  const setStatus = (studentId: string, status: Status) => setMarks((m) => ({ ...m, [studentId]: { status, remarks: m[studentId]?.remarks ?? "" } }));
-  const setRemarks = (studentId: string, remarks: string) => setMarks((m) => ({ ...m, [studentId]: { status: m[studentId]?.status ?? null, remarks } }));
-  const markAllPresent = () => setMarks((m) => Object.fromEntries(markable.map((s) => [s.studentId, { status: "PRESENT" as Status, remarks: m[s.studentId]?.remarks ?? "" }])));
+  const setStatus = React.useCallback((studentId: string, status: AttendanceStatus) => setMarks((m) => ({ ...m, [studentId]: { status, remarks: m[studentId]?.remarks ?? "" } })), []);
+  const setRemarks = React.useCallback((studentId: string, remarks: string) => setMarks((m) => ({ ...m, [studentId]: { status: m[studentId]?.status ?? null, remarks } })), []);
+  const markAllPresent = () => setMarks((m) => Object.fromEntries(markable.map((s) => [s.studentId, { status: "PRESENT" as AttendanceStatus, remarks: m[s.studentId]?.remarks ?? "" }])));
 
   const save = async () => {
     if (!sheet) return;
     const records = markable
       .map((s) => ({ studentId: s.studentId, status: marks[s.studentId]?.status ?? null, remarks: marks[s.studentId]?.remarks.trim() || null }))
-      .filter((r): r is { studentId: string; status: Status; remarks: string | null } => !!r.status);
+      .filter((r): r is { studentId: string; status: AttendanceStatus; remarks: string | null } => !!r.status);
     if (records.length === 0) {
       setSaveError("Mark at least one student before saving.");
       return;
@@ -181,18 +167,18 @@ function MarkTab({ batches, batch, batchId, onBatchChange, today, disabled }: { 
     }
   };
 
+  const showRoster = canLoad && !error && !loading && sheet && sheet.students.length > 0;
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <Card>
-        <CardBody>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <BatchPicker batches={batches} value={batchId} onChange={onBatchChange} className="sm:col-span-2" />
-            <Field label="Date" htmlFor="attendance-date" hint={batch ? `Batch runs ${formatDate(batch.startDate)} – ${formatDate(batch.endDate)}. Dates up to today only.` : undefined}>
-              <Input id="attendance-date" type="date" value={date} min={batch?.startDate || undefined} max={today} onChange={(e) => setRawDate(e.target.value)} />
-            </Field>
-          </div>
+        <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <BatchPicker batches={batches} value={batchId} onChange={onBatchChange} className="sm:col-span-2" />
+          <Field label="Date" htmlFor="attendance-date" hint={batch ? `Up to today only.` : undefined}>
+            <DateInput id="attendance-date" value={date} min={batch?.startDate || undefined} max={today} onChange={(e) => setRawDate(e.target.value)} />
+          </Field>
           {batch && (
-            <p className="mt-3 text-xs text-muted">
+            <p className="text-caption text-muted sm:col-span-3">
               {batch.courseName} · {batch.centerName} · {batch.days.join(", ")} {batch.startTime}–{batch.endTime}
               {batch.room ? ` · ${batch.room}` : ""}
             </p>
@@ -214,7 +200,7 @@ function MarkTab({ batches, batch, batchId, onBatchChange, today, disabled }: { 
       {!canLoad ? null : error ? (
         <ErrorState description={error} onRetry={reload} />
       ) : loading || !sheet ? (
-        <SkeletonTable rows={6} cols={3} />
+        <SkeletonList rows={6} />
       ) : sheet.students.length === 0 ? (
         <EmptyState title="No students admitted to this batch yet" description="Students appear here once their admission is confirmed by the Foundation." />
       ) : (
@@ -223,7 +209,7 @@ function MarkTab({ batches, batch, batchId, onBatchChange, today, disabled }: { 
             title={formatDate(date, "EEEE, dd MMM yyyy")}
             description={
               <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span>
+                <span className="font-semibold text-ink tabular-nums">
                   {markedCount} of {markable.length} marked
                 </span>
                 {sheet.marked && (
@@ -234,8 +220,8 @@ function MarkTab({ batches, batch, batchId, onBatchChange, today, disabled }: { 
                 {counts
                   .filter((c) => c.n > 0)
                   .map((c) => (
-                    <span key={c.value} className="text-xs">
-                      {c.label}: <strong className="text-ink">{c.n}</strong>
+                    <span key={c.value} className="text-caption">
+                      {c.label}: <strong className="text-ink tabular-nums">{c.n}</strong>
                     </span>
                   ))}
               </span>
@@ -249,81 +235,29 @@ function MarkTab({ batches, batch, batchId, onBatchChange, today, disabled }: { 
             }
           />
           <CardBody className="p-0">
-            <ul className="divide-y divide-line" aria-label="Attendance sheet">
-              {sheet.students.map((s, i) => {
-                const m = marks[s.studentId];
-                const completed = s.admissionStatus === "COMPLETED";
-                const rowDisabled = readOnly || completed;
-                const showRemark = !!remarkOpen[s.studentId] || (!!m?.status && m.status !== "PRESENT") || !!m?.remarks;
-                return (
-                  <li key={s.admissionId} className="px-4 py-3.5 sm:px-5">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className="w-6 shrink-0 text-right text-xs text-muted tabular-nums">{i + 1}</span>
-                        <Avatar name={s.name} src={s.photoUrl} size={40} />
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-ink">{s.name}</p>
-                          <p className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                            <span className="font-mono">{s.studentCode ?? "ID pending"}</span>
-                            {s.admissionStatus !== "ACTIVE" && <StatusBadge status={s.admissionStatus} />}
-                          </p>
-                        </div>
-                      </div>
-                      <div role="radiogroup" aria-label={`Attendance for ${s.name}`} className="grid grid-cols-4 gap-2 lg:w-auto lg:shrink-0">
-                        {STATUSES.map((st) => {
-                          const active = m?.status === st.value;
-                          return (
-                            <button
-                              key={st.value}
-                              type="button"
-                              role="radio"
-                              aria-checked={active}
-                              disabled={rowDisabled}
-                              onClick={() => setStatus(s.studentId, st.value)}
-                              className={cn(
-                                "inline-flex min-h-11 min-w-15 items-center justify-center rounded-xl border px-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-navy/40 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-20",
-                                active ? st.active : "border-line bg-white text-ink hover:border-navy/40 hover:bg-surface"
-                              )}
-                            >
-                              <span className="sm:hidden">{st.short}</span>
-                              <span className="hidden sm:inline">{st.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    {showRemark ? (
-                      <div className="mt-2 lg:pl-19">
-                        <Field label={<span className="sr-only">Remarks for {s.name}</span>} htmlFor={`remark-${s.studentId}`}>
-                          <Input id={`remark-${s.studentId}`} value={m?.remarks ?? ""} onChange={(e) => setRemarks(s.studentId, e.target.value)} placeholder="Remarks (optional)" maxLength={300} disabled={rowDisabled} className="py-2 text-xs" />
-                        </Field>
-                      </div>
-                    ) : (
-                      !rowDisabled && (
-                        <button type="button" onClick={() => setRemarkOpen((o) => ({ ...o, [s.studentId]: true }))} className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-navy lg:ml-19">
-                          <MessageSquarePlus className="h-3.5 w-3.5" /> Add remark
-                        </button>
-                      )
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+            <AttendanceRoster students={sheet.students} marks={marks} readOnly={!!readOnly} onStatus={setStatus} onRemarks={setRemarks} />
             {saveError && (
               <div className="px-5 pt-4">
                 <Alert tone="danger">{saveError}</Alert>
               </div>
             )}
-            {!readOnly && (
-              <div className="flex flex-col-reverse gap-3 border-t border-line px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-muted">{markedCount < markable.length ? `${markable.length - markedCount} student${markable.length - markedCount === 1 ? "" : "s"} not marked yet. Unmarked students are left unchanged.` : "Everyone is marked."}</p>
-                <Button onClick={save} loading={saving} disabled={markedCount === 0} leftIcon={<Save className="h-4 w-4" />} size="lg">
-                  Save attendance
-                </Button>
-              </div>
-            )}
           </CardBody>
         </Card>
+      )}
+
+      {/* Sticky on phones (and above the bottom nav), an ordinary form footer from lg up. */}
+      {showRoster && !readOnly && (
+        <StickyActionBar innerClassName="justify-between lg:justify-end">
+          <p className="min-w-0 flex-1 text-caption text-muted lg:hidden">
+            {remaining > 0 ? `${remaining} not marked` : "Everyone marked"}
+          </p>
+          <p className="hidden text-body-sm text-muted lg:mr-auto lg:block">
+            {remaining > 0 ? `${remaining} student${remaining === 1 ? "" : "s"} not marked yet. Unmarked students are left unchanged.` : "Everyone is marked."}
+          </p>
+          <Button onClick={() => void save()} loading={saving} disabled={markedCount === 0} leftIcon={<Save className="h-4 w-4" />} size="lg" className="shrink-0">
+            Save attendance
+          </Button>
+        </StickyActionBar>
       )}
     </div>
   );
@@ -345,14 +279,14 @@ function ReportsTab({ batches, batch, batchId, onBatchChange, today }: { batches
   const low = report ? report.rows.filter((r) => r.held > 0 && r.pct < 75).length : 0;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <Card>
         <CardBody className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <BatchPicker batches={batches} value={batchId} onChange={onBatchChange} className="lg:max-w-md lg:flex-1" />
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-ink">Period</span>
-            <SegmentedControl value={range} onChange={(v) => setRange(v as Range)} items={RANGES.map((r) => ({ value: r.value, label: r.label }))} />
-            <span className="text-xs text-muted">{RANGES.find((r) => r.value === range)?.hint}</span>
+            <span className="text-body-sm font-medium text-ink">Period</span>
+            <SegmentedControl value={range} onChange={(v) => setRange(v as Range)} fullWidth items={RANGES.map((r) => ({ value: r.value, label: r.label }))} className="lg:w-auto" />
+            <span className="text-caption text-muted">{RANGES.find((r) => r.value === range)?.hint}</span>
           </div>
         </CardBody>
       </Card>
@@ -379,7 +313,7 @@ function ReportsTab({ batches, batch, batchId, onBatchChange, today }: { batches
               }
             />
             <CardBody className="p-0">
-              <TableWrap className="rounded-none border-0">
+              <TableWrap className="md:rounded-none md:border-0 md:shadow-none">
                 <THead>
                   <tr>
                     <TH>Student</TH>
@@ -397,15 +331,15 @@ function ReportsTab({ batches, batch, batchId, onBatchChange, today }: { batches
                   ) : (
                     report.rows.map((r) => (
                       <TR key={r.studentId}>
-                        <TD>
+                        <TD mobile="full">
                           <span className="font-medium">{r.name}</span>
-                          <span className="ml-2 font-mono text-xs text-muted">{r.studentCode ?? ""}</span>
+                          <span className="ml-2 font-mono text-caption text-muted">{r.studentCode ?? ""}</span>
                         </TD>
-                        <TD>{r.held}</TD>
-                        <TD>{r.present}</TD>
-                        <TD>{r.late}</TD>
-                        <TD>{r.absent}</TD>
-                        <TD>{r.leave}</TD>
+                        <TD className="tabular-nums">{r.held}</TD>
+                        <TD className="tabular-nums">{r.present}</TD>
+                        <TD className="tabular-nums">{r.late}</TD>
+                        <TD className="tabular-nums">{r.absent}</TD>
+                        <TD className="tabular-nums">{r.leave}</TD>
                         <TD>
                           <span className={cn("font-semibold tabular-nums", r.held ? pctClass(r.pct) : "text-muted")}>{r.held ? `${r.pct}%` : "—"}</span>
                         </TD>
@@ -420,7 +354,7 @@ function ReportsTab({ batches, batch, batchId, onBatchChange, today }: { batches
             <Card>
               <CardHeader title="Day-wise summary" description="Most recent classes first." />
               <CardBody className="p-0">
-                <TableWrap className="rounded-none border-0">
+                <TableWrap className="md:rounded-none md:border-0 md:shadow-none">
                   <THead>
                     <tr>
                       <TH>Date</TH>
@@ -431,15 +365,18 @@ function ReportsTab({ batches, batch, batchId, onBatchChange, today }: { batches
                     </tr>
                   </THead>
                   <TBody>
-                    {[...report.daily].reverse().slice(0, 31).map((d) => (
-                      <TR key={d.date}>
-                        <TD>{formatDate(d.date, "EEE, dd MMM yyyy")}</TD>
-                        <TD>{d.present}</TD>
-                        <TD>{d.late}</TD>
-                        <TD>{d.absent}</TD>
-                        <TD>{d.leave}</TD>
-                      </TR>
-                    ))}
+                    {[...report.daily]
+                      .reverse()
+                      .slice(0, 31)
+                      .map((d) => (
+                        <TR key={d.date}>
+                          <TD mobile="full">{formatDate(d.date, "EEE, dd MMM yyyy")}</TD>
+                          <TD className="tabular-nums">{d.present}</TD>
+                          <TD className="tabular-nums">{d.late}</TD>
+                          <TD className="tabular-nums">{d.absent}</TD>
+                          <TD className="tabular-nums">{d.leave}</TD>
+                        </TR>
+                      ))}
                   </TBody>
                 </TableWrap>
               </CardBody>

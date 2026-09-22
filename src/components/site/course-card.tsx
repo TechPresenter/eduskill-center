@@ -1,65 +1,83 @@
 import Link from "next/link";
-import { Clock, Layers, MonitorSmartphone } from "lucide-react";
+import { ArrowRight, Clock, Layers, MonitorSmartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { DynamicIcon } from "@/components/ui/icon";
-import { SafeImage } from "@/components/site/safe-image";
+import { Media } from "@/components/site/safe-image";
 import type { PublicCourseCard } from "@/server/public";
 import { formatINR, titleCase } from "@/lib/utils";
 
-export function CourseCard({ course, applyHref }: { course: PublicCourseCard; applyHref: string }) {
+/** One fact from the course record: an icon, an invisible label and the value. */
+function Fact({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
   return (
-    <article className="card card-hover flex h-full flex-col overflow-hidden">
-      <div className="relative h-40 bg-lavender">
-        {course.image ? (
-          <SafeImage src={course.image} alt={course.name} sizes="(max-width: 640px) 100vw, 33vw" />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-orange shadow-card">
-              <DynamicIcon name={course.icon ?? course.category?.icon ?? undefined} className="h-8 w-8" aria-hidden />
+    <div className="flex min-w-0 items-center gap-1.5">
+      <Icon className="h-4 w-4 shrink-0 text-orange" aria-hidden />
+      <dt className="sr-only">{label}</dt>
+      <dd className="truncate text-body-sm text-muted">{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * A course in the public catalogue.
+ *
+ * The cover is a `media media-16x9` frame, the same ratio the detail page uses, so a course
+ * photograph is never cropped two different ways — and when there is none (the common case) the
+ * branded placeholder fills the identical box, with the course icon laid over it.
+ */
+export function CourseCard({ course, applyHref }: { course: PublicCourseCard; applyHref: string }) {
+  const href = `/courses/${course.slug}`;
+
+  return (
+    <article className="group card card-hover relative flex h-full flex-col overflow-hidden">
+      {/* Zero-radius wrapper: `media` inherits its radius, so this is what rounds the top corners
+          and leaves the bottom edge square against the body. */}
+      <div className="rounded-t-card">
+        <Media src={course.image} alt={course.image ? course.name : ""} seed={course.slug} ratio="16x9" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw">
+          {!course.image && (
+            <span className="absolute inset-0 flex items-center justify-center">
+              <span className="flex h-16 w-16 items-center justify-center rounded-card bg-white/90 text-orange shadow-e1">
+                <DynamicIcon name={course.icon ?? course.category?.icon ?? undefined} className="h-8 w-8" aria-hidden />
+              </span>
             </span>
-          </div>
-        )}
-        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
-          {course.category && <Badge tone="navy">{course.category.name}</Badge>}
-          {course.scholarshipAvailable && <Badge tone="orange">Scholarship</Badge>}
-        </div>
+          )}
+          {(course.category || course.scholarshipAvailable) && (
+            <span className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+              {course.category && <Badge tone="navy">{course.category.name}</Badge>}
+              {course.scholarshipAvailable && <Badge tone="orange">Scholarship</Badge>}
+            </span>
+          )}
+        </Media>
       </div>
-      <div className="flex flex-1 flex-col p-5">
-        <h3 className="text-lg font-bold text-navy">
-          <Link href={`/courses/${course.slug}`} className="hover:text-orange">
+
+      <div className="flex flex-1 flex-col card-p">
+        <h3 className="text-h3 text-navy">
+          {/* Stretched link: the whole card is the tap target, the buttons below are raised over it. */}
+          <Link href={href} className="transition-colors duration-micro after:absolute after:inset-0 hover:text-orange focus-visible:text-orange motion-reduce:transition-none">
             {course.name}
           </Link>
         </h3>
-        {course.shortDescription && <p className="mt-1.5 line-clamp-2 text-sm text-muted">{course.shortDescription}</p>}
-        <dl className="mt-4 grid grid-cols-3 gap-2 text-xs text-muted">
-          <div className="flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5 text-orange" aria-hidden />
-            <dt className="sr-only">Duration</dt>
-            <dd className="truncate">{course.durationText}</dd>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Layers className="h-3.5 w-3.5 text-orange" aria-hidden />
-            <dt className="sr-only">Level</dt>
-            <dd>{titleCase(course.level)}</dd>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <MonitorSmartphone className="h-3.5 w-3.5 text-orange" aria-hidden />
-            <dt className="sr-only">Mode</dt>
-            <dd>{titleCase(course.mode)}</dd>
-          </div>
+        {course.shortDescription && <p className="mt-2 line-clamp-2 text-body text-muted">{course.shortDescription}</p>}
+
+        <dl className="mt-4 grid grid-cols-3 gap-x-2 gap-y-1">
+          <Fact icon={Clock} label="Duration" value={course.durationText} />
+          <Fact icon={Layers} label="Level" value={titleCase(course.level)} />
+          <Fact icon={MonitorSmartphone} label="Mode" value={titleCase(course.mode)} />
         </dl>
-        <div className="mt-4 flex items-baseline justify-between border-t border-line pt-4">
-          <span className="text-xs font-semibold tracking-wide text-muted uppercase">Course fee</span>
-          <span className="font-heading text-xl font-extrabold text-navy">{course.courseFee > 0 ? formatINR(course.courseFee) : "Free"}</span>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <ButtonLink href={`/courses/${course.slug}`} variant="outline" size="sm">
-            View Course
-          </ButtonLink>
-          <ButtonLink href={applyHref} size="sm">
-            Apply Now
-          </ButtonLink>
+
+        <div className="mt-auto pt-4">
+          <div className="flex items-baseline justify-between gap-3 border-t border-line pt-4">
+            <span className="text-overline text-muted">Course fee</span>
+            <span className="text-h3 text-navy tabular-nums">{course.courseFee > 0 ? formatINR(course.courseFee) : "Free"}</span>
+          </div>
+          <div className="relative z-raised mt-4 grid grid-cols-2 gap-2">
+            <ButtonLink href={href} variant="outline" size="sm">
+              Details
+            </ButtonLink>
+            <ButtonLink href={applyHref} size="sm" rightIcon={<ArrowRight className="h-4 w-4" />}>
+              Apply
+            </ButtonLink>
+          </div>
         </div>
       </div>
     </article>

@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Armchair, BadgeCheck, CalendarDays, Clock, GraduationCap, Images, Mail, MapPin, MessageCircle, Navigation, Phone, Users } from "lucide-react";
+import { ArrowRight, Armchair, BadgeCheck, CalendarDays, Clock, GraduationCap, Mail, MapPin, MessageCircle, Navigation, Phone, Users } from "lucide-react";
 import { getSessionUser } from "@/lib/auth/session";
 import { getBranding } from "@/lib/settings";
 import { absoluteUrl, formatDate, formatINR, initials, titleCase } from "@/lib/utils";
 import { Badge, StatusBadge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
+import { ButtonLink, buttonClasses } from "@/components/ui/button";
 import { DynamicIcon } from "@/components/ui/icon";
 import { Avatar } from "@/components/ui/misc";
 import { TableWrap, THead, TH, TBody, TR, TD } from "@/components/ui/table";
 import { getPublicCenter } from "@/server/centers";
 import { PageHero } from "@/components/site/page-hero";
-import { SafeImage } from "@/components/site/safe-image";
+import { Media } from "@/components/site/safe-image";
+import { SectionHeading } from "@/components/site/section-heading";
+import { StickyActionBar } from "@/components/ui/sticky-action-bar";
 import { CenterMap } from "@/components/site/center-map";
 import { JsonLd } from "@/components/site/json-ld";
 import { CtaBand } from "@/components/site/cta-band";
@@ -53,6 +55,7 @@ export default async function CenterDetailPage({ params }: Props) {
   const waDigits = (c.whatsapp ?? "").replace(/\D/g, "");
   const waHref = waDigits ? `https://wa.me/${waDigits.length === 10 ? `91${waDigits}` : waDigits}` : null;
   const marker = c.latitude !== null && c.longitude !== null ? [{ id: c.id, code: c.code, name: c.name, lat: c.latitude, lng: c.longitude, verified: c.isVerified, location: `${c.block.name}, ${c.district.name}, ${c.state.name}`, courses: c.courses.map((x) => x.course.name), url }] : [];
+  const mark = initials(c.name.replace(/^eduskill\s+/i, "")) || "TC";
   const fullAddress = [c.address, c.landmark ? `near ${c.landmark}` : null, c.villageTown, c.block.name, c.district.name, c.state.name, c.pincode].filter(Boolean).join(", ");
 
   const jsonLd = {
@@ -92,29 +95,37 @@ export default async function CenterDetailPage({ params }: Props) {
               Verification pending
             </Badge>
           )}
-          {c.establishedOn && <span className="text-sm text-white/70">Established {formatDate(c.establishedOn, "MMM yyyy")}</span>}
+          {c.establishedOn && <span className="text-body-sm text-white/80">Established {formatDate(c.establishedOn, "MMM yyyy")}</span>}
         </div>
       </PageHero>
 
-      <section className="container-x -mt-8 relative z-10">
-        <div className="relative aspect-[21/9] overflow-hidden rounded-card-lg bg-navy shadow-card">
-          {c.coverImage ? (
-            <SafeImage src={c.coverImage} alt={c.name} priority sizes="(max-width: 1280px) 100vw, 1200px" />
-          ) : (
-            <div className="flex h-full items-center justify-center bg-linear-to-br from-navy to-navy-light">
-              <span className="flex h-24 w-24 items-center justify-center rounded-3xl bg-white/10 font-heading text-4xl font-extrabold text-white ring-1 ring-white/20">{initials(c.name.replace(/^eduskill\s+/i, "")) || "TC"}</span>
-            </div>
-          )}
+      {/* The banner is a 16/9 media frame — the same ratio the centre's photo gets in a list card —
+          capped in height on wide screens so it reads as a banner and never eats the fold. With no
+          photograph (the common case) the branded placeholder fills the identical box, so adding one
+          later shifts nothing. */}
+      <section className="container-x relative z-raised -mt-8 sm:-mt-10">
+        <div className="rounded-card-lg shadow-e2">
+          <Media
+            src={c.coverImage}
+            alt={c.coverImage ? `${c.name} training centre` : ""}
+            seed={c.slug}
+            mark={mark}
+            tone="navy"
+            ratio="16x9"
+            priority
+            sizes="(max-width: 1280px) 100vw, 1200px"
+            className="max-h-88 sm:max-h-104"
+          />
         </div>
       </section>
 
-      <section className="container-x grid gap-10 py-12 lg:grid-cols-12 lg:py-16">
+      <section className="container-x grid gap-10 section-y lg:grid-cols-12 lg:gap-12">
         <div className="space-y-12 lg:col-span-8">
           {c.description && (
-            <div>
-              <h2 className="mb-3 text-2xl font-extrabold text-navy">About the center</h2>
-              <p className="text-[15.5px] leading-7 text-ink">{c.description}</p>
-            </div>
+            <section aria-labelledby="centre-about-title">
+              <SectionHeading id="centre-about-title" title="About the center" />
+              <p className="mt-4 text-body-lg text-ink">{c.description}</p>
+            </section>
           )}
 
           <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -125,53 +136,53 @@ export default async function CenterDetailPage({ params }: Props) {
               { label: "Seats open", value: c.availableSeats, icon: CalendarDays },
             ].map((s) => (
               <div key={s.label} className="card p-4 text-center">
-                <s.icon className="mx-auto h-5 w-5 text-orange" aria-hidden />
-                <dd className="mt-1 font-heading text-2xl font-extrabold text-navy">{s.value}</dd>
-                <dt className="text-xs font-semibold text-muted">{s.label}</dt>
+                <s.icon className="mx-auto h-5 w-5 text-navy/40" aria-hidden />
+                <dd className="mt-1.5 text-h2 text-orange tabular-nums">{s.value}</dd>
+                <dt className="mt-0.5 text-overline text-muted">{s.label}</dt>
               </div>
             ))}
           </dl>
 
-          <div>
-            <h2 className="mb-4 text-2xl font-extrabold text-navy">Courses offered</h2>
+          <section aria-labelledby="centre-courses-title">
+            <SectionHeading id="centre-courses-title" title="Courses offered" />
             {c.courses.length === 0 ? (
-              <p className="card p-6 text-sm text-muted">Courses for this center will be published soon.</p>
+              <p className="mt-4 card card-p text-body text-muted">Courses for this center will be published soon.</p>
             ) : (
-              <ul className="grid gap-4 sm:grid-cols-2">
+              <ul className="mt-6 grid gap-4 sm:grid-cols-2">
                 {c.courses.map(({ course }) => (
-                  <li key={course.id} className="card card-hover flex gap-4 p-5">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-light text-orange">
+                  <li key={course.id} className="card card-hover flex gap-4 card-p">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-orange-light text-orange">
                       <DynamicIcon name={course.icon ?? undefined} className="h-5 w-5" aria-hidden />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-base font-bold text-navy">
-                        <Link href={`/courses/${course.slug}`} className="hover:text-orange">
+                      <h3 className="text-h4 text-navy">
+                        <Link href={`/courses/${course.slug}`} className="transition-colors duration-micro hover:text-orange motion-reduce:transition-none">
                           {course.name}
                         </Link>
                       </h3>
-                      <p className="mt-1 text-xs text-muted">
+                      <p className="mt-1 text-body-sm text-muted">
                         {course.durationText} · {titleCase(course.level)} · {titleCase(course.mode)}
                       </p>
-                      <p className="mt-2 flex items-center gap-2 text-sm">
-                        <span className="font-semibold text-navy">{Number(course.courseFee) > 0 ? formatINR(course.courseFee) : "Free"}</span>
+                      <p className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="font-semibold text-navy tabular-nums">{Number(course.courseFee) > 0 ? formatINR(course.courseFee) : "Free"}</span>
                         {course.scholarshipAvailable && <Badge tone="orange">Scholarship</Badge>}
                       </p>
-                      <Link href={applyHref(user, { centerId: c.id, courseId: course.id })} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-orange">
-                        Apply for this course <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                      <Link href={applyHref(user, { centerId: c.id, courseId: course.id })} className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-body-sm font-semibold text-orange ring-focus hover:underline">
+                        Apply for this course <ArrowRight className="h-4 w-4" aria-hidden />
                       </Link>
                     </div>
                   </li>
                 ))}
               </ul>
             )}
-          </div>
+          </section>
 
-          <div>
-            <h2 className="mb-4 text-2xl font-extrabold text-navy">Open batches</h2>
+          <section aria-labelledby="centre-batches-title">
+            <SectionHeading id="centre-batches-title" title="Open batches" />
             {c.batches.length === 0 ? (
-              <p className="card p-6 text-sm text-muted">No upcoming or ongoing batches are listed right now. Apply and we will place you in the next batch.</p>
+              <p className="mt-4 card card-p text-body text-muted">No upcoming or ongoing batches are listed right now. Apply and we will place you in the next batch.</p>
             ) : (
-              <>
+              <div className="mt-6">
                 <TableWrap className="hidden md:block">
                   <THead>
                     <tr>
@@ -206,7 +217,7 @@ export default async function CenterDetailPage({ params }: Props) {
                           </span>
                         </TD>
                         <TD>
-                          <span className={b.available > 0 ? "font-semibold text-success" : "font-semibold text-danger"}>{b.available}</span>
+                          <span className={b.available > 0 ? "font-semibold text-success-dark tabular-nums" : "font-semibold text-danger tabular-nums"}>{b.available}</span>
                           <span className="text-muted"> / {b.capacity}</span>
                         </TD>
                         <TD>{b.trainerName ?? "To be assigned"}</TD>
@@ -219,62 +230,62 @@ export default async function CenterDetailPage({ params }: Props) {
                 </TableWrap>
                 <ul className="space-y-3 md:hidden">
                   {c.batches.map((b) => (
-                    <li key={b.id} className="card p-4 text-sm">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="font-semibold text-navy">{b.name}</p>
-                          <p className="text-xs text-muted">{b.course.name}</p>
+                    <li key={b.id} className="card card-p">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-h4 text-navy">{b.name}</p>
+                          <p className="text-body-sm text-muted">{b.course.name}</p>
                         </div>
                         <StatusBadge status={b.status} />
                       </div>
-                      <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
                         <div>
-                          <dt className="text-muted">Dates</dt>
-                          <dd className="font-medium text-ink">
+                          <dt className="text-overline text-muted">Dates</dt>
+                          <dd className="mt-0.5 text-body-sm font-medium text-ink">
                             {formatDate(b.startDate)} – {formatDate(b.endDate)}
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-muted">Time</dt>
-                          <dd className="font-medium text-ink">
+                          <dt className="text-overline text-muted">Time</dt>
+                          <dd className="mt-0.5 text-body-sm font-medium text-ink">
                             {b.days.join(", ")} · {b.startTime}–{b.endTime}
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-muted">Seats available</dt>
-                          <dd className="font-medium text-ink">
+                          <dt className="text-overline text-muted">Seats available</dt>
+                          <dd className={`mt-0.5 text-body-sm font-semibold tabular-nums ${b.available > 0 ? "text-success-dark" : "text-danger"}`}>
                             {b.available} / {b.capacity}
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-muted">Trainer</dt>
-                          <dd className="font-medium text-ink">{b.trainerName ?? "To be assigned"}</dd>
+                          <dt className="text-overline text-muted">Trainer</dt>
+                          <dd className="mt-0.5 text-body-sm font-medium text-ink">{b.trainerName ?? "To be assigned"}</dd>
                         </div>
                       </dl>
                     </li>
                   ))}
                 </ul>
-              </>
+              </div>
             )}
-          </div>
+          </section>
 
           {c.trainers.length > 0 && (
-            <div>
-              <h2 className="mb-4 text-2xl font-extrabold text-navy">Trainers</h2>
-              <ul className="grid gap-4 sm:grid-cols-2">
+            <section aria-labelledby="centre-trainers-title">
+              <SectionHeading id="centre-trainers-title" title="Trainers" />
+              <ul className="mt-6 grid gap-4 sm:grid-cols-2">
                 {c.trainers.map((t) => (
-                  <li key={t.id} className="card flex items-start gap-4 p-5">
+                  <li key={t.id} className="card flex items-start gap-4 card-p">
                     <Avatar name={t.name} src={t.avatarUrl} size={48} />
                     <div className="min-w-0">
-                      <p className="font-bold text-navy">{t.name}</p>
-                      <p className="text-xs text-muted">
+                      <p className="text-h4 text-navy">{t.name}</p>
+                      <p className="mt-0.5 text-body-sm text-muted">
                         {titleCase(t.level)} level trainer · {t.trainerId}
                         {t.course ? ` · ${t.course}` : ""}
                       </p>
                       {t.skills.length > 0 && (
-                        <ul className="mt-2 flex flex-wrap gap-1.5">
+                        <ul className="mt-2.5 flex flex-wrap gap-1.5">
                           {t.skills.slice(0, 5).map((s) => (
-                            <li key={s} className="rounded-full bg-lavender px-2 py-0.5 text-[11px] font-medium text-navy">
+                            <li key={s} className="rounded-full bg-lavender px-2.5 py-1 text-caption text-navy">
                               {s}
                             </li>
                           ))}
@@ -284,48 +295,46 @@ export default async function CenterDetailPage({ params }: Props) {
                   </li>
                 ))}
               </ul>
-            </div>
+            </section>
           )}
 
           {c.facilities.length > 0 && (
-            <div>
-              <h2 className="mb-4 text-2xl font-extrabold text-navy">Facilities</h2>
-              <ul className="flex flex-wrap gap-2">
+            <section aria-labelledby="centre-facilities-title">
+              <SectionHeading id="centre-facilities-title" title="Facilities" />
+              <ul className="mt-6 flex flex-wrap gap-2">
                 {c.facilities.map((f) => (
-                  <li key={f} className="rounded-full border border-line bg-white px-3.5 py-1.5 text-sm font-medium text-ink">
+                  <li key={f} className="rounded-full border border-line bg-white px-4 py-2 text-body-sm font-medium text-ink">
                     {f}
                   </li>
                 ))}
               </ul>
-            </div>
+            </section>
           )}
 
           {c.gallery.length > 0 && (
-            <div>
-              <h2 className="mb-4 flex items-center gap-2 text-2xl font-extrabold text-navy">
-                <Images className="h-6 w-6 text-orange" aria-hidden /> Gallery
-              </h2>
-              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <section aria-labelledby="centre-gallery-title">
+              <SectionHeading id="centre-gallery-title" title="Gallery" />
+              <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {c.gallery.map((g) => (
-                  <li key={g.id} className="relative aspect-[4/3] overflow-hidden rounded-xl bg-lavender">
-                    <SafeImage src={g.url} alt={g.caption ?? `${c.name} photo`} sizes="(max-width: 640px) 50vw, 33vw" />
+                  <li key={g.id} className="rounded-card">
+                    <Media src={g.url} alt={g.caption ?? `${c.name} photo`} seed={g.id} ratio="4x3" sizes="(max-width: 640px) 50vw, 33vw" />
                   </li>
                 ))}
               </ul>
-            </div>
+            </section>
           )}
         </div>
 
         <aside className="lg:col-span-4">
-          <div className="sticky top-24 space-y-6">
-            <div className="card p-6">
+          <div className="space-y-6 lg:sticky lg:top-24">
+            <div className="card card-p">
               <ButtonLink href={apply} fullWidth size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
                 Apply for Admission
               </ButtonLink>
-              <a href={directionsUrl(c)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-line bg-white px-5 text-sm font-semibold text-ink transition-all hover:border-navy/40 hover:bg-surface">
+              <a href={directionsUrl(c)} target="_blank" rel="noopener noreferrer" className={buttonClasses({ variant: "outline", size: "md", fullWidth: true, className: "mt-2" })}>
                 <Navigation className="h-4 w-4 text-orange" aria-hidden /> Get Directions
               </a>
-              <address className="mt-5 space-y-3 text-sm not-italic">
+              <address className="mt-6 space-y-3 text-body not-italic">
                 <p className="flex items-start gap-3">
                   <MapPin className="mt-0.5 h-4.5 w-4.5 shrink-0 text-orange" aria-hidden />
                   <span className="text-ink">{fullAddress}</span>
@@ -356,11 +365,11 @@ export default async function CenterDetailPage({ params }: Props) {
                 )}
               </address>
               {hours.length > 0 && (
-                <div className="mt-5 border-t border-line pt-4">
-                  <h2 className="flex items-center gap-2 text-sm font-bold text-navy">
-                    <Clock className="h-4 w-4 text-orange" aria-hidden /> Opening hours
+                <div className="mt-6 border-t border-line pt-5">
+                  <h2 className="flex items-center gap-2 text-h4 text-navy">
+                    <Clock className="h-4 w-4 shrink-0 text-orange" aria-hidden /> Opening hours
                   </h2>
-                  <dl className="mt-2 space-y-1 text-sm">
+                  <dl className="mt-3 space-y-1.5 text-body">
                     {hours.map((h) => (
                       <div key={h.label} className="flex justify-between gap-4">
                         <dt className="text-muted">{h.label}</dt>
@@ -377,6 +386,20 @@ export default async function CenterDetailPage({ params }: Props) {
       </section>
 
       <CtaBand title={`Join [[${c.name}]]`} description="Apply online, upload your documents and our team will confirm your seat in the next available batch." primary={{ label: "Apply for Admission", href: apply }} secondary={{ label: "Ask a Question", href: "/contact?type=ADMISSION" }} />
+      {/* Phone + tablet conversion bar. StickyActionBar publishes --sticky-bar-h, which the chat
+          launcher and the Toaster both offset by, so the three can never sit on top of each other.
+          Hidden at lg, where the sidebar CTA is permanently in view. */}
+      <StickyActionBar desktop="hidden" innerClassName="justify-between">
+        <span className="min-w-0">
+          <span className="block text-overline text-muted">Seats open</span>
+          <span className="block truncate text-h4 text-navy tabular-nums">
+            {c.availableSeats} of {c.capacity}
+          </span>
+        </span>
+        <ButtonLink href={apply} size="md" className="shrink-0" rightIcon={<ArrowRight className="h-4 w-4" />}>
+          Apply Now
+        </ButtonLink>
+      </StickyActionBar>
     </>
   );
 }

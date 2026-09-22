@@ -77,7 +77,7 @@ export function CourseHeaderActions({ course, perms }: { course: CourseActionTar
         </ButtonLink>
       )}
       {perms.update && course.status !== "ACTIVE" && (
-        <ConfirmAction size="sm" variant="navy" icon={<CheckCircle2 className="h-4 w-4" />} method="patch" url={`/api/admin/courses/${course.id}/status`} body={{ status: "ACTIVE" }} title={`Activate ${course.code}?`} description="The course becomes visible on the website and selectable in applications and batches." confirmLabel="Activate" successMessage="Course activated">
+        <ConfirmAction variant="navy" icon={<CheckCircle2 className="h-4 w-4" />} method="patch" url={`/api/admin/courses/${course.id}/status`} body={{ status: "ACTIVE" }} title={`Activate ${course.code}?`} description="The course becomes visible on the website and selectable in applications and batches." confirmLabel="Activate" successMessage="Course activated">
           Activate
         </ConfirmAction>
       )}

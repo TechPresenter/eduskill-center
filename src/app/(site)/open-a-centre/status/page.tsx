@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { ButtonLink } from "@/components/ui/button";
+import { PageHero } from "@/components/site/page-hero";
 import { absoluteUrl } from "@/lib/utils";
 import { CENTRE_CLASSES } from "@/lib/validation/centre-applications";
 import { CENTRE_STEPS } from "@/server/centre-applications";
@@ -28,28 +29,20 @@ export default async function OpenACentreStatusPage({ searchParams }: PageProps<
 
   return (
     <>
-      <section className="bg-navy text-white">
-        <div className="container-x py-10 sm:py-14">
-          <div>
-            <Link href="/open-a-centre" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-white/80 hover:text-white">
-              <ArrowLeft className="h-4 w-4" aria-hidden />
-              Open a Centre
-            </Link>
-          </div>
-          <p className="eyebrow mt-2 text-orange">EduSkill Shiksha Mission</p>
-          <h1 className="mt-2 font-heading text-2xl font-extrabold text-white sm:text-4xl">Track your centre application</h1>
-          <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-white/80">
-            Enter your application number and the mobile number you applied with to see where you are in the seven-step process. Not applied yet?{" "}
-            <Link href="/open-a-centre/apply" className="font-semibold text-white underline underline-offset-4">
-              Apply to open a centre
-            </Link>
-            .
-          </p>
-        </div>
-      </section>
+      <PageHero
+        compact
+        eyebrow="EduSkill Shiksha Mission"
+        title="Track your [[centre application]]"
+        description="Enter your application number and the mobile number you applied with to see where you are in the seven-step process."
+        breadcrumbs={[{ label: "Home", href: "/" }, { label: "Open a Centre", href: "/open-a-centre" }, { label: "Application status" }]}
+      >
+        <ButtonLink href="/open-a-centre/apply" variant="white" rightIcon={<ArrowRight className="h-4 w-4" />}>
+          Not applied yet? Apply now
+        </ButtonLink>
+      </PageHero>
 
       <section className="bg-surface">
-        <div className="container-x py-8 sm:py-12">
+        <div className="container-x section-y">
           <CentreStatusForm initialNo={no} steps={CENTRE_STEPS} classes={CENTRE_CLASSES} />
         </div>
       </section>

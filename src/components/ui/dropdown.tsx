@@ -32,8 +32,10 @@ const MENUITEM_SELECTOR = "[role='menuitem']:not([aria-disabled='true']):not(:di
 
 /**
  * Click-to-open menu. Desktop: anchored popover with arrow-key navigation, closes on outside click,
- * Escape or item click. Phones (< sm): the same children render inside a BottomSheet (focus-trapped,
- * scroll-locked) so rows are thumb-sized.
+ * Escape or item click. Phones (< sm): the same children render inside the shared overlay core as a
+ * BottomSheet (focus-trapped, scroll-locked) so rows are thumb-sized.
+ *
+ * The popover is a surface like any other: `rounded-lg`, `shadow-e3`, `z-overlay`, `animate-pop`.
  */
 export function Dropdown({ trigger, children, align = "right", className, menuClassName, mobile = "sheet", mobileTitle, mobileLabel = "Menu" }: DropdownProps) {
   const [open, setOpen] = React.useState(false);
@@ -76,12 +78,8 @@ export function Dropdown({ trigger, children, align = "right", className, menuCl
         {trigger}
       </div>
       {asSheet ? (
-        <BottomSheet open={open} onClose={close} title={mobileTitle} aria-label={mobileLabel} size="sm" hideClose={!mobileTitle} bodyClassName="px-3 pb-2">
-          <div
-            role="menu"
-            className="space-y-0.5 [&_[role=menuitem]]:min-h-14 [&_[role=menuitem]]:rounded-xl [&_[role=menuitem]]:px-3 [&_[role=menuitem]]:text-[15px] [&_[role=separator]]:my-2"
-            onClick={close}
-          >
+        <BottomSheet open={open} onClose={close} title={mobileTitle} aria-label={mobileLabel} size="sm" hideClose={!mobileTitle} bodyClassName="px-3 py-3">
+          <div role="menu" className="space-y-1 [&_[role=menuitem]]:min-h-14 [&_[role=menuitem]]:rounded-md [&_[role=menuitem]]:px-3 [&_[role=menuitem]]:text-body [&_[role=separator]]:my-2" onClick={close}>
             {children}
           </div>
         </BottomSheet>
@@ -90,11 +88,7 @@ export function Dropdown({ trigger, children, align = "right", className, menuCl
           <div
             ref={menuRef}
             role="menu"
-            className={cn(
-              "absolute z-50 mt-2 min-w-[12rem] overflow-hidden rounded-xl border border-line bg-white p-1 shadow-card-hover animate-pop motion-reduce:animate-none",
-              align === "right" ? "right-0" : "left-0",
-              menuClassName
-            )}
+            className={cn("absolute z-overlay mt-2 min-w-[12rem] overflow-hidden rounded-lg border border-line bg-white p-1 shadow-e3 animate-pop motion-reduce:animate-none", align === "right" ? "right-0" : "left-0", menuClassName)}
             onClick={close}
           >
             {children}
@@ -126,7 +120,7 @@ export type DropdownItemLinkProps = DropdownItemBase &
 
 export type DropdownItemProps = DropdownItemButtonProps | DropdownItemLinkProps;
 
-const ITEM_CLASSES = "flex w-full min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink transition-colors hover:bg-surface focus-visible:bg-surface disabled:opacity-50 lg:min-h-0";
+const ITEM_CLASSES = "flex w-full min-h-11 items-center gap-2 rounded-md px-3 py-2 text-left text-ink transition-colors duration-micro hover:bg-surface focus-visible:bg-surface disabled:opacity-50 lg:min-h-0";
 
 /** Splits the presentational props from the ones forwarded to the underlying button / link. */
 function splitItemProps<T extends DropdownItemBase>(props: T) {
@@ -134,17 +128,23 @@ function splitItemProps<T extends DropdownItemBase>(props: T) {
   return { danger, icon, description, className, children, rest };
 }
 
-/** Menu row (button, or `Link` when `href` is set). 44px tall below lg, desktop density at lg+. */
+/**
+ * Menu row (button, or `Link` when `href` is set). 44px tall below lg, desktop density at lg+.
+ *
+ * `text-body-sm` is appended after `cn()` on purpose: tailwind-merge reads any unrecognised `text-*`
+ * class as a text colour, so a `text-danger` merged in later would silently delete the type-scale class.
+ */
 export function DropdownItem(props: DropdownItemProps) {
   const { danger, icon, description, className, children, rest } = splitItemProps(props);
-  const classes = cn(ITEM_CLASSES, danger && "text-danger hover:bg-danger-light", className);
+  const base = cn(ITEM_CLASSES, danger && "text-danger hover:bg-danger-light", className);
+  const classes = `${base} text-body-sm`;
   const content = (
     <>
       {icon}
       {description ? (
         <span className="min-w-0 flex-1">
           <span className="block">{children}</span>
-          <span className="block text-xs font-normal text-muted">{description}</span>
+          <span className="mt-0.5 block font-normal text-muted text-caption">{description}</span>
         </span>
       ) : (
         children
@@ -155,7 +155,7 @@ export function DropdownItem(props: DropdownItemProps) {
   if (typeof rest.href === "string") {
     const { href, disabled, ...linkRest } = rest as Omit<DropdownItemLinkProps, keyof DropdownItemBase>;
     return (
-      <Link href={href} role="menuitem" aria-disabled={disabled || undefined} tabIndex={disabled ? -1 : undefined} className={cn(classes, disabled && "pointer-events-none opacity-50")} {...linkRest}>
+      <Link href={href} role="menuitem" aria-disabled={disabled || undefined} tabIndex={disabled ? -1 : undefined} className={`${cn(base, disabled && "pointer-events-none opacity-50")} text-body-sm`} {...linkRest}>
         {content}
       </Link>
     );

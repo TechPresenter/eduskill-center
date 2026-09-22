@@ -57,7 +57,7 @@ export function AttendanceWorkspace({ centers, batches, courses, can, initial }:
   return (
     <div>
       <Tabs
-        className="-mx-4 mb-5 max-w-[100vw] px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:max-w-none lg:px-0"
+        className="-mx-4 mb-4 max-w-[100vw] px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:max-w-none lg:px-0"
         value={tab}
         onChange={(v) => setTab(v as Tab)}
         items={[

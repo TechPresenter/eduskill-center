@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/feedback";
 import { formatDate } from "@/lib/utils";
 
 export interface AttendanceRow {
@@ -20,11 +22,11 @@ export function AttendanceRowCard({ record: r }: { record: AttendanceRow }) {
   return (
     <li className="flex items-start gap-3 px-4 py-3">
       <div className="min-w-0 flex-1">
-        <p className="text-[14px] font-bold text-navy">{formatDate(r.date, "EEE, dd MMM")}</p>
-        <p className="truncate text-[13px] text-muted">
+        <p className="text-body font-bold text-navy">{formatDate(r.date, "EEE, dd MMM")}</p>
+        <p className="truncate text-body-sm text-muted">
           {r.courseName} · {r.batchName}
         </p>
-        {r.remarks && <p className="mt-0.5 text-[12px] text-muted">{r.remarks}</p>}
+        {r.remarks && <p className="mt-0.5 text-caption text-muted">{r.remarks}</p>}
       </div>
       <StatusBadge status={r.status} />
     </li>
@@ -48,13 +50,27 @@ export function AttendanceRecordsList({ records, initial = 30 }: { records: Atte
     else groups.push({ month, rows: [r] });
   }
 
-  if (records.length === 0) return <p className="px-4 py-6 text-center text-[13px] text-muted">No attendance marked yet.</p>;
+  if (records.length === 0) {
+    return (
+      <EmptyState
+        size="sm"
+        icon={<CalendarCheck className="h-6 w-6" />}
+        title="No attendance marked yet"
+        description="Your trainer marks attendance after each class. Entries appear here the same day."
+      />
+    );
+  }
 
   return (
     <div className="space-y-3">
       {groups.map((g) => (
         <section key={g.month} aria-label={g.month}>
-          <h4 className="sticky top-14 z-10 -mx-4 bg-surface/95 px-4 py-1.5 text-[12px] font-bold tracking-wide text-muted uppercase backdrop-blur">{g.month}</h4>
+          {/*
+           * Opaque, never blurred: this header sticks inside a scrolling list, and backdrop-filter
+           * both costs a repaint per frame on cheap Androids and turns the element into a containing
+           * block for any position:fixed descendant. `top` tracks the app-bar height token.
+           */}
+          <h4 className="text-overline sticky top-[var(--header-h)] z-raised -mx-4 bg-surface px-4 py-2 text-muted">{g.month}</h4>
           <ul className="card divide-y divide-line overflow-hidden">
             {g.rows.map((r) => (
               <AttendanceRowCard key={r.id} record={r} />

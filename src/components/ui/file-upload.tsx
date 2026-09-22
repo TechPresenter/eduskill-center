@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Camera, Eye, FileText, FolderOpen, Image as ImageIcon, Images, Loader2, RefreshCw, Trash2, UploadCloud, X } from "lucide-react";
+import { AlertCircle, Camera, Eye, FileText, FolderOpen, Image as ImageIcon, Images, Loader2, RefreshCw, Trash2, UploadCloud, X } from "lucide-react";
 import { cn, formatBytes } from "@/lib/utils";
 import { withBasePath } from "@/lib/base-path";
 import { useIsCoarsePointer } from "@/lib/hooks";
@@ -50,6 +50,16 @@ const IMAGE_HINT = /image\/|\.(jpe?g|png|webp|gif|heic|heif|bmp|avif)\b/i;
 
 function acceptsImages(accept: string) {
   return IMAGE_HINT.test(accept);
+}
+
+/** ".jpg,.jpeg,.png,.pdf" → "JPG, JPEG, PNG, PDF"; anything else (e.g. "image/*") passes through. */
+function formatAccept(accept: string) {
+  const parts = accept
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (!parts.length || !parts.every((p) => p.startsWith("."))) return accept.toUpperCase();
+  return parts.map((p) => p.slice(1).toUpperCase()).join(", ");
 }
 
 class UploadAbortedError extends Error {
@@ -102,10 +112,38 @@ const SOURCE_META: Record<FileUploadSource, { label: string; Icon: React.Compone
   files: { label: "Files", Icon: FolderOpen },
 };
 
+/** The upload card's own error line — same size, icon and tone as `<Field error>`. */
+function UploadError({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mt-2 flex items-start gap-1.5 text-sm font-medium text-danger" role="alert">
+      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+      <span>{children}</span>
+    </p>
+  );
+}
+
+/** 56px square that shows the image itself, or a typed glyph on lavender when there is nothing to show. */
+function FileThumb({ src, alt, image }: { src?: string | null; alt?: string; image: boolean }) {
+  if (src) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={alt ?? ""} width={56} height={56} loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded-md border border-line object-cover" />;
+  }
+  return (
+    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-lavender text-navy" aria-hidden>
+      {image ? <ImageIcon className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
+    </span>
+  );
+}
+
 /**
- * Single-file uploader. Desktop: drag-and-drop / click zone. Touch devices: Camera / Gallery / Files tiles
- * (native camera via `capture`). Shows a local preview immediately, filename + size, a live progress bar
- * with cancel, and a "has file" card with View (PDFs/other), Replace and Delete actions.
+ * Single-file uploader with one card anatomy across all four states.
+ *
+ *   resting    a dashed drop zone (desktop) or Camera / Gallery / Files tiles (touch), with the accepted
+ *              formats and size limit always spelled out;
+ *   dragging   the same zone in orange;
+ *   uploading  thumbnail, file name, size, live percentage, progress bar and a cancel control;
+ *   uploaded   thumbnail, name, size, and View / Replace / Delete — 44px targets that move to their own
+ *              row below `sm` so the file name keeps its width on a 360px phone.
  */
 export function FileUpload({
   endpoint,
@@ -212,27 +250,34 @@ export function FileUpload({
     target?.click();
   };
 
+  // Only the drop-zone state has no visible control of its own, so only there does the hidden
+  // "files" input join the tab order (and lend its focus ring to the zone through `peer`).
+  const dropzone = !tiles && !value && !(busy && pending);
+
   const hiddenInputs = (
     <>
-      {sourceList.map((s) => (
-        <input
-          key={s}
-          ref={(el) => {
-            inputs.current[s] = el;
-          }}
-          id={s === "files" ? id : `${id}-${s}`}
-          type="file"
-          className="sr-only"
-          tabIndex={-1}
-          accept={s === "files" ? accept : "image/*"}
-          capture={s === "camera" ? capture : undefined}
-          disabled={disabled || busy}
-          onChange={(e) => {
-            onFiles(e.target.files);
-            e.target.value = "";
-          }}
-        />
-      ))}
+      {sourceList.map((s) => {
+        const primary = s === "files" && dropzone;
+        return (
+          <input
+            key={s}
+            ref={(el) => {
+              inputs.current[s] = el;
+            }}
+            id={s === "files" ? id : `${id}-${s}`}
+            type="file"
+            className={cn("sr-only", primary && "peer")}
+            tabIndex={primary ? undefined : -1}
+            accept={s === "files" ? accept : "image/*"}
+            capture={s === "camera" ? capture : undefined}
+            disabled={disabled || busy}
+            onChange={(e) => {
+              onFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        );
+      })}
     </>
   );
 
@@ -246,9 +291,11 @@ export function FileUpload({
             type="button"
             disabled={disabled || busy}
             onClick={() => openPicker(s)}
-            className="flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-xl border border-line bg-surface/60 px-2 py-3 text-xs font-semibold text-ink transition-colors tap-highlight-none active:bg-lavender disabled:opacity-60"
+            className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-lg border border-line bg-surface/70 px-2 py-3 text-xs font-semibold text-ink transition duration-micro tap-highlight-none ring-focus focus-visible:ring-0 focus-visible:ring-offset-0 active:scale-[0.98] active:bg-lavender disabled:opacity-60 motion-reduce:transition-none"
           >
-            <Icon className="h-6 w-6 text-navy" />
+            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-lavender text-navy" aria-hidden>
+              <Icon className="h-5 w-5" />
+            </span>
             {sLabel}
           </button>
         );
@@ -256,27 +303,21 @@ export function FileUpload({
     </div>
   );
 
-  const hintText = hint ?? `${tiles ? "Take a photo or choose a file." : "Drag & drop or click."} ${accept.replace(/\./g, "").toUpperCase()} up to ${maxSizeMb} MB`;
+  const hintText = hint ?? `${tiles ? "Take a photo or choose a file." : "Drag and drop, or click to browse."} ${formatAccept(accept)} · up to ${maxSizeMb} MB`;
 
   /* ── Uploading ── */
   if (busy && pending) {
-    const isImg = pending.type.startsWith("image/");
     return (
-      <div className={cn("rounded-xl border border-line bg-white p-3", className)} aria-busy="true">
+      <div className={cn("rounded-lg border border-line bg-white p-3 shadow-e1", className)} aria-busy="true">
         <div className="flex items-center gap-3">
-          {localPreview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={localPreview} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
-          ) : (
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-lavender text-navy">{isImg ? <ImageIcon className="h-6 w-6" /> : <FileText className="h-6 w-6" />}</div>
-          )}
+          <FileThumb src={localPreview} image={pending.type.startsWith("image/")} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-ink">{pending.name}</p>
+            <p className="truncate text-sm font-semibold text-ink">{pending.name}</p>
             <p className="text-xs text-muted">
-              {formatBytes(pending.size)} · Uploading {progress}%
+              {formatBytes(pending.size)} · Uploading <span className="tabular-nums">{progress}%</span>
             </p>
           </div>
-          <IconButton size="sm" aria-label="Cancel upload" icon={<X className="h-4 w-4" />} onClick={() => abortRef.current?.()} />
+          <IconButton size="md" aria-label="Cancel upload" icon={<X className="h-4 w-4" />} onClick={() => abortRef.current?.()} />
         </div>
         <ProgressBar value={progress} className="mt-3" />
         {hiddenInputs}
@@ -290,27 +331,23 @@ export function FileUpload({
     const thumb = preview && isImage ? value.url : null;
     return (
       <div className={className}>
-        <div className="flex items-center gap-3 rounded-xl border border-line bg-white p-3">
-          {thumb ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={thumb} alt={value.name} className="h-14 w-14 shrink-0 rounded-lg object-cover" loading="lazy" decoding="async" width={56} height={56} />
-          ) : (
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-lavender text-navy">{isImage ? <ImageIcon className="h-6 w-6" /> : <FileText className="h-6 w-6" />}</div>
-          )}
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-white p-3 shadow-e1">
+          <FileThumb src={thumb} alt={value.name} image={isImage} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-ink">{value.name}</p>
+            <p className="truncate text-sm font-semibold text-ink">{value.name}</p>
             <p className="text-xs text-muted">{formatBytes(value.size)}</p>
           </div>
-          <div className="flex shrink-0 items-center gap-0.5">
+          {/* Below sm the actions take their own row, so the file name keeps its width at 360px. */}
+          <div className="flex w-full shrink-0 items-center justify-end gap-1 border-t border-line/70 pt-2 sm:w-auto sm:border-0 sm:pt-0">
             {!isImage && value.url && (
-              <a href={value.url} target="_blank" rel="noreferrer" className={iconButtonClasses({ size: "sm" })} aria-label={`View ${value.name}`}>
+              <a href={value.url} target="_blank" rel="noreferrer" className={iconButtonClasses({ size: "md" })} aria-label={`View ${value.name}`}>
                 <Eye className="h-4 w-4" />
               </a>
             )}
             {!disabled && (
               <>
-                <IconButton size="sm" aria-label="Replace file" icon={<RefreshCw className="h-4 w-4" />} onClick={() => openPicker()} />
-                <IconButton size="sm" aria-label="Remove file" icon={<Trash2 className="h-4 w-4" />} className="hover:bg-danger-light hover:text-danger" onClick={() => onChange(null)} />
+                <IconButton size="md" aria-label="Replace file" icon={<RefreshCw className="h-4 w-4" />} onClick={() => openPicker()} />
+                <IconButton size="md" aria-label="Remove file" icon={<Trash2 className="h-4 w-4" />} className="hover:bg-danger-light hover:text-danger" onClick={() => onChange(null)} />
               </>
             )}
           </div>
@@ -318,11 +355,16 @@ export function FileUpload({
         {picking && tiles && (
           <div className="mt-2 space-y-2">
             {sourceTiles}
-            <button type="button" className="min-h-11 w-full text-sm font-medium text-muted hover:text-ink" onClick={() => setPicking(false)}>
+            <button
+              type="button"
+              className="min-h-11 w-full rounded-md text-sm font-semibold text-muted ring-focus transition-colors duration-micro hover:text-ink focus-visible:ring-0 focus-visible:ring-offset-0 motion-reduce:transition-none"
+              onClick={() => setPicking(false)}
+            >
               Keep the current file
             </button>
           </div>
         )}
+        {error && <UploadError>{error}</UploadError>}
         {hiddenInputs}
       </div>
     );
@@ -334,12 +376,8 @@ export function FileUpload({
       <div className={className}>
         <p className="mb-2 text-sm font-semibold text-ink">{label}</p>
         {sourceTiles}
-        <p className="mt-1.5 text-xs text-muted">{hintText}</p>
-        {error && (
-          <p className="mt-1.5 text-[13px] font-medium text-danger" role="alert">
-            {error}
-          </p>
-        )}
+        <p className="mt-2 text-xs text-muted">{hintText}</p>
+        {error && <UploadError>{error}</UploadError>}
         {hiddenInputs}
       </div>
     );
@@ -347,6 +385,7 @@ export function FileUpload({
 
   return (
     <div className={className}>
+      {hiddenInputs}
       <label
         htmlFor={id}
         onDragOver={(e) => {
@@ -360,26 +399,30 @@ export function FileUpload({
           if (!disabled) onFiles(e.dataTransfer.files);
         }}
         className={cn(
-          "flex min-h-[7.5rem] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors tap-highlight-none",
-          drag ? "border-orange bg-orange-light/40" : "border-line bg-surface/60 hover:border-navy/40 active:bg-lavender/60",
-          disabled && "cursor-not-allowed opacity-60"
+          "flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-center transition duration-micro tap-highlight-none motion-reduce:transition-none",
+          "peer-focus-visible:ring-2 peer-focus-visible:ring-orange peer-focus-visible:ring-offset-2",
+          drag ? "border-orange bg-orange-light/50" : "border-line bg-surface/70 hover:border-navy/40 hover:bg-surface active:bg-lavender/60",
+          disabled && "pointer-events-none cursor-not-allowed opacity-60"
         )}
       >
-        {busy ? <Loader2 className="h-6 w-6 animate-spin text-orange" /> : <UploadCloud className="h-6 w-6 text-navy" />}
-        <span className="text-sm font-semibold text-ink">{busy ? "Uploading…" : label}</span>
+        <span
+          className={cn(
+            "flex h-11 w-11 items-center justify-center rounded-md transition-colors duration-micro motion-reduce:transition-none",
+            drag ? "bg-orange text-white" : "bg-lavender text-navy"
+          )}
+          aria-hidden
+        >
+          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <UploadCloud className="h-5 w-5" />}
+        </span>
+        <span className="text-sm font-semibold text-ink">{busy ? "Uploading…" : drag ? "Drop the file to upload" : label}</span>
         <span className="text-xs text-muted">{hintText}</span>
       </label>
-      {error && (
-        <p className="mt-1.5 text-[13px] font-medium text-danger" role="alert">
-          {error}
-        </p>
-      )}
-      {hiddenInputs}
+      {error && <UploadError>{error}</UploadError>}
     </div>
   );
 }
 
-/** Simple chip list for multi-value text (skills, languages). */
+/** Simple chip list for multi-value text (skills, languages); wears the shared control chrome. */
 export function TagInput({ value, onChange, placeholder = "Type and press Enter", className }: { value: string[]; onChange: (v: string[]) => void; placeholder?: string; className?: string }) {
   const [text, setText] = React.useState("");
   const add = () => {
@@ -388,7 +431,12 @@ export function TagInput({ value, onChange, placeholder = "Type and press Enter"
     setText("");
   };
   return (
-    <div className={cn("flex min-h-11 flex-wrap items-center gap-1.5 rounded-xl border border-line bg-white px-2 py-1.5 focus-within:border-navy focus-within:ring-2 focus-within:ring-navy/15", className)}>
+    <div
+      className={cn(
+        "flex min-h-11 sm:min-h-10 flex-wrap items-center gap-1.5 rounded-md border border-line bg-white px-2 py-1.5 transition-colors duration-micro focus-within:border-navy focus-within:ring-2 focus-within:ring-navy/20 motion-reduce:transition-none",
+        className
+      )}
+    >
       {value.map((v) => (
         <span key={v} className="inline-flex items-center gap-1 rounded-full bg-lavender px-2.5 py-0.5 text-xs font-semibold text-navy">
           {v}
@@ -396,7 +444,7 @@ export function TagInput({ value, onChange, placeholder = "Type and press Enter"
             type="button"
             onClick={() => onChange(value.filter((x) => x !== v))}
             aria-label={`Remove ${v}`}
-            className="-mr-1 inline-flex h-5 w-5 items-center justify-center rounded-full tap-highlight-none hover:bg-navy/10 hover:text-orange pointer-coarse:-my-1.5 pointer-coarse:h-8 pointer-coarse:w-8"
+            className="-mr-1 inline-flex h-5 w-5 items-center justify-center rounded-full tap-highlight-none ring-focus transition-colors duration-micro hover:bg-navy/10 hover:text-orange focus-visible:ring-0 focus-visible:ring-offset-0 pointer-coarse:-my-1.5 pointer-coarse:h-8 pointer-coarse:w-8 motion-reduce:transition-none"
           >
             <X className="h-3 w-3 pointer-coarse:h-3.5 pointer-coarse:w-3.5" />
           </button>
@@ -415,7 +463,7 @@ export function TagInput({ value, onChange, placeholder = "Type and press Enter"
         }}
         onBlur={add}
         placeholder={value.length ? "" : placeholder}
-        className="min-w-[8rem] flex-1 bg-transparent px-1.5 py-1 text-base sm:text-sm outline-none placeholder:text-muted/70"
+        className="min-w-32 flex-1 bg-transparent px-1.5 py-1 text-base sm:text-sm text-ink outline-none placeholder:text-muted/70"
       />
     </div>
   );

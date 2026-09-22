@@ -2,15 +2,17 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { UserPen } from "lucide-react";
 import { api, ApiClientError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Field, FormActions, FormGrid } from "@/components/ui/form";
 import { FileUpload, TagInput, type UploadedFile } from "@/components/ui/file-upload";
+import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Avatar } from "@/components/ui/misc";
 import { toast } from "@/components/ui/toast";
 
-interface Initial {
+export interface TrainerProfileInitial {
   bio: string;
   qualification: string;
   skills: string[];
@@ -18,7 +20,7 @@ interface Initial {
   avatarUrl: string | null;
 }
 
-export function ProfileForm({ initial, disabled }: { trainerId: string; initial: Initial; disabled?: boolean }) {
+export function ProfileForm({ initial, disabled, onSaved }: { trainerId?: string; initial: TrainerProfileInitial; disabled?: boolean; onSaved?: () => void }) {
   const router = useRouter();
   const [bio, setBio] = React.useState(initial.bio);
   const [qualification, setQualification] = React.useState(initial.qualification);
@@ -37,6 +39,7 @@ export function ProfileForm({ initial, disabled }: { trainerId: string; initial:
       toast.success("Profile updated");
       setPhoto(null);
       router.refresh();
+      onSaved?.();
     } catch (err) {
       if (err instanceof ApiClientError) {
         setErrors(err.fieldErrors);
@@ -70,10 +73,28 @@ export function ProfileForm({ initial, disabled }: { trainerId: string; initial:
         </Field>
       </FormGrid>
       <FormActions>
-        <Button type="submit" loading={saving} disabled={disabled}>
+        <Button type="submit" size="md" loading={saving} disabled={disabled} className="w-full sm:w-auto">
           Save changes
         </Button>
       </FormActions>
     </form>
+  );
+}
+
+/**
+ * Phone entry point to the same form: a full-width button that opens it as a bottom sheet
+ * (a right-hand drawer from `sm` up), matching how every other create/edit flow in the portal opens.
+ */
+export function ProfileEditSheet({ initial, disabled }: { initial: TrainerProfileInitial; disabled?: boolean }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <>
+      <Button variant="navy" fullWidth size="lg" onClick={() => setOpen(true)} disabled={disabled} leftIcon={<UserPen className="h-5 w-5" />}>
+        Edit my profile
+      </Button>
+      <ResponsiveSheet open={open} onClose={() => setOpen(false)} title="Edit profile" description="Bio, skills, languages, qualification and photo." size="lg" height="full">
+        {open && <ProfileForm initial={initial} disabled={disabled} onSaved={() => setOpen(false)} />}
+      </ResponsiveSheet>
+    </>
   );
 }

@@ -26,15 +26,15 @@ export function QuickDecideButton(p: QuickDecideProps) {
   return (
     <>
       <Gate allowed={p.allowed} reason="You do not have permission to decide scholarships">
-        <Button size="xs" variant="secondary" leftIcon={<Award className="h-3.5 w-3.5" />} onClick={() => setOpen(true)}>
+        <Button size="sm" variant="secondary" leftIcon={<Award className="h-3.5 w-3.5" />} onClick={() => setOpen(true)}>
           Decide
         </Button>
       </Gate>
       {open && (
         <Drawer open onClose={() => setOpen(false)} title="Scholarship decision" description={`${p.studentName} · ${p.courseName} · ${p.applicationNo} · fee ${formatINR(p.originalFee)}`} className="max-w-xl">
           {p.reason && (
-            <div className="mb-4 rounded-xl bg-surface p-3 text-sm">
-              <p className="text-[11px] font-medium text-muted uppercase">Student&apos;s reason</p>
+            <div className="mb-4 rounded-md bg-surface p-3 text-body-sm">
+              <p className="text-caption font-medium text-muted uppercase">Student&apos;s reason</p>
               <p className="mt-0.5 whitespace-pre-line text-ink">{p.reason}</p>
             </div>
           )}

@@ -59,7 +59,7 @@ export default async function StudentApplicationDetailPage({ params }: { params:
         title={
           <span className="flex flex-wrap items-center gap-3">
             <span className="font-mono">{app.applicationNo}</span>
-            <StatusBadge status={app.status} className="text-sm" />
+            <StatusBadge status={app.status} className="text-body-sm" />
           </span>
         }
         description={`${app.course.name} at ${app.center.name} · Applied ${formatDate(app.createdAt)}`}
@@ -86,16 +86,16 @@ export default async function StudentApplicationDetailPage({ params }: { params:
           <Card>
             <CardHeader title="Course, center & batch" />
             <CardBody className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <KeyValue label="Course" value={<span>{app.course.name} <span className="text-xs text-muted">({app.course.durationText}, {titleCase(app.course.mode)})</span></span>} />
-              <KeyValue label="Training center" value={<span>{app.center.name} <span className="font-mono text-xs text-muted">({app.center.code})</span><br /><span className="text-xs font-normal text-muted">{app.center.address}, {app.center.district.name}, {app.center.state.name} – {app.center.pincode}{app.center.phone ? ` · ${app.center.phone}` : ""}</span></span>} />
-              <KeyValue label="Batch" value={app.batch ? <span>{app.batch.name} <span className="font-mono text-xs text-muted">({app.batch.code})</span><br /><span className="text-xs font-normal text-muted">{formatSchedule(app.batch)} · {formatDate(app.batch.startDate)} – {formatDate(app.batch.endDate)}{app.batch.room ? ` · Room ${app.batch.room}` : ""}</span></span> : <span className="text-muted">To be allocated by the Foundation</span>} />
+              <KeyValue label="Course" value={<span>{app.course.name} <span className="text-caption text-muted">({app.course.durationText}, {titleCase(app.course.mode)})</span></span>} />
+              <KeyValue label="Training center" value={<span>{app.center.name} <span className="font-mono text-caption text-muted">({app.center.code})</span><br /><span className="text-caption font-normal text-muted">{app.center.address}, {app.center.district.name}, {app.center.state.name} – {app.center.pincode}{app.center.phone ? ` · ${app.center.phone}` : ""}</span></span>} />
+              <KeyValue label="Batch" value={app.batch ? <span>{app.batch.name} <span className="font-mono text-caption text-muted">({app.batch.code})</span><br /><span className="text-caption font-normal text-muted">{formatSchedule(app.batch)} · {formatDate(app.batch.startDate)} – {formatDate(app.batch.endDate)}{app.batch.room ? ` · Room ${app.batch.room}` : ""}</span></span> : <span className="text-muted">To be allocated by the Foundation</span>} />
               <KeyValue label="Submitted on" value={app.submittedAt ? formatDateTime(app.submittedAt) : "Not submitted yet"} />
             </CardBody>
           </Card>
 
           {/* Documents */}
           <Card>
-            <CardHeader title="Documents" description={app.missingDocuments.length ? `${app.missingDocuments.length} required document${app.missingDocuments.length === 1 ? "" : "s"} missing` : "All required documents uploaded"} action={<Link href="/student/documents" className="text-sm font-semibold text-orange hover:underline">Manage all documents</Link>} />
+            <CardHeader title="Documents" description={app.missingDocuments.length ? `${app.missingDocuments.length} required document${app.missingDocuments.length === 1 ? "" : "s"} missing` : "All required documents uploaded"} action={<Link href="/student/documents" className="text-body-sm font-semibold text-orange hover:underline">Manage all documents</Link>} />
             <CardBody>
               {app.status === "DOCUMENTS_REQUIRED" && app.documentsRequestNote && (
                 <Alert tone="warning" className="mb-4" title="Requested by the Foundation">
@@ -134,8 +134,8 @@ export default async function StudentApplicationDetailPage({ params }: { params:
         <div className="space-y-6">
           {/* Fees */}
           <Card>
-            <CardHeader title="Fees" action={app.installmentsAllowed ? <span className="text-xs font-semibold text-green-700">Installments allowed</span> : undefined} />
-            <CardBody className="space-y-2 text-sm">
+            <CardHeader title="Fees" action={app.installmentsAllowed ? <span className="text-caption font-semibold text-green-700">Installments allowed</span> : undefined} />
+            <CardBody className="space-y-2 text-body-sm">
               {app.fees.map((f) => (
                 <div key={f.id} className="flex justify-between text-muted">
                   <span>{f.description}</span>
@@ -147,12 +147,12 @@ export default async function StudentApplicationDetailPage({ params }: { params:
               {app.discountAmount > 0 && <FeeRow label="Discount" value={-app.discountAmount} tone="success" />}
               <FeeRow label="Payable" value={app.payableAmount} strong />
               <FeeRow label="Paid" value={app.paidAmount} tone="success" />
-              <div className="flex justify-between border-t border-line pt-2 text-base font-bold text-navy">
+              <div className="flex justify-between border-t border-line pt-2 text-body font-bold text-navy">
                 <span>Due</span>
                 <span className="tabular-nums">{formatINR(due)}</span>
               </div>
               {app.installments.length > 0 && (
-                <ul className="mt-2 space-y-1 rounded-lg bg-surface p-3 text-xs">
+                <ul className="mt-2 space-y-1 rounded-md bg-surface p-3 text-caption">
                   {app.installments.map((i) => (
                     <li key={i.id} className="flex justify-between">
                       <span>
@@ -171,7 +171,7 @@ export default async function StudentApplicationDetailPage({ params }: { params:
                 </ButtonLink>
               )}
               {app.payments.length > 0 && (
-                <p className="pt-1 text-xs text-muted">
+                <p className="pt-1 text-caption text-muted">
                   {app.payments.length} payment{app.payments.length === 1 ? "" : "s"} · <Link href="/student/payments" className="font-semibold text-orange hover:underline">View history & receipts</Link>
                 </p>
               )}
@@ -182,7 +182,7 @@ export default async function StudentApplicationDetailPage({ params }: { params:
           {(app.scholarshipRequested || app.scholarshipAward) && (
             <Card>
               <CardHeader title="Scholarship" action={app.scholarshipAward ? <StatusBadge status={app.scholarshipAward.status} /> : <StatusBadge status="PENDING" />} />
-              <CardBody className="space-y-2 text-sm">
+              <CardBody className="space-y-2 text-body-sm">
                 {app.scholarshipAward ? (
                   <>
                     <p>
@@ -193,12 +193,12 @@ export default async function StudentApplicationDetailPage({ params }: { params:
                       <span>Amount</span>
                       <span className="font-semibold text-ink tabular-nums">{formatINR(app.scholarshipAward.scholarshipAmount)}</span>
                     </div>
-                    {app.scholarshipAward.remarks && <p className="text-xs text-muted">Remarks: {app.scholarshipAward.remarks}</p>}
+                    {app.scholarshipAward.remarks && <p className="text-caption text-muted">Remarks: {app.scholarshipAward.remarks}</p>}
                   </>
                 ) : (
                   <p className="text-muted">You requested scholarship support. The Foundation will decide during review and update the payable fee.</p>
                 )}
-                {app.scholarshipReason && <p className="text-xs text-muted">Your reason: “{app.scholarshipReason}”</p>}
+                {app.scholarshipReason && <p className="text-caption text-muted">Your reason: “{app.scholarshipReason}”</p>}
               </CardBody>
             </Card>
           )}
@@ -209,7 +209,7 @@ export default async function StudentApplicationDetailPage({ params }: { params:
           {/* Timeline */}
           <Card>
             <CardHeader title="Status history" />
-            <CardBody>{timeline.length ? <Timeline items={timeline} /> : <p className="text-sm text-muted">No updates yet.</p>}</CardBody>
+            <CardBody>{timeline.length ? <Timeline items={timeline} /> : <p className="text-body-sm text-muted">No updates yet.</p>}</CardBody>
           </Card>
         </div>
       </div>

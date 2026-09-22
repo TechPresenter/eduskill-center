@@ -46,7 +46,7 @@ export function DocumentCard({ title, description, required, doc, onReplace, onR
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-semibold text-ink">{title}</p>
-          {description && <p className="mt-0.5 text-xs text-muted">{description}</p>}
+          {description && <p className="mt-0.5 text-caption text-muted">{description}</p>}
         </div>
         {doc ? <StatusBadge status={doc.status} /> : required ? <Badge tone="orange">Required</Badge> : <Badge tone="neutral">Optional</Badge>}
       </div>
@@ -55,16 +55,16 @@ export function DocumentCard({ title, description, required, doc, onReplace, onR
         <div className="mt-3 flex items-center gap-3">
           {isImage ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={doc.url} alt={doc.name} width={56} height={56} loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded-xl border border-line object-cover" />
+            <img src={doc.url} alt={doc.name} width={56} height={56} loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded-md border border-line object-cover" />
           ) : (
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-lavender text-navy">{doc.mimeType?.includes("pdf") ? <FileText className="h-6 w-6" /> : <ImageIcon className="h-6 w-6" />}</div>
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">{doc.mimeType?.includes("pdf") ? <FileText className="h-6 w-6" /> : <ImageIcon className="h-6 w-6" />}</div>
           )}
           <a href={doc.url} target="_blank" rel="noopener noreferrer" className="block min-w-0 flex-1 py-1.5 tap-highlight-none">
-            <span className="flex items-center gap-1 text-sm font-medium text-navy">
+            <span className="flex items-center gap-1 text-body-sm font-medium text-navy">
               <span className="truncate">{doc.name}</span>
               <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
             </span>
-            <span className="mt-0.5 block text-xs text-muted">
+            <span className="mt-0.5 block text-caption text-muted">
               {doc.size ? `${formatBytes(doc.size)} · ` : ""}
               {formatDate(doc.createdAt)}
             </span>
@@ -72,8 +72,8 @@ export function DocumentCard({ title, description, required, doc, onReplace, onR
         </div>
       )}
 
-      {doc?.status === "REJECTED" && <p className="mt-2 text-[13px] font-medium text-danger">Rejected{doc.remarks ? `: ${doc.remarks}` : ""}. Please upload a clearer copy.</p>}
-      {doc?.status === "VERIFIED" && doc.remarks && <p className="mt-2 text-xs text-muted">Remarks: {doc.remarks}</p>}
+      {doc?.status === "REJECTED" && <p className="mt-2 text-body-sm font-medium text-danger">Rejected{doc.remarks ? `: ${doc.remarks}` : ""}. Please upload a clearer copy.</p>}
+      {doc?.status === "VERIFIED" && doc.remarks && <p className="mt-2 text-caption text-muted">Remarks: {doc.remarks}</p>}
 
       {doc && (onReplace || canRemove) && (
         <div className="mt-3 grid grid-cols-2 gap-2">
@@ -104,13 +104,13 @@ export function AddDocumentCard({ onClick, label = "Upload document", hint }: { 
       <button
         type="button"
         onClick={onClick}
-        className="flex min-h-[5.5rem] w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-line bg-white/60 px-4 py-4 text-center tap-highlight-none transition-colors active:bg-lavender/60 hover:border-navy/40"
+        className="flex min-h-[5.5rem] w-full flex-col items-center justify-center gap-1 rounded-card border-2 border-dashed border-line bg-white/60 px-4 py-4 text-center tap-highlight-none transition-colors motion-reduce:transition-none active:bg-lavender/60 hover:border-navy/40"
       >
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-lavender text-navy">
           <Plus className="h-5 w-5" aria-hidden />
         </span>
-        <span className="text-sm font-semibold text-navy">{label}</span>
-        {hint && <span className="text-xs text-muted">{hint}</span>}
+        <span className="text-body-sm font-semibold text-navy">{label}</span>
+        {hint && <span className="text-caption text-muted">{hint}</span>}
       </button>
     </li>
   );

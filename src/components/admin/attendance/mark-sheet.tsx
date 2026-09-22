@@ -164,13 +164,13 @@ export function MarkSheet({ centers, batches, courses, canMark, centerId, batchI
           <div className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="font-semibold text-navy">
-                {sheet.batch.name} <span className="font-mono text-xs text-muted">{sheet.batch.code}</span> <StatusBadge status={sheet.batch.status} className="ml-1" />
+                {sheet.batch.name} <span className="font-mono text-caption text-muted">{sheet.batch.code}</span> <StatusBadge status={sheet.batch.status} className="ml-1" />
               </p>
-              <p className="text-xs text-muted">
+              <p className="text-caption text-muted">
                 {sheet.batch.course} · {sheet.batch.center.name} · {sheet.batch.days.join(", ") || "no schedule"} · {formatDate(date, "EEEE, dd MMM yyyy")}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2 text-caption">
               <Badge tone="success">Present {counts.PRESENT}</Badge>
               <Badge tone="danger">Absent {counts.ABSENT}</Badge>
               <Badge tone="warning">Late {counts.LATE}</Badge>
@@ -200,7 +200,7 @@ export function MarkSheet({ centers, batches, courses, canMark, centerId, batchI
                 <Button type="button" size="sm" variant="ghost" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={() => setMarks(Object.fromEntries(sheet.students.map((s) => [s.studentId, { status: s.status, remarks: s.remarks ?? "" }])))} disabled={!dirty}>
                   Discard changes
                 </Button>
-                <span className="ml-auto hidden text-xs text-muted md:inline">P = Present · A = Absent · L = Late · Lv = Leave</span>
+                <span className="ml-auto hidden text-caption text-muted md:inline">P = Present · A = Absent · L = Late · Lv = Leave</span>
               </div>
               {/* ── Phone roster: one card per student with a full-width P/A/L/Lv control ── */}
               <ul className="space-y-3 md:hidden">
@@ -214,8 +214,8 @@ export function MarkSheet({ centers, batches, courses, canMark, centerId, batchI
                         <Link href={`/admin/students/${s.studentId}`} className="flex min-w-0 flex-1 items-center gap-3">
                           <Avatar name={s.name} src={s.photoUrl} size={40} />
                           <span className="min-w-0">
-                            <span className="block truncate text-[15px] font-semibold text-navy">{s.name}</span>
-                            <span className="block font-mono text-xs text-muted">{s.studentCode ?? "—"}</span>
+                            <span className="block truncate text-body font-semibold text-navy">{s.name}</span>
+                            <span className="block font-mono text-caption text-muted">{s.studentCode ?? "—"}</span>
                           </span>
                         </Link>
                         <StatusBadge status={s.admissionStatus} />
@@ -231,7 +231,7 @@ export function MarkSheet({ centers, batches, courses, canMark, centerId, batchI
                             disabled={!editable}
                             onClick={() => set(s.studentId, { status: st.value })}
                             className={cn(
-                              "flex min-h-12 items-center justify-center rounded-xl border border-line bg-white px-1 text-xs font-bold text-ink tap-highlight-none transition-colors active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50",
+                              "flex min-h-12 items-center justify-center rounded-md border border-line bg-white px-1 text-caption font-bold text-ink tap-highlight-none transition-colors duration-micro active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
                               st.cls
                             )}
                           >
@@ -246,7 +246,7 @@ export function MarkSheet({ centers, batches, courses, canMark, centerId, batchI
                           type="button"
                           disabled={!editable}
                           onClick={() => setRemarkOpen((r) => new Set(r).add(s.studentId))}
-                          className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-navy disabled:opacity-50"
+                          className="inline-flex min-h-11 items-center gap-1.5 text-caption font-semibold text-navy disabled:opacity-50"
                         >
                           <MessageSquarePlus className="h-4 w-4" aria-hidden /> Add remark
                         </button>
@@ -278,7 +278,7 @@ export function MarkSheet({ centers, batches, courses, canMark, centerId, batchI
                             <span className="font-semibold">{s.name}</span>
                           </Link>
                         </TD>
-                        <TD className="font-mono text-xs">{s.studentCode ?? "—"}</TD>
+                        <TD className="font-mono text-caption">{s.studentCode ?? "—"}</TD>
                         <TD>
                           <StatusBadge status={s.admissionStatus} />
                         </TD>
@@ -295,13 +295,13 @@ export function MarkSheet({ centers, batches, courses, canMark, centerId, batchI
                                 data-on={m.status === st.value}
                                 disabled={!editable}
                                 onClick={() => set(s.studentId, { status: st.value })}
-                                className={cn("h-8 min-w-9 rounded-lg border border-line bg-white px-2 text-xs font-bold text-ink transition-colors hover:border-navy/40 disabled:cursor-not-allowed disabled:opacity-50", st.cls)}
+                                className={cn("h-9 min-w-10 rounded-md border border-line bg-white px-2 text-caption font-bold text-ink transition-colors duration-micro hover:border-navy/40 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none", st.cls)}
                               >
                                 {st.short}
                               </button>
                             ))}
                           </div>
-                          {m.status && <span className="ml-2 text-xs text-muted">{STATUS_NAMES[m.status]}</span>}
+                          {m.status && <span className="ml-2 text-caption text-muted">{STATUS_NAMES[m.status]}</span>}
                         </TD>
                         <TD>
                           <Input value={m.remarks} onChange={(e) => set(s.studentId, { remarks: e.target.value })} placeholder="Optional" disabled={!editable} aria-label={`Remarks for ${s.name}`} className="min-w-40 py-1.5" />
@@ -312,7 +312,7 @@ export function MarkSheet({ centers, batches, courses, canMark, centerId, batchI
                 </TBody>
               </TableWrap>
               <div className="hidden flex-col-reverse items-stretch gap-2 md:flex md:flex-row md:items-center md:justify-end">
-                <p className="mr-auto text-xs text-muted">
+                <p className="mr-auto text-caption text-muted">
                   {markable.length} of {sheet.students.length} students can be marked{sheet.students.length - markable.length > 0 ? ` (${sheet.students.length - markable.length} completed / dropped)` : ""}.
                 </p>
                 <Button type="button" leftIcon={<Save className="h-4 w-4" />} loading={saving} disabled={!canMark || future || beforeStart || markable.length === 0} onClick={() => void save()}>

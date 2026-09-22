@@ -72,8 +72,12 @@ function isActive(pathname: string, item: NavItem) {
 
 /** Height of the phone bottom nav (56px rows + border) exposed as `--bottom-nav-h` for Toaster / Fab / pb-safe-nav. */
 const BOTTOM_NAV_HEIGHT = "4rem";
-/** Drawer slide duration in ms; keep in sync with `duration-200` below. */
-const DRAWER_MS = 200;
+/**
+ * Drawer slide duration in ms. This MUST equal `--duration-overlay` (350ms), which is what the
+ * `duration-overlay` classes below use: the timer is what flips the drawer to `display: none`, so a
+ * shorter value cuts the closing slide off part-way and the panel vanishes instead of leaving.
+ */
+const DRAWER_MS = 350;
 
 export function LogoutButton({ className, children }: { className?: string; children?: React.ReactNode }) {
   const router = useRouter();
@@ -176,7 +180,7 @@ function ShellInner({ nav, user, branding, portalLabel, homeHref, bottomNav, unr
         </Link>
         <button
           type="button"
-          className="touch-target -mr-2 inline-flex items-center justify-center rounded-xl text-white/70 tap-highlight-none hover:bg-white/10 hover:text-white active:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange lg:hidden"
+          className="touch-target ring-focus-inverse -mr-2 inline-flex items-center justify-center rounded-md text-white/70 tap-highlight-none transition-colors duration-micro hover:bg-white/10 hover:text-white active:bg-white/10 motion-reduce:transition-none lg:hidden"
           onClick={closeDrawer}
           aria-label="Close menu"
         >
@@ -184,10 +188,10 @@ function ShellInner({ nav, user, branding, portalLabel, homeHref, bottomNav, unr
         </button>
       </div>
       <div className="scrollbar-thin flex-1 overflow-y-auto px-3 py-4">
-        <p className="px-3 pb-2 text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase">{portalLabel}</p>
+        <p className="px-3 pb-2 text-overline text-white/40">{portalLabel}</p>
         {groups.map((g, gi) => (
           <div key={gi} className="mb-4">
-            {g.title && <p className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-[0.16em] text-white/40 uppercase">{g.title}</p>}
+            {g.title && <p className="px-3 pt-2 pb-1 text-overline text-white/40">{g.title}</p>}
             <ul className="space-y-0.5">
               {g.items.map((item) => {
                 const active = isActive(pathname, item);
@@ -198,13 +202,13 @@ function ShellInner({ nav, user, branding, portalLabel, homeHref, bottomNav, unr
                       onClick={closeDrawer}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "group flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium transition-colors lg:min-h-0",
+                        "group ring-focus-inverse flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-body-sm font-medium transition-colors duration-micro motion-reduce:transition-none lg:min-h-0",
                         active ? "bg-white/12 text-white" : "text-white/70 hover:bg-white/8 hover:text-white"
                       )}
                     >
                       <item.icon className={cn("h-4.5 w-4.5 shrink-0", active ? "text-orange" : "text-white/50 group-hover:text-white/80")} />
                       <span className="truncate">{item.label}</span>
-                      {item.badge ? <span className="ml-auto rounded-full bg-orange px-1.5 py-0.5 text-[10px] font-bold text-white">{item.badge}</span> : null}
+                      {item.badge ? <span className="ml-auto rounded-full bg-orange px-1.5 py-0.5 text-caption font-bold text-white">{item.badge}</span> : null}
                     </Link>
                   </li>
                 );
@@ -217,12 +221,12 @@ function ShellInner({ nav, user, branding, portalLabel, homeHref, bottomNav, unr
         <div className="flex items-center gap-3 rounded-lg px-2 py-1.5">
           <Avatar name={user.name} src={user.avatarUrl} size={34} className="bg-white/15 text-white" />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-white">{user.name}</p>
-            <p className="truncate text-[11px] text-white/50">{user.subtitle ?? user.role}</p>
+            <p className="truncate text-body-sm font-semibold text-white">{user.name}</p>
+            <p className="truncate text-caption text-white/50">{user.subtitle ?? user.role}</p>
           </div>
         </div>
         {/* Pinned Log out row (phone drawer only; the desktop header keeps the account menu). */}
-        <LogoutButton className="mt-1 flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left text-[13.5px] font-medium text-white/80 tap-highlight-none transition-colors hover:bg-white/8 hover:text-white active:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange lg:hidden">
+        <LogoutButton className="ring-focus-inverse mt-1 flex min-h-12 w-full items-center gap-3 rounded-md px-3 text-left text-body-sm font-medium text-white/80 tap-highlight-none transition-colors duration-micro hover:bg-white/8 hover:text-white active:bg-white/10 motion-reduce:transition-none lg:hidden">
           <LogOut className="h-4.5 w-4.5 shrink-0 text-white/50" aria-hidden /> Log out
         </LogoutButton>
       </div>
@@ -232,15 +236,15 @@ function ShellInner({ nav, user, branding, portalLabel, homeHref, bottomNav, unr
   return (
     <div className="flex min-h-screen bg-surface" data-portal={portalKind} style={rootStyle}>
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 bg-navy-dark lg:block">{sidebar}</aside>
+      <aside className="fixed inset-y-0 left-0 z-drawer hidden w-64 bg-navy-dark lg:block">{sidebar}</aside>
 
       {/* Mobile drawer: always mounted so the slide transition can run both ways */}
-      <div id="portal-drawer" className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={`${portalLabel} menu`} hidden={!mounted}>
-        <div className={cn("absolute inset-0 bg-navy/60 transition-opacity duration-200 ease-out motion-reduce:transition-none", shown ? "opacity-100" : "opacity-0")} onClick={closeDrawer} aria-hidden />
+      <div id="portal-drawer" className="fixed inset-0 z-drawer lg:hidden" role="dialog" aria-modal="true" aria-label={`${portalLabel} menu`} hidden={!mounted}>
+        <div className={cn("absolute inset-0 bg-navy/60 transition-opacity duration-overlay motion-reduce:transition-none", shown ? "opacity-100" : "opacity-0")} onClick={closeDrawer} aria-hidden />
         <aside
           ref={drawerRef}
           className={cn(
-            "absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-navy-dark pt-safe pb-safe shadow-float transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none",
+            "absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-navy-dark pt-safe pb-safe shadow-e3 transition-transform duration-overlay will-change-transform motion-reduce:transition-none",
             shown ? "translate-x-0" : "-translate-x-full"
           )}
         >
@@ -273,45 +277,45 @@ function ShellInner({ nav, user, branding, portalLabel, homeHref, bottomNav, unr
         />
 
         {/* Desktop header (unchanged at lg+) */}
-        <header className="sticky top-0 z-30 hidden h-16 items-center gap-3 border-b border-line bg-white/95 px-4 backdrop-blur sm:px-6 lg:flex">
+        <header className="sticky top-0 z-header hidden h-16 items-center gap-3 border-b border-line bg-white px-4 sm:px-6 lg:flex">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-navy">{portalLabel}</p>
+            <p className="truncate text-h4 text-navy">{portalLabel}</p>
           </div>
           {notificationsHref && (
-            <Link href={notificationsHref} className="relative rounded-lg p-2 text-muted hover:bg-surface hover:text-navy" aria-label={`Notifications${unreadCount ? ` (${unreadCount} unread)` : ""}`}>
+            <Link href={notificationsHref} className="relative rounded-md p-2 text-muted ring-focus transition-colors duration-micro hover:bg-surface hover:text-navy motion-reduce:transition-none" aria-label={`Notifications${unreadCount ? ` (${unreadCount} unread)` : ""}`}>
               <Bell className="h-5 w-5" />
-              {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange px-1 text-[10px] font-bold text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+              {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-orange px-1 text-caption leading-none font-bold text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
             </Link>
           )}
           <Dropdown
             trigger={
-              <button type="button" className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-surface" aria-label="Account menu">
+              <button type="button" className="flex items-center gap-2 rounded-md px-2 py-1.5 ring-focus transition-colors duration-micro hover:bg-surface motion-reduce:transition-none" aria-label="Account menu">
                 <Avatar name={user.name} src={user.avatarUrl} size={32} />
-                <span className="hidden max-w-[10rem] truncate text-sm font-medium text-ink sm:block">{user.name}</span>
+                <span className="hidden max-w-[10rem] truncate text-body-sm font-medium text-ink sm:block">{user.name}</span>
                 <ChevronDown className="hidden h-4 w-4 text-muted sm:block" />
               </button>
             }
           >
             <div className="px-3 py-2">
-              <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
-              <p className="truncate text-xs text-muted">{user.subtitle ?? user.role}</p>
+              <p className="truncate text-body-sm font-semibold text-ink">{user.name}</p>
+              <p className="truncate text-caption text-muted">{user.subtitle ?? user.role}</p>
             </div>
             <DropdownSeparator />
             {profileHref && (
-              <Link href={profileHref} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink hover:bg-surface">
+              <Link href={profileHref} className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-body-sm text-ink ring-focus transition-colors duration-micro hover:bg-surface motion-reduce:transition-none lg:min-h-0">
                 My profile
               </Link>
             )}
             {settingsHref && (
-              <Link href={settingsHref} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink hover:bg-surface">
+              <Link href={settingsHref} className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-body-sm text-ink ring-focus transition-colors duration-micro hover:bg-surface motion-reduce:transition-none lg:min-h-0">
                 Account settings
               </Link>
             )}
-            <Link href="/" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink hover:bg-surface">
+            <Link href="/" className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-body-sm text-ink ring-focus transition-colors duration-micro hover:bg-surface motion-reduce:transition-none lg:min-h-0">
               Go to website
             </Link>
             <DropdownSeparator />
-            <LogoutButton className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-danger hover:bg-danger-light">
+            <LogoutButton className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-body-sm text-danger ring-focus transition-colors duration-micro hover:bg-danger-light motion-reduce:transition-none lg:min-h-0">
               <LogOut className="h-4 w-4" /> Log out
             </LogoutButton>
           </Dropdown>

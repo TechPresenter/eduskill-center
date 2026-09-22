@@ -25,13 +25,13 @@ export function QuickActions({ items, label = "Quick actions", className }: { it
           href={item.href}
           className="card card-hover relative flex min-h-[72px] items-center gap-3 p-3 tap-highlight-none transition-transform active:scale-[0.98] motion-reduce:transition-none"
         >
-          <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", item.attention ? "bg-warning-light text-amber-700" : "bg-lavender text-navy")}>
+          <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-md", item.attention ? "bg-warning-light text-amber-700" : "bg-lavender text-navy")}>
             <item.icon className="h-5 w-5" aria-hidden />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="line-clamp-2 text-[13px] font-semibold text-ink">{item.label}</span>
+            <span className="line-clamp-2 text-body-sm font-semibold text-ink">{item.label}</span>
             {item.badge !== undefined && item.badge !== null && item.badge !== "" && (
-              <span className="mt-0.5 block truncate text-[12px] font-bold text-orange tabular-nums">{item.badge}</span>
+              <span className="mt-0.5 block truncate text-caption font-bold text-orange tabular-nums">{item.badge}</span>
             )}
           </span>
         </Link>

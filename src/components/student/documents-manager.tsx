@@ -88,7 +88,7 @@ export function DocumentsManager({ types, documents }: { types: DocType[]; docum
   );
 
   const keepCurrent = () => (
-    <button type="button" className="mt-1 inline-flex min-h-11 items-center text-sm font-medium text-muted hover:text-ink" onClick={() => setReplacing(null)}>
+    <button type="button" className="mt-1 inline-flex min-h-11 items-center text-body-sm font-medium text-muted hover:text-ink" onClick={() => setReplacing(null)}>
       Keep the current file
     </button>
   );
@@ -147,21 +147,21 @@ export function DocumentsManager({ types, documents }: { types: DocType[]; docum
               />
               <CardBody className="space-y-3">
                 {docs.map((d) => (
-                  <div key={d.id} className="flex flex-col gap-2 rounded-xl border border-line p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div key={d.id} className="flex flex-col gap-2 rounded-md border border-line p-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-lavender text-navy">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">
                         <FileText className="h-5 w-5" />
                       </div>
                       <div className="min-w-0">
-                        <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 truncate text-sm font-medium text-navy hover:underline">
+                        <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 truncate text-body-sm font-medium text-navy hover:underline">
                           {d.name} <ExternalLink className="h-3 w-3 shrink-0" />
                         </a>
-                        <p className="text-xs text-muted">
+                        <p className="text-caption text-muted">
                           Uploaded {formatDate(d.createdAt)}
                           {d.size ? ` · ${formatBytes(d.size)}` : ""}
                         </p>
-                        {d.status === "REJECTED" && <p className="text-xs font-medium text-danger">Rejected{d.remarks ? `: ${d.remarks}` : ""}</p>}
-                        {d.status === "VERIFIED" && d.remarks && <p className="text-xs text-muted">Remarks: {d.remarks}</p>}
+                        {d.status === "REJECTED" && <p className="text-caption font-medium text-danger">Rejected{d.remarks ? `: ${d.remarks}` : ""}</p>}
+                        {d.status === "VERIFIED" && d.remarks && <p className="text-caption text-muted">Remarks: {d.remarks}</p>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -204,11 +204,11 @@ export function DocumentsManager({ types, documents }: { types: DocType[]; docum
             <CardHeader title="Other documents" description="Uploaded for document types that are no longer active." />
             <CardBody className="space-y-2">
               {orphaned.map((d) => (
-                <div key={d.id} className="flex items-center justify-between gap-2 rounded-lg bg-surface px-3 py-2 text-sm">
+                <div key={d.id} className="flex items-center justify-between gap-2 rounded-md bg-surface px-3 py-2 text-body-sm">
                   <a href={d.url} target="_blank" rel="noopener noreferrer" className="font-medium text-navy hover:underline">
                     {d.name}
                   </a>
-                  <span className="flex items-center gap-2 text-xs text-muted">
+                  <span className="flex items-center gap-2 text-caption text-muted">
                     {d.type.replace(/_/g, " ")} <StatusBadge status={d.status} />
                   </span>
                 </div>

@@ -136,7 +136,7 @@ export function TrainerStatusForm({ initialNo, documentTypes }: { initialNo: str
               </div>
 
               {result.status === "INTERVIEW" && result.interviewAt && (
-                <div className="flex gap-3 rounded-xl border border-info/30 bg-info-light p-4 text-sm text-blue-900">
+                <div className="flex gap-3 rounded-card border border-info/30 bg-info-light p-4 text-body text-blue-900">
                   <CalendarClock className="mt-0.5 h-5 w-5 shrink-0" />
                   <div>
                     <p className="font-semibold">Interview details</p>
@@ -144,7 +144,7 @@ export function TrainerStatusForm({ initialNo, documentTypes }: { initialNo: str
                       {formatDateTime(result.interviewAt)}
                       {result.interviewMode ? ` · ${result.interviewMode}` : ""}
                     </p>
-                    <p className="mt-1 text-xs opacity-80">Please keep your original documents ready. If you cannot attend, reply to the interview email or call the Foundation office.</p>
+                    <p className="mt-1 text-body-sm opacity-80">Please keep your original documents ready. If you cannot attend, reply to the interview email or call the Foundation office.</p>
                   </div>
                 </div>
               )}
@@ -161,10 +161,10 @@ export function TrainerStatusForm({ initialNo, documentTypes }: { initialNo: str
               )}
 
               {result.status === "APPROVED" && (
-                <div className="rounded-2xl border border-success/30 bg-success-light p-5">
-                  <p className="text-xs font-semibold tracking-[0.2em] text-green-800 uppercase">Your Trainer ID</p>
-                  <p className="mt-1 font-heading text-2xl font-extrabold text-navy sm:text-3xl">{result.trainerId ?? "Being issued"}</p>
-                  <p className="mt-2 text-sm text-green-900">Log in with the email or mobile number on your application. If you have not received a password, use &ldquo;Forgot password&rdquo; on the login page.</p>
+                <div className="rounded-card border border-success/30 bg-success-light card-p">
+                  <p className="text-overline text-success-dark">Your Trainer ID</p>
+                  <p className="mt-1 font-heading text-h2 tracking-wide text-navy">{result.trainerId ?? "Being issued"}</p>
+                  <p className="mt-2 text-body text-ink">Log in with the email or mobile number on your application. If you have not received a password, use &ldquo;Forgot password&rdquo; on the login page.</p>
                   <div className="mt-4">
                     <ButtonLink href="/login" variant="navy" leftIcon={<LogIn className="h-4 w-4" />}>
                       Log in to Trainer Portal
@@ -193,17 +193,17 @@ export function TrainerStatusForm({ initialNo, documentTypes }: { initialNo: str
             <CardHeader title="Documents" description="Status of each document you have uploaded." />
             <CardBody className="space-y-5">
               {result.documents.length === 0 ? (
-                <p className="text-sm text-muted">No documents uploaded yet.</p>
+                <p className="text-body text-muted">No documents uploaded yet.</p>
               ) : (
-                <ul className="divide-y divide-line rounded-xl border border-line">
+                <ul className="divide-y divide-line rounded-card border border-line">
                   {result.documents.map((d) => (
                     <li key={d.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-lavender text-navy">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-lavender text-navy">
                           <FileText className="h-4 w-4" />
                         </span>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-ink">{docTypeName(d.type)}</p>
+                          <p className="text-body font-semibold text-ink">{docTypeName(d.type)}</p>
                           <p className="truncate text-xs text-muted">
                             {d.name} · {formatDate(d.createdAt)}
                           </p>

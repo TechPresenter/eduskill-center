@@ -23,7 +23,7 @@ export interface RecordActionItem {
  * density while staying tappable (WCAG 2.5.8).
  */
 const TRIGGER_CLASS =
-  "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors tap-highlight-none hover:bg-surface hover:text-navy active:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/30 max-sm:h-11 max-sm:w-11 pointer-coarse:h-11 pointer-coarse:w-11";
+  "ring-focus inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors duration-micro tap-highlight-none hover:bg-surface hover:text-navy active:bg-surface motion-reduce:transition-none max-sm:h-11 max-sm:w-11 pointer-coarse:h-11 pointer-coarse:w-11";
 
 export interface RecordActionsProps {
   items?: RecordActionItem[];

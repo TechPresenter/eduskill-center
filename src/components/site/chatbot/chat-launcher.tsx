@@ -22,8 +22,8 @@ export interface ChatLauncherProps {
  *
  * It sits above a page's sticky CTA bar rather than on top of it: the bottom offset is the same
  * `--bottom-nav-h + --sticky-bar-h + safe-area` stack that `Fab` and the toaster use, so a course or
- * centre detail page pushes it up automatically. z-50 keeps it over page content but under dialogs
- * (z-90) and toasts (z-100). Its labels stay English because it exists before the conversation has a
+ * centre detail page pushes it up automatically. `z-sticky` (20) is the FAB step: over page content,
+ * under the header, the drawer, dialogs (z-overlay) and toasts (z-toast). Its labels stay English because it exists before the conversation has a
  * language; `aria-expanded` and `aria-controls` carry the state.
  */
 export const ChatLauncher = React.forwardRef<HTMLButtonElement, ChatLauncherProps>(function ChatLauncher({ open, onToggle, panelId, unread, pulse }, ref) {
@@ -38,7 +38,7 @@ export const ChatLauncher = React.forwardRef<HTMLButtonElement, ChatLauncherProp
       aria-expanded={open}
       aria-controls={panelId}
       className={cn(
-        "fixed z-50 flex h-14 w-14 items-center justify-center rounded-full bg-orange text-white shadow-float transition-[transform,opacity,background-color] duration-200 tap-highlight-none active:scale-95 motion-reduce:transition-none",
+        "fixed z-sticky flex h-14 w-14 items-center justify-center rounded-full bg-orange text-white shadow-e3 transition-[transform,opacity,background-color] duration-micro tap-highlight-none active:scale-95 motion-reduce:transition-none",
         "right-[max(1rem,env(safe-area-inset-right))] bottom-[calc(var(--bottom-nav-h)+var(--sticky-bar-h)+env(safe-area-inset-bottom,0px)+1rem)]",
         "hover:bg-orange-hover",
         keyboardOpen && "pointer-events-none translate-y-6 opacity-0"

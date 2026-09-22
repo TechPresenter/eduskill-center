@@ -1,5 +1,5 @@
 import * as React from "react";
-import { AlertCircle, AlertTriangle, CheckCircle2, Info, Inbox, RefreshCw } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, Info, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button, ButtonLink } from "@/components/ui/button";
 
@@ -15,55 +15,107 @@ const ALERT: Record<AlertTone, { cls: string; Icon: React.ComponentType<{ classN
 export function Alert({ tone = "info", title, children, className, action }: { tone?: AlertTone; title?: React.ReactNode; children?: React.ReactNode; className?: string; action?: React.ReactNode }) {
   const { cls, Icon } = ALERT[tone];
   return (
-    <div role={tone === "danger" ? "alert" : "status"} className={cn("flex gap-3 rounded-xl border p-4 text-sm", cls, className)}>
+    <div role={tone === "danger" ? "alert" : "status"} className={cn("text-body-sm flex gap-3 rounded-card border p-4", cls, className)}>
       <Icon className="mt-0.5 h-5 w-5 shrink-0" />
       <div className="min-w-0 flex-1">
-        {title && <p className="font-semibold">{title}</p>}
-        {children && <div className={cn(title && "mt-0.5", "opacity-90")}>{children}</div>}
+        {title && <p className="text-h4">{title}</p>}
+        {children && <div className={cn(title && "mt-1", "opacity-90")}>{children}</div>}
       </div>
       {action}
     </div>
   );
 }
 
-export function EmptyState({
-  icon,
-  title,
-  description,
-  action,
-  className,
-}: {
+/* ───────────── Empty states ─────────────
+ * ONE implementation. `EmptyRow` (table.tsx) and `CardList` (responsive-table.tsx) both render this
+ * through `EmptyContent`, so a table, a phone card list and a standalone panel say "nothing here"
+ * the same way — and they share EMPTY_MESSAGE rather than each keeping their own string.
+ */
+
+/** The single default "there is nothing here yet" line. */
+export const EMPTY_MESSAGE = "No records found.";
+
+/**
+ * Branded placeholder mark: lavender tile, concentric navy rings, the Foundation's cap, one orange
+ * accent. Inline SVG — no image request, no client JS, ~0.4KB. Used whenever no `icon` is supplied,
+ * because a brand-new Foundation sees this state on almost every screen before its first record.
+ */
+function EmptyMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 64" className={className} aria-hidden focusable="false">
+      <rect width="64" height="64" rx="18" fill="#e8eaf6" />
+      <circle cx="32" cy="33" r="21.5" fill="none" stroke="#12357a" strokeOpacity="0.16" strokeWidth="1.25" />
+      <circle cx="32" cy="33" r="14.5" fill="none" stroke="#12357a" strokeOpacity="0.26" strokeWidth="1.25" />
+      <path d="M32 19.5 47 26.5 32 33.5 17 26.5Z" fill="#12357a" />
+      <path d="M23.5 30.2v7.3c0 2.9 3.8 5 8.5 5s8.5-2.1 8.5-5v-7.3" fill="none" stroke="#12357a" strokeOpacity="0.45" strokeWidth="2" strokeLinecap="round" />
+      <path d="M45.5 27.4v6.2" fill="none" stroke="#e8520a" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="45.5" cy="36.2" r="2.3" fill="#e8520a" />
+    </svg>
+  );
+}
+
+export interface EmptyStateProps {
+  /** A lucide icon (rendered in a lavender tile). Omit it to get the branded mark. */
   icon?: React.ReactNode;
-  title: string;
+  title?: React.ReactNode;
+  /** One line of guidance: what this screen will hold, or what to do next. */
   description?: React.ReactNode;
   action?: React.ReactNode;
   className?: string;
-}) {
+  /** `sm` is the compact step used inside tables and cards; `md` is the standalone panel. */
+  size?: "sm" | "md";
+  /** Drop the dashed frame when the state already sits inside a card, a table row or a sheet. */
+  bare?: boolean;
+}
+
+export function EmptyState({ icon, title = EMPTY_MESSAGE, description, action, className, size = "md", bare }: EmptyStateProps) {
+  const sm = size === "sm";
   return (
-    <div className={cn("flex flex-col items-center justify-center rounded-card border border-dashed border-line bg-surface/50 px-6 py-14 text-center", className)}>
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-lavender text-navy">{icon ?? <Inbox className="h-7 w-7" />}</div>
-      <h3 className="text-base font-bold text-navy">{title}</h3>
-      {description && <p className="mt-1 max-w-md text-sm text-muted">{description}</p>}
-      {action && <div className="mt-5">{action}</div>}
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center px-6 text-center",
+        sm ? "py-10" : "py-14",
+        !bare && "rounded-card border border-dashed border-line bg-surface/60",
+        className
+      )}
+    >
+      {icon ? (
+        <span className={cn("mb-4 flex items-center justify-center rounded-md bg-lavender text-navy", sm ? "h-12 w-12" : "h-14 w-14")}>{icon}</span>
+      ) : (
+        <EmptyMark className={cn("mb-4", sm ? "h-12 w-12" : "h-16 w-16")} />
+      )}
+      <h3 className={cn("text-navy", sm ? "text-h4" : "text-h3")}>{title}</h3>
+      {description && <p className="text-body mt-1.5 max-w-md text-muted">{description}</p>}
+      {action && <div className={cn(sm ? "mt-4" : "mt-6")}>{action}</div>}
     </div>
   );
+}
+
+/**
+ * Resolves the `empty` / `emptyState` slot that lists accept: a plain string (or nothing) becomes the
+ * shared EmptyState, while a caller-supplied node is rendered as-is. Keeps EmptyRow and CardList from
+ * growing their own empty-state markup again.
+ */
+export function EmptyContent({ content, size, bare, className }: { content?: React.ReactNode; size?: "sm" | "md"; bare?: boolean; className?: string }) {
+  if (content !== undefined && content !== null && typeof content !== "string" && typeof content !== "number") return <>{content}</>;
+  return <EmptyState title={content ?? EMPTY_MESSAGE} size={size} bare={bare} className={className} />;
 }
 
 export function ErrorState({ title = "Something went wrong", description, onRetry, retryHref, className }: { title?: string; description?: React.ReactNode; onRetry?: () => void; retryHref?: string; className?: string }) {
   return (
     <div className={cn("flex flex-col items-center justify-center rounded-card border border-danger/20 bg-danger-light/40 px-6 py-14 text-center", className)}>
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-danger shadow-sm">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-md bg-white text-danger shadow-e1">
         <AlertCircle className="h-7 w-7" />
       </div>
-      <h3 className="text-base font-bold text-navy">{title}</h3>
-      {description && <p className="mt-1 max-w-md text-sm text-muted">{description}</p>}
+      <h3 className="text-h3 text-navy">{title}</h3>
+      {description && <p className="text-body mt-1.5 max-w-md text-muted">{description}</p>}
       {onRetry && (
-        <Button variant="navy" size="md" className="mt-5" onClick={onRetry} leftIcon={<RefreshCw className="h-4 w-4" />}>
+        <Button variant="navy" size="md" className="mt-6" onClick={onRetry} leftIcon={<RefreshCw className="h-4 w-4" />}>
           Try again
         </Button>
       )}
       {retryHref && (
-        <ButtonLink href={retryHref} variant="navy" size="md" className="mt-5" leftIcon={<RefreshCw className="h-4 w-4" />}>
+        <ButtonLink href={retryHref} variant="navy" size="md" className="mt-6" leftIcon={<RefreshCw className="h-4 w-4" />}>
           Try again
         </ButtonLink>
       )}
@@ -74,12 +126,12 @@ export function ErrorState({ title = "Something went wrong", description, onRetr
 /* ───────────── Skeletons ───────────── */
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-lg bg-line/70", className)} aria-hidden />;
+  return <div className={cn("animate-pulse rounded-sm bg-line/70 motion-reduce:animate-none", className)} aria-hidden />;
 }
 
 export function SkeletonCard({ lines = 3 }: { lines?: number }) {
   return (
-    <div className="card space-y-3 p-5">
+    <div className="card card-p space-y-3">
       <Skeleton className="h-5 w-1/2" />
       {Array.from({ length: lines }).map((_, i) => (
         <Skeleton key={i} className={cn("h-4", i === lines - 1 ? "w-2/3" : "w-full")} />
@@ -156,13 +208,13 @@ export function SkeletonTable({ rows = 6, cols = 5, cards = true }: { rows?: num
 
 export function Spinner({ className }: { className?: string }) {
   return (
-    <span className={cn("inline-block h-5 w-5 animate-spin rounded-full border-2 border-navy/20 border-t-navy", className)} role="status" aria-label="Loading" />
+    <span className={cn("inline-block h-5 w-5 animate-spin rounded-full border-2 border-navy/20 border-t-navy motion-reduce:animate-none", className)} role="status" aria-label="Loading" />
   );
 }
 
 export function LoadingBlock({ label = "Loading…" }: { label?: string }) {
   return (
-    <div className="flex items-center justify-center gap-3 py-16 text-sm text-muted">
+    <div className="text-body-sm flex items-center justify-center gap-3 py-16 text-muted">
       <Spinner /> {label}
     </div>
   );

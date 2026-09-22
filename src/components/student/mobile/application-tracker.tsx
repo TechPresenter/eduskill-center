@@ -12,11 +12,13 @@ export interface ApplicationTrackerProps {
   className?: string;
 }
 
-const NODE = "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-[11px] font-bold transition-colors duration-200 motion-reduce:transition-none";
+const NODE = "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-caption font-bold transition-colors duration-micro motion-reduce:transition-none";
 
 /**
  * Four-milestone horizontal tracker (Submitted → Documents verified → Payment → Admission confirmed).
- * Server-safe and width-safe at 360px: nodes are 28px, labels 11px and wrap under their node.
+ * Server-safe and width-safe at 360px: nodes are 28px and labels sit at the 12px caption step,
+ * wrapping under their own node rather than shrinking — there is no `whitespace-nowrap` here, which
+ * is what keeps four columns inside a 296px card without horizontal overflow.
  */
 export function ApplicationTracker({ application, applicationNo, href, className }: ApplicationTrackerProps) {
   const state = trackerState(application);
@@ -26,14 +28,15 @@ export function ApplicationTracker({ application, applicationNo, href, className
   return (
     <section className={cn("card p-4", className)} aria-label="Application progress">
       <div className="mb-3 flex items-baseline justify-between gap-3">
-        <p className="text-[13px] font-bold text-navy">Application progress</p>
+        <p className="text-body-sm font-bold text-navy">Application progress</p>
         {applicationNo &&
           (href ? (
-            <Link href={href} className="inline-flex min-h-6 items-center font-mono text-[12px] font-semibold text-orange">
+            // 44px tap target, pulled back with negative margin so the header row keeps its height.
+            <Link href={href} className="text-caption ring-focus -my-2.5 -mr-1 inline-flex min-h-11 items-center px-1 font-mono font-semibold text-orange">
               {applicationNo}
             </Link>
           ) : (
-            <span className="font-mono text-[12px] text-muted">{applicationNo}</span>
+            <span className="font-mono text-caption text-muted">{applicationNo}</span>
           ))}
       </div>
 
@@ -56,7 +59,7 @@ export function ApplicationTracker({ application, applicationNo, href, className
                 <span className={cn("h-0.5 flex-1 rounded-full", i === TRACKER_STEPS.length - 1 ? "bg-transparent" : isDone ? doneBar : "bg-line")} />
               </div>
               <p
-                className={cn("mt-1.5 px-0.5 text-center text-[11px] leading-tight", isDone || isCurrent ? "font-semibold text-navy" : "text-muted")}
+                className={cn("mt-1.5 px-0.5 text-center text-caption leading-tight", isDone || isCurrent ? "font-semibold text-navy" : "text-muted")}
                 aria-current={isCurrent ? "step" : undefined}
               >
                 {step.label}
@@ -66,7 +69,7 @@ export function ApplicationTracker({ application, applicationNo, href, className
         })}
       </ol>
 
-      {state.hint && <p className={cn("mt-3 text-[13px] leading-5", state.failed ? "text-danger" : "text-muted")}>{state.hint}</p>}
+      {state.hint && <p className={cn("mt-3 text-body-sm leading-5", state.failed ? "text-danger" : "text-muted")}>{state.hint}</p>}
     </section>
   );
 }

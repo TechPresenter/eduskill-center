@@ -87,7 +87,7 @@ export function BatchReport({ centers, batches, courses, can, centerId, batchId,
         <BatchSelector centers={centers} batches={batches} courses={courses} centerId={centerId} batchId={batchId} onChange={(v) => onSelection({ ...v, preset, from, to })} idPrefix="report" />
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-ink">Period</span>
+            <span className="mb-1.5 block text-body-sm font-medium text-ink">Period</span>
             <SegmentedControl
               scrollable
               className="w-full lg:w-auto"
@@ -111,7 +111,7 @@ export function BatchReport({ centers, batches, courses, can, centerId, batchId,
               </Field>
             </div>
           )}
-          <p className="text-xs text-muted lg:ml-auto lg:pb-3">
+          <p className="text-caption text-muted lg:ml-auto lg:pb-3">
             {range.from && range.to ? `${formatDate(range.from)} – ${formatDate(range.to)}` : "Entire batch"}
           </p>
         </div>
@@ -132,9 +132,9 @@ export function BatchReport({ centers, batches, courses, can, centerId, batchId,
           <div className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold text-navy">
-                {report.batch.name} <span className="font-mono text-xs text-muted">{report.batch.code}</span> <StatusBadge status={report.batch.status} className="ml-1" />
+                {report.batch.name} <span className="font-mono text-caption text-muted">{report.batch.code}</span> <StatusBadge status={report.batch.status} className="ml-1" />
               </p>
-              <p className="text-xs text-muted">
+              <p className="text-caption text-muted">
                 {report.batch.course.name} · {report.batch.center.name} · {formatDate(report.batch.startDate)} – {formatDate(report.batch.endDate)} · minimum {min}%
               </p>
             </div>
@@ -192,17 +192,17 @@ export function BatchReport({ centers, batches, courses, can, centerId, batchId,
                       <Link href={`/admin/students/${r.studentId}`} className="font-semibold hover:text-navy">
                         {r.name}
                       </Link>
-                      <span className="block font-mono text-xs font-normal text-muted">{r.studentCode ?? "—"}</span>
+                      <span className="block font-mono text-caption font-normal text-muted">{r.studentCode ?? "—"}</span>
                       {/* The five count columns are dropped on phones – one compact line replaces them. */}
-                      <span className="mt-1 block text-xs font-normal text-muted md:hidden">
-                        {r.held} held · <span className="font-semibold text-green-700">{r.present} present</span> · <span className="font-semibold text-amber-700">{r.late} late</span> ·{" "}
+                      <span className="mt-1 block text-caption font-normal text-muted md:hidden">
+                        {r.held} held · <span className="font-semibold text-success-dark">{r.present} present</span> · <span className="font-semibold text-amber-700">{r.late} late</span> ·{" "}
                         <span className="font-semibold text-danger">{r.absent} absent</span> · <span className="font-semibold text-blue-700">{r.leave} leave</span>
                       </span>
                     </TD>
                     <TD mobile="hidden" className="text-center tabular-nums">
                       {r.held}
                     </TD>
-                    <TD mobile="hidden" className="text-center text-green-700 tabular-nums">
+                    <TD mobile="hidden" className="text-center text-success-dark tabular-nums">
                       {r.present}
                     </TD>
                     <TD mobile="hidden" className="text-center text-amber-700 tabular-nums">
@@ -216,7 +216,7 @@ export function BatchReport({ centers, batches, courses, can, centerId, batchId,
                     </TD>
                     <TD label="" className="md:min-w-40">
                       <ProgressBar value={r.pct} label={r.held ? undefined : "No classes"} tone={r.pct >= min ? "success" : r.pct >= min - 15 ? "warning" : "danger"} />
-                      <span className="mt-1 flex items-center gap-2 text-[11px] text-muted">
+                      <span className="mt-1 flex items-center gap-2 text-caption text-muted">
                         {r.pct}%{r.held > 0 && r.pct < min && <Badge tone="danger">Below minimum</Badge>}
                       </span>
                     </TD>
@@ -245,14 +245,14 @@ export function BatchReport({ centers, batches, courses, can, centerId, batchId,
                       <TD primary>
                         <span className="flex items-center justify-between gap-2">
                           <span className="whitespace-nowrap">{formatDate(d.date, "EEE, dd MMM")}</span>
-                          <span className={cn("font-semibold tabular-nums md:hidden", pct >= min ? "text-green-700" : "text-amber-700")}>{pct}%</span>
+                          <span className={cn("font-semibold tabular-nums md:hidden", pct >= min ? "text-success-dark" : "text-amber-700")}>{pct}%</span>
                         </span>
-                        <span className="mt-1 block text-xs font-normal text-muted md:hidden">
-                          <span className="font-semibold text-green-700">{d.present} present</span> · <span className="font-semibold text-amber-700">{d.late} late</span> ·{" "}
+                        <span className="mt-1 block text-caption font-normal text-muted md:hidden">
+                          <span className="font-semibold text-success-dark">{d.present} present</span> · <span className="font-semibold text-amber-700">{d.late} late</span> ·{" "}
                           <span className="font-semibold text-danger">{d.absent} absent</span> · <span className="font-semibold text-blue-700">{d.leave} leave</span>
                         </span>
                       </TD>
-                      <TD mobile="hidden" className="text-center text-green-700 tabular-nums">
+                      <TD mobile="hidden" className="text-center text-success-dark tabular-nums">
                         {d.present}
                       </TD>
                       <TD mobile="hidden" className="text-center text-amber-700 tabular-nums">
@@ -264,7 +264,7 @@ export function BatchReport({ centers, batches, courses, can, centerId, batchId,
                       <TD mobile="hidden" className="text-center text-blue-700 tabular-nums">
                         {d.leave}
                       </TD>
-                      <TD mobile="hidden" className={cn("text-center font-semibold tabular-nums", pct >= min ? "text-green-700" : "text-amber-700")}>
+                      <TD mobile="hidden" className={cn("text-center font-semibold tabular-nums", pct >= min ? "text-success-dark" : "text-amber-700")}>
                         {pct}%
                       </TD>
                     </TR>

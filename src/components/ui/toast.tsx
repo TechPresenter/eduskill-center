@@ -51,6 +51,7 @@ const ICONS: Record<ToastVariant, React.ComponentType<{ className?: string }>> =
   warning: AlertTriangle,
 };
 
+/** The variant only tints the icon and the hairline — the surface stays white, like every other card. */
 const STYLES: Record<ToastVariant, string> = {
   success: "border-success/30 [&_svg.icon]:text-success",
   error: "border-danger/30 [&_svg.icon]:text-danger",
@@ -67,13 +68,18 @@ function subscribe(cb: () => void) {
  * Toast outlet (mounted once in the root layout). On phones the stack sits just above the bottom nav /
  * sticky action bar / gesture bar (reads the --bottom-nav-h and --sticky-bar-h variables the shell and
  * StickyActionBar set on :root) and slides up; on sm+ it docks bottom-right and slides in from the right.
+ *
+ * Stacking: `z-toast` (60), the top of the scale. It clears the sticky action bar (20) and the bottom nav,
+ * and deliberately sits above overlays (50) so feedback from an action taken inside a dialog is visible
+ * rather than hidden behind it. Elevation and motion are the overlay ones: `shadow-e3`, one easing.
  */
 export function Toaster() {
   const list = useSyncExternalStore(subscribe, () => items, () => items);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && items.length) dismiss(items[items.length - 1]!.id);
+      // An open dialog's focus trap calls preventDefault on Escape; let it close first.
+      if (e.key === "Escape" && !e.defaultPrevented && items.length) dismiss(items[items.length - 1]!.id);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -84,7 +90,7 @@ export function Toaster() {
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-4 z-[100] flex flex-col items-end gap-2 bottom-[calc(var(--bottom-nav-h)+var(--sticky-bar-h)+env(safe-area-inset-bottom,0px)+1rem)] sm:inset-x-auto sm:right-6 sm:bottom-6"
+      className="pointer-events-none fixed inset-x-4 z-toast flex flex-col items-end gap-3 bottom-[calc(var(--bottom-nav-h)+var(--sticky-bar-h)+env(safe-area-inset-bottom,0px)+1rem)] sm:inset-x-auto sm:right-6 sm:bottom-6"
     >
       {list.map((t) => {
         const Icon = ICONS[t.variant];
@@ -93,16 +99,16 @@ export function Toaster() {
             key={t.id}
             role="status"
             className={cn(
-              "pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border bg-white p-4 shadow-card-hover animate-slide-up sm:animate-slide-in-right motion-reduce:animate-none",
+              "pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-lg border bg-white p-4 shadow-e3 ease-soft animate-slide-up sm:animate-slide-in-right motion-reduce:animate-none",
               STYLES[t.variant]
             )}
           >
             <Icon className="icon mt-0.5 h-5 w-5 shrink-0" />
             <div className="min-w-0 flex-1 py-0.5">
-              <p className="text-sm font-semibold text-ink">{t.title}</p>
-              {t.description && <p className="mt-0.5 text-sm text-muted">{t.description}</p>}
+              <p className="font-semibold text-ink text-body">{t.title}</p>
+              {t.description && <p className="mt-1 text-muted text-body-sm">{t.description}</p>}
             </div>
-            <IconButton size="sm" variant="ghost" aria-label="Dismiss notification" icon={<X className="h-4 w-4" />} onClick={() => dismiss(t.id)} className="-m-2 sm:-m-1.5" />
+            <IconButton size="sm" variant="ghost" aria-label="Dismiss notification" icon={<X className="h-4 w-4" />} onClick={() => dismiss(t.id)} className="-my-1 -mr-2" />
           </div>
         );
       })}

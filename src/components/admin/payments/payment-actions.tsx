@@ -42,14 +42,14 @@ export function PaymentActions(p: PaymentActionsProps) {
   const pending = p.status === "PENDING" || p.status === "PROCESSING";
   const size = p.compact ? "xs" : "sm";
   // Row actions stay icon-compact on desktop but reach the 44px touch target inside the mobile card footer.
-  const touch = p.compact ? "max-md:h-11 max-md:px-4 max-md:text-sm" : undefined;
+  const touch = p.compact ? "max-md:h-11 max-md:px-4 max-md:text-body-sm" : undefined;
   const close = () => {
     clearErrors();
     setDialog(null);
   };
   return (
     <div className="flex flex-wrap items-center justify-end gap-2 md:gap-1.5">
-      <a href={`${base}/document`} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 rounded-lg border border-line bg-white font-semibold text-ink hover:bg-surface ${p.compact ? "h-11 px-4 text-sm md:h-8 md:px-2.5 md:text-xs" : "h-11 px-4 text-sm md:h-9 md:px-3.5"}`} aria-label={`Open ${p.status === "COMPLETED" ? "receipt" : "invoice"} for ${p.paymentNo}`}>
+      <a href={`${base}/document`} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 rounded-md border border-line bg-white font-semibold text-ink hover:bg-surface ${p.compact ? "h-11 px-4 text-body-sm md:h-8 md:px-2.5 md:text-caption" : "h-11 px-4 text-body-sm md:h-9 md:px-3.5"}`} aria-label={`Open ${p.status === "COMPLETED" ? "receipt" : "invoice"} for ${p.paymentNo}`}>
         <FileText className="h-3.5 w-3.5" /> {p.status === "COMPLETED" ? "Receipt" : "Invoice"}
       </a>
       {pending && (

@@ -36,7 +36,8 @@ const AXIS_LOCK_PX = 6;
 /**
  * Swipe-to-reveal row for notification / document lists: drag the content left to expose the actions,
  * release past half-way to snap open, tap outside or press Escape to close. Vertical scrolling is untouched
- * (`touch-pan-y`, axis lock). Transform snaps in 200ms, instantly under prefers-reduced-motion.
+ * (`touch-pan-y`, axis lock). The snap runs on the 150ms micro duration and the product easing, and is
+ * instant under prefers-reduced-motion.
  * Optional enhancement: keep a visible alternative (menu / buttons) for keyboard and desktop users.
  */
 export function SwipeRow({ children, actions, className, contentClassName, disabled, actionWidth = 72 }: SwipeRowProps) {
@@ -120,7 +121,10 @@ export function SwipeRow({ children, actions, className, contentClassName, disab
               setOffset(0);
               a.onSelect();
             }}
-            className={cn("flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold tap-highlight-none active:brightness-95", TONES[a.tone ?? "navy"])}
+            className={cn(
+              "flex h-full flex-col items-center justify-center gap-1 text-xs font-semibold tap-highlight-none ring-focus-inverse focus-visible:ring-0 focus-visible:ring-offset-0 active:opacity-90",
+              TONES[a.tone ?? "navy"]
+            )}
             style={{ width: actionWidth }}
           >
             <span className="flex h-6 w-6 items-center justify-center" aria-hidden>
@@ -131,7 +135,7 @@ export function SwipeRow({ children, actions, className, contentClassName, disab
         ))}
       </div>
       <div
-        className={cn("relative z-10 bg-white", !dragging && !reduce && "transition-[translate] duration-200 ease-out", contentClassName)}
+        className={cn("relative z-raised bg-white", !dragging && !reduce && "transition-[translate] duration-micro", contentClassName)}
         style={{ translate: `${-offset}px 0` }}
         onClickCapture={onClickCapture}
       >

@@ -53,7 +53,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
         title={
           <span className="flex flex-wrap items-center gap-3">
             <span className="font-mono">{p.paymentNo}</span>
-            <StatusBadge status={p.status} className="text-sm" />
+            <StatusBadge status={p.status} className="text-body-sm" />
           </span>
         }
         description={`${formatINR(amount)} · ${titleCase(p.method)} · ${p.student.name} · ${app.course.name}`}
@@ -63,25 +63,25 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
       {/* The app bar shows only the payment number on phones – keep the status and amount in the page. */}
       <div className="mb-4 flex flex-wrap items-center gap-2 lg:hidden">
         <StatusBadge status={p.status} />
-        <span className="text-lg font-bold text-navy tabular-nums">{formatINR(amount)}</span>
+        <span className="text-h3 text-navy tabular-nums">{formatINR(amount)}</span>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <div className="space-y-5 xl:col-span-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
           {(p.status === "PENDING" || p.status === "PROCESSING") && (
             <Alert tone="warning" title="Awaiting verification">
               {p.gateway === "manual" ? "The student declared an offline payment. Check the bank statement / cash register, then verify or reject it." : "The gateway has not confirmed this payment yet."}
             </Alert>
           )}
           {meta?.proofUrl && (
-            <Alert tone="info" title="Proof of payment" action={<a href={meta.proofUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 self-center text-sm font-semibold text-navy hover:underline"><Paperclip className="h-4 w-4" /> Open</a>}>
+            <Alert tone="info" title="Proof of payment" action={<a href={meta.proofUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 self-center text-body-sm font-semibold text-navy hover:underline"><Paperclip className="h-4 w-4" /> Open</a>}>
               {meta.proofName ?? "File"} {meta.proofUploadedAt ? `· uploaded ${formatDateTime(meta.proofUploadedAt)}` : ""}
             </Alert>
           )}
           <Card>
             <CardHeader title="Payment details" />
             <CardBody className="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-3">
-              <KeyValue label="Amount" value={<span className="text-lg font-bold text-navy tabular-nums">{formatINR(amount, { decimals: true })}</span>} />
+              <KeyValue label="Amount" value={<span className="text-h3 text-navy tabular-nums">{formatINR(amount, { decimals: true })}</span>} />
               <KeyValue label="Method" value={titleCase(p.method)} />
               <KeyValue label="Gateway" value={p.gateway} />
               <KeyValue label="Invoice No" value={<span className="font-mono">{p.invoiceNo}</span>} />
@@ -100,7 +100,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
           </Card>
 
           <Card>
-            <CardHeader title="Application fee" action={<Link href={`/admin/applications/${app.id}`} className="text-sm font-semibold text-navy hover:underline">Open application</Link>} />
+            <CardHeader title="Application fee" action={<Link href={`/admin/applications/${app.id}`} className="text-body-sm font-semibold text-navy hover:underline">Open application</Link>} />
             <CardBody>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                 {[
@@ -111,9 +111,9 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
                   { label: "Paid", value: app.paidAmount },
                   { label: "Due", value: due },
                 ].map((x) => (
-                  <div key={x.label} className="rounded-xl bg-surface p-3">
-                    <p className="text-[11px] font-medium tracking-wide text-muted uppercase">{x.label}</p>
-                    <p className="mt-0.5 text-base font-bold tabular-nums">{x.value < 0 ? `− ${formatINR(-x.value)}` : formatINR(x.value)}</p>
+                  <div key={x.label} className="rounded-md bg-surface p-3">
+                    <p className="text-caption font-medium tracking-wide text-muted uppercase">{x.label}</p>
+                    <p className="mt-0.5 text-h4 tabular-nums">{x.value < 0 ? `− ${formatINR(-x.value)}` : formatINR(x.value)}</p>
                   </div>
                 ))}
               </div>
@@ -156,7 +156,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
           </Card>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-6">
           <Card>
             <CardHeader title="Student" />
             <CardBody className="space-y-3">

@@ -34,8 +34,17 @@ export function TableWrap({ className, children, cards = true }: { className?: s
     return () => observer.disconnect();
   }, [cards]);
   return (
-    <div ref={ref} className={cn("scrollbar-thin relative w-full max-w-full overflow-x-auto [contain:inline-size]", cards ? "table-cards md:rounded-card md:border md:border-line md:bg-white" : "rounded-card border border-line bg-white", className)}>
-      <table className={cn("w-full text-left text-sm", cards ? "md:min-w-[640px]" : "min-w-[640px]")}>{children}</table>
+    <div
+      ref={ref}
+      className={cn(
+        "scrollbar-thin relative w-full max-w-full overflow-x-auto [contain:inline-size]",
+        // The table container IS a card: one radius, one border, one resting elevation (e1). In card
+        // mode the chrome only appears from md up, because below it every row is already its own card.
+        cards ? "table-cards md:rounded-card md:border md:border-line md:bg-white md:shadow-e1" : "rounded-card border border-line bg-white shadow-e1",
+        className
+      )}
+    >
+      <table className={cn("text-body-sm w-full text-left", cards ? "md:min-w-[640px]" : "min-w-[640px]")}>{children}</table>
     </div>
   );
 }

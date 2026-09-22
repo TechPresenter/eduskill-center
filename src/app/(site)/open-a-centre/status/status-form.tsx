@@ -194,18 +194,18 @@ export function CentreStatusForm({ initialNo, steps, classes }: CentreStatusForm
               </div>
 
               {result.verificationAt && (
-                <div className="flex gap-3 rounded-xl border border-info/30 bg-info-light p-4 text-sm text-blue-900">
+                <div className="flex gap-3 rounded-card border border-info/30 bg-info-light p-4 text-body text-blue-900">
                   <CalendarClock className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
                   <div>
                     <p className="font-semibold">Centre verification visit</p>
                     <p>{formatDateTime(result.verificationAt)}</p>
-                    <p className="mt-1 text-xs opacity-80">Please be at the proposed space with your original documents. The team checks the rooms, the classroom and the basic facilities.</p>
+                    <p className="mt-1 text-body-sm opacity-80">Please be at the proposed space with your original documents. The team checks the rooms, the classroom and the basic facilities.</p>
                   </div>
                 </div>
               )}
 
               {result.orientationAt && (
-                <div className="flex gap-3 rounded-xl border border-orange/25 bg-orange-light/60 p-4 text-sm text-navy">
+                <div className="flex gap-3 rounded-card border border-orange/25 bg-orange-light/60 p-4 text-body text-navy">
                   <CalendarClock className="mt-0.5 h-5 w-5 shrink-0 text-orange" aria-hidden />
                   <div>
                     <p className="font-semibold">Orientation</p>
@@ -213,7 +213,7 @@ export function CentreStatusForm({ initialNo, steps, classes }: CentreStatusForm
                       {formatDateTime(result.orientationAt)}
                       {result.orientationMode ? ` · ${result.orientationMode}` : ""}
                     </p>
-                    <p className="mt-1 text-xs opacity-80">The orientation covers how to run the centre and the academics for Class 1 to 4.</p>
+                    <p className="mt-1 text-body-sm opacity-80">The orientation covers how to run the centre and the academics for Class 1 to 4.</p>
                   </div>
                 </div>
               )}
@@ -231,13 +231,13 @@ export function CentreStatusForm({ initialNo, steps, classes }: CentreStatusForm
               )}
 
               {result.center && (
-                <div className="rounded-2xl border border-success/30 bg-success-light p-5">
-                  <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.2em] text-green-800 uppercase">
-                    <BadgeCheck className="h-4 w-4" aria-hidden />
+                <div className="rounded-card border border-success/30 bg-success-light card-p">
+                  <p className="flex items-center gap-2 text-overline text-success-dark">
+                    <BadgeCheck className="h-4 w-4 shrink-0" aria-hidden />
                     Your centre code
                   </p>
-                  <p className="mt-1 font-heading text-2xl font-extrabold tracking-wide text-navy sm:text-3xl">{result.center.code}</p>
-                  <p className="mt-2 text-sm text-green-900">
+                  <p className="mt-1 font-heading text-h2 tracking-wide text-navy">{result.center.code}</p>
+                  <p className="mt-2 text-body text-ink">
                     {result.center.name} is authorised and can begin Class 1 to 4 classes. The Foundation team will be in touch about academics and student admissions.
                   </p>
                 </div>
@@ -271,17 +271,17 @@ export function CentreStatusForm({ initialNo, steps, classes }: CentreStatusForm
             <CardHeader title="Documents" description="Status of everything you have uploaded so far." />
             <CardBody className="space-y-6">
               {result.documents.length === 0 ? (
-                <p className="text-sm text-muted">No documents uploaded yet.</p>
+                <p className="text-body text-muted">No documents uploaded yet.</p>
               ) : (
-                <ul className="divide-y divide-line rounded-xl border border-line">
+                <ul className="divide-y divide-line rounded-card border border-line">
                   {result.documents.map((d) => (
                     <li key={d.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-lavender text-navy">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-lavender text-navy">
                           <FileText className="h-4 w-4" aria-hidden />
                         </span>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-ink">{docTypeName(d.type)}</p>
+                          <p className="text-body font-semibold text-ink">{docTypeName(d.type)}</p>
                           <p className="truncate text-xs text-muted">
                             {d.name} · {formatDate(d.createdAt)}
                           </p>

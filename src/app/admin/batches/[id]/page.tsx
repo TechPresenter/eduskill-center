@@ -29,7 +29,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
   const avgAttendance = batch.attendance.rows.length ? Math.round(batch.attendance.rows.reduce((a, r) => a + r.pct, 0) / batch.attendance.rows.length) : null;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-3">
@@ -57,7 +57,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
 
       {/* The app bar shows only the batch code on phones – keep the name and status in the page. */}
       <div className="flex flex-wrap items-center gap-2 lg:hidden">
-        <span className="text-base font-bold text-navy">{batch.name}</span>
+        <h2 className="text-h4 min-w-0 text-navy">{batch.name}</h2>
         <StatusBadge status={batch.status} />
       </div>
 
@@ -78,7 +78,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
           </Card>
 
           <Card>
-            <CardHeader title="Roster" description={`${batch.roster.length} admission${batch.roster.length === 1 ? "" : "s"} in this batch.`} action={canAttendance ? <ButtonLink href={`/admin/attendance?batchId=${batch.id}`} variant="outline" size="xs">Attendance register</ButtonLink> : undefined} />
+            <CardHeader title="Roster" description={`${batch.roster.length} admission${batch.roster.length === 1 ? "" : "s"} in this batch.`} action={canAttendance ? <ButtonLink href={`/admin/attendance?batchId=${batch.id}`} variant="outline" size="sm">Attendance register</ButtonLink> : undefined} />
             <TableWrap className="rounded-none border-0">
               <THead>
                 <tr>
@@ -100,7 +100,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
                           <Avatar name={a.student.name} src={a.student.photoUrl} size={32} />
                           <span className="min-w-0">
                             <span className="block truncate font-semibold">{a.student.name}</span>
-                            <span className="block text-xs font-normal text-muted">{a.student.studentId ?? a.student.mobile}</span>
+                            <span className="block text-caption font-normal text-muted">{a.student.studentId ?? a.student.mobile}</span>
                           </span>
                         </Link>
                         <span className="shrink-0 md:hidden">
@@ -109,10 +109,10 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
                       </span>
                     </TD>
                     <TD label="Admission">
-                      <Link href={`/admin/admissions/${a.id}`} className="font-mono text-xs font-semibold text-navy hover:underline">
+                      <Link href={`/admin/admissions/${a.id}`} className="font-mono text-caption font-semibold text-navy hover:underline">
                         {a.admissionNo}
                       </Link>
-                      <span className="block text-xs text-muted">{formatDate(a.admittedAt)}</span>
+                      <span className="block text-caption text-muted">{formatDate(a.admittedAt)}</span>
                     </TD>
                     <TD label="Attendance" className="text-right tabular-nums">
                       {a.attendancePct === null ? "—" : `${a.attendancePct}%`}
@@ -120,7 +120,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
                     <TD label="Progress" className="text-right tabular-nums">
                       {a.completionPct === null ? "—" : `${a.completionPct}%`}
                     </TD>
-                    <TD label="Certificate" className="text-xs">
+                    <TD label="Certificate" className="text-caption">
                       {a.certificate ? <span className="font-mono">{a.certificate.certificateNo}</span> : a.progress?.certificateEligible ? <Badge tone="success">Eligible</Badge> : <span className="text-muted">—</span>}
                     </TD>
                     <TD mobile="hidden">
@@ -150,7 +150,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
                   <TR key={a.id}>
                     <TD primary>
                       <span className="flex items-start justify-between gap-2">
-                        <Link href={`/admin/applications/${a.id}`} className="font-mono text-xs font-semibold text-navy hover:underline">
+                        <Link href={`/admin/applications/${a.id}`} className="font-mono text-caption font-semibold text-navy hover:underline">
                           {a.applicationNo}
                         </Link>
                         <span className="shrink-0 md:hidden">
@@ -162,7 +162,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
                       <Link href={`/admin/students/${a.student.id}`} className="hover:text-navy">
                         {a.student.name}
                       </Link>
-                      <span className="block text-xs text-muted">{a.student.studentId ?? ""}</span>
+                      <span className="block text-caption text-muted">{a.student.studentId ?? ""}</span>
                     </TD>
                     <TD label="Payable" className="text-right tabular-nums">
                       {formatINR(a.payableAmount)}
@@ -197,12 +197,12 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
                     <TR key={String(d.date)}>
                       <TD primary>
                         {formatDate(d.date)}
-                        <span className="mt-1 block text-xs font-normal text-muted md:hidden">
-                          <span className="font-semibold text-green-700">{d.present} present</span> · <span className="font-semibold text-amber-700">{d.late} late</span> ·{" "}
+                        <span className="mt-1 block text-caption font-normal text-muted md:hidden">
+                          <span className="font-semibold text-success-dark">{d.present} present</span> · <span className="font-semibold text-amber-700">{d.late} late</span> ·{" "}
                           <span className="font-semibold text-danger">{d.absent} absent</span> · {d.leave} leave
                         </span>
                       </TD>
-                      <TD mobile="hidden" className="text-right tabular-nums text-green-700">
+                      <TD mobile="hidden" className="text-right tabular-nums text-success-dark">
                         {d.present}
                       </TD>
                       <TD mobile="hidden" className="text-right tabular-nums text-amber-700">
@@ -219,7 +219,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
                 </TBody>
               </TableWrap>
             )}
-            {batch.attendance.daily.length > 12 && <p className="px-5 py-3 text-xs text-muted">Showing the latest 12 of {batch.attendance.daily.length} days.</p>}
+            {batch.attendance.daily.length > 12 && <p className="px-5 py-3 text-caption text-muted">Showing the latest 12 of {batch.attendance.daily.length} days.</p>}
           </Card>
         </div>
 
@@ -244,21 +244,21 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
               {batch.trainer ? (
                 <div className="flex items-start gap-3">
                   <Avatar name={batch.trainer.user.name} size={40} />
-                  <div className="min-w-0 text-sm">
+                  <div className="min-w-0 text-body-sm">
                     <Link href={`/admin/trainers/${batch.trainer.id}`} className="font-semibold text-navy hover:underline">
                       {batch.trainer.user.name}
                     </Link>
-                    <p className="font-mono text-xs text-muted">
+                    <p className="font-mono text-caption text-muted">
                       {batch.trainer.trainerId} · {titleCase(batch.trainer.level)} level
                     </p>
-                    <p className="text-xs text-muted">{[batch.trainer.user.mobile, batch.trainer.user.email].filter(Boolean).join(" · ")}</p>
+                    <p className="text-caption text-muted">{[batch.trainer.user.mobile, batch.trainer.user.email].filter(Boolean).join(" · ")}</p>
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted">No trainer assigned yet.</p>
+                <p className="text-body-sm text-muted">No trainer assigned yet.</p>
               )}
               {batch.trainerAssignments.length > 0 && (
-                <ul className="mt-4 space-y-1.5 border-t border-line pt-3 text-xs text-muted">
+                <ul className="mt-4 space-y-1.5 border-t border-line pt-3 text-caption text-muted">
                   {batch.trainerAssignments.slice(0, 6).map((a) => (
                     <li key={a.id} className="flex items-center justify-between gap-2">
                       <span>
@@ -275,16 +275,16 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
 
           <Card>
             <CardHeader title="Center" />
-            <CardBody className="space-y-2 text-sm">
+            <CardBody className="space-y-2 text-body-sm">
               <Link href={`/admin/centers/${batch.center.id}`} className="inline-flex items-center gap-1 font-semibold text-navy hover:underline">
                 {batch.center.name} <ExternalLink className="h-3.5 w-3.5" />
               </Link>
               <p className="text-muted">
                 {batch.center.block.name}, {batch.center.district.name}, {batch.center.state.name}
               </p>
-              <p className="font-mono text-xs text-muted">{batch.center.code}</p>
+              <p className="font-mono text-caption text-muted">{batch.center.code}</p>
               <div className="pt-2">
-                <ButtonLink href={`/admin/batches?centerId=${batch.center.id}`} variant="outline" size="xs" leftIcon={<CalendarDays className="h-3.5 w-3.5" />}>
+                <ButtonLink href={`/admin/batches?centerId=${batch.center.id}`} variant="outline" size="sm" leftIcon={<CalendarDays className="h-3.5 w-3.5" />}>
                   Other batches here
                 </ButtonLink>
               </div>

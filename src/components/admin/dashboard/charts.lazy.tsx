@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/feedback";
  * Drop-in: same props as the components in ./charts. Only types are re-exported from ./charts so this
  * module never pulls the chart code in statically.
  */
-const loading = () => <Skeleton className="h-64 w-full rounded-2xl" />;
+const loading = () => <Skeleton className="h-64 w-full rounded-card" />;
 
 export const TrendChart = dynamic(() => import("./charts").then((m) => m.TrendChart), { ssr: false, loading });
 export const DonutChart = dynamic(() => import("./charts").then((m) => m.DonutChart), { ssr: false, loading });

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { CalendarDays } from "lucide-react";
+import { AlertCircle, CalendarDays } from "lucide-react";
 import { cn, dateInputValue } from "@/lib/utils";
 import { Input, type InputProps } from "@/components/ui/input";
 import { Field } from "@/components/ui/form";
@@ -26,7 +26,9 @@ export interface DateInputProps extends Omit<InputProps, "type" | "value" | "def
 
 /**
  * Native `type="date"` (system picker on Android/iOS, inline calendar on desktop) with a calendar glyph,
- * the shared Input styling and a 44px minimum height. Supports `invalid` / `valid` like Input.
+ * the shared Input styling and the same 44/40px height as every other control. Supports `invalid` / `valid`
+ * like Input; the browser owns the right edge here, so validity is signalled by the border plus the
+ * `<Field error>` message rather than an inline glyph.
  */
 export const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(function DateInput({ value, defaultValue, min, max, className, ...props }, ref) {
   return (
@@ -38,7 +40,7 @@ export const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(func
       min={toDateInputValue(min) || undefined}
       max={toDateInputValue(max) || undefined}
       leftIcon={<CalendarDays className="h-4 w-4" aria-hidden />}
-      className={cn("min-h-11 appearance-none", className)}
+      className={cn("appearance-none", className)}
       {...props}
     />
   );
@@ -67,8 +69,14 @@ export interface DateRangeInputProps {
   className?: string;
 }
 
-/** Two DateInputs (stacked on phones, side by side from sm) that keep `to ≥ from`. */
+/**
+ * Two DateInputs (stacked on phones, side by side from sm) that keep `to ≥ from`. A range error belongs
+ * to the pair rather than to either field, so it is rendered once underneath and both inputs point at it
+ * with `aria-describedby` — same wording, size and icon as every other `<Field error>`.
+ */
 export function DateRangeInput({ from, to, onChange, labels, names, min, max, required, disabled, invalid, error, className }: DateRangeInputProps) {
+  const reactId = React.useId();
+  const errorId = error ? `${reactId}-range-error` : undefined;
   const fromValue = toDateInputValue(from) ?? "";
   const toValue = toDateInputValue(to) ?? "";
   return (
@@ -83,6 +91,7 @@ export function DateRangeInput({ from, to, onChange, labels, names, min, max, re
             required={required}
             disabled={disabled}
             invalid={invalid}
+            aria-describedby={errorId}
             onChange={(e) => onChange({ from: e.target.value, to: toValue })}
           />
         </Field>
@@ -95,13 +104,15 @@ export function DateRangeInput({ from, to, onChange, labels, names, min, max, re
             required={required}
             disabled={disabled}
             invalid={invalid}
+            aria-describedby={errorId}
             onChange={(e) => onChange({ from: fromValue, to: e.target.value })}
           />
         </Field>
       </div>
       {error && (
-        <p className="text-[13px] font-medium text-danger" role="alert">
-          {error}
+        <p id={errorId} className="flex items-start gap-1.5 text-sm font-medium text-danger" role="alert">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span>{error}</span>
         </p>
       )}
     </div>

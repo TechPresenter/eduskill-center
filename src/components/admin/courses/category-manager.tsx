@@ -115,16 +115,16 @@ export function CategoryManager({ categories, canCreate, canUpdate, canDelete }:
             <TR key={c.id}>
               <TD>
                 <span className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-lavender text-navy">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">
                     <DynamicIcon name={c.icon ?? undefined} className="h-4 w-4" />
                   </span>
                   <span>
                     <span className="block font-semibold">{c.name}</span>
-                    <span className="block font-mono text-xs text-muted">{c.slug}</span>
+                    <span className="block font-mono text-caption text-muted">{c.slug}</span>
                   </span>
                 </span>
               </TD>
-              <TD className="max-w-md text-sm text-muted">{c.description || "—"}</TD>
+              <TD className="max-w-md text-body-sm text-muted">{c.description || "—"}</TD>
               <TD className="text-right tabular-nums">{c.courses}</TD>
               <TD className="text-right tabular-nums">{c.sortOrder}</TD>
               <TD>
@@ -135,12 +135,12 @@ export function CategoryManager({ categories, canCreate, canUpdate, canDelete }:
               <TD className="text-right">
                 <span className="inline-flex gap-1">
                   {canUpdate && (
-                    <Button size="xs" variant="outline" leftIcon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setEditing(c)}>
+                    <Button size="sm" variant="outline" leftIcon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setEditing(c)}>
                       Edit
                     </Button>
                   )}
                   {canDelete && (
-                    <ConfirmAction size="xs" danger method="delete" url={`/api/admin/courses/categories/${c.id}`} title={`Delete ${c.name}?`} description={c.courses > 0 ? `${c.courses} course(s) use this category. Move them first or deactivate the category.` : "This permanently removes the category."} confirmLabel="Delete" successMessage="Category deleted" disabled={c.courses > 0} icon={<Trash2 className="h-3.5 w-3.5" />}>
+                    <ConfirmAction danger method="delete" url={`/api/admin/courses/categories/${c.id}`} title={`Delete ${c.name}?`} description={c.courses > 0 ? `${c.courses} course(s) use this category. Move them first or deactivate the category.` : "This permanently removes the category."} confirmLabel="Delete" successMessage="Category deleted" disabled={c.courses > 0} icon={<Trash2 className="h-3.5 w-3.5" />}>
                       Delete
                     </ConfirmAction>
                   )}

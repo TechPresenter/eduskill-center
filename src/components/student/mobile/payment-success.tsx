@@ -34,16 +34,16 @@ export function PaymentSuccess({ payment, applicationId, applicationNo, course }
           </span>
         </div>
         <div>
-          <h2 className="font-heading text-xl font-extrabold text-navy">{completed ? "Payment successful" : "Payment recorded"}</h2>
-          <p className="mt-1 text-sm text-muted">
+          <h2 className="text-h3 text-navy">{completed ? "Payment successful" : "Payment recorded"}</h2>
+          <p className="mt-1 text-body-sm text-muted">
             {completed
               ? `Your fee has been received${course ? ` for ${course}` : ""}. The receipt is available below.`
               : "The Foundation will verify your payment and issue the receipt – this usually takes 1–2 working days."}
           </p>
         </div>
-        <p className="text-3xl font-extrabold text-orange tabular-nums">{formatINR(payment.amount)}</p>
+        <p className="text-h1 text-orange tabular-nums">{formatINR(payment.amount)}</p>
 
-        <dl className="grid grid-cols-2 gap-4 rounded-xl border border-line bg-surface/60 p-4 text-left">
+        <dl className="grid grid-cols-2 gap-4 rounded-md border border-line bg-surface/60 p-4 text-left">
           <KeyValue label="Payment ID" value={<span className="font-mono">{payment.paymentNo}</span>} />
           <KeyValue label="Receipt no." value={payment.receiptNo ? <span className="font-mono">{payment.receiptNo}</span> : "On verification"} />
           <KeyValue label="Date" value={payment.paidAt ? formatDateTime(payment.paidAt) : "—"} />

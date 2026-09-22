@@ -33,7 +33,7 @@ export function DiscountButton({ applicationId, originalFee, scholarshipAmount, 
     <>
       <Gate allowed={allowed} reason={reason ?? NO_PERM}>
         <Button
-          size="xs"
+          size="sm"
           variant="outline"
           leftIcon={<Percent className="h-3.5 w-3.5" />}
           onClick={() => {
@@ -73,7 +73,7 @@ export function DiscountButton({ applicationId, originalFee, scholarshipAmount, 
             <Textarea id="disc-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason for the concession" />
           </Field>
           {payable !== null && (
-            <p className="text-sm text-muted">
+            <p className="text-body-sm text-muted">
               New payable fee: <span className="font-semibold text-navy tabular-nums">{formatINR(payable)}</span>
             </p>
           )}
@@ -142,7 +142,7 @@ export function InstallmentPlanButton({ applicationId, due, existing, allowed }:
     <>
       <Gate allowed={allowed && due > 0} reason={due <= 0 ? "Nothing is due" : NO_PERM}>
         <Button
-          size="xs"
+          size="sm"
           variant="outline"
           leftIcon={<CalendarClock className="h-3.5 w-3.5" />}
           onClick={() => {
@@ -180,7 +180,7 @@ export function InstallmentPlanButton({ applicationId, due, existing, allowed }:
             <div className="space-y-2">
               {rows.map((r, i) => (
                 <div key={i} className="grid grid-cols-[auto_1fr_1fr_auto] items-end gap-2">
-                  <span className="pb-3 text-xs font-semibold text-muted">#{i + 1}</span>
+                  <span className="pb-3 text-caption font-semibold text-muted">#{i + 1}</span>
                   <Field label={i === 0 ? "Amount" : undefined} htmlFor={`inst-amt-${i}`}>
                     <Input id={`inst-amt-${i}`} type="number" inputMode="decimal" min={1} step="1" value={r.amount} onChange={(e) => set(i, { amount: e.target.value })} aria-label={`Installment ${i + 1} amount`} />
                   </Field>
@@ -194,10 +194,10 @@ export function InstallmentPlanButton({ applicationId, due, existing, allowed }:
               ))}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <Button type="button" variant="outline" size="xs" leftIcon={<Plus className="h-3.5 w-3.5" />} disabled={rows.length >= 12} onClick={() => setRows((rs) => [...rs, { amount: String(Math.max(0, diff < 0 ? -diff : 0)), dueDate: "" }])}>
+              <Button type="button" variant="outline" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} disabled={rows.length >= 12} onClick={() => setRows((rs) => [...rs, { amount: String(Math.max(0, diff < 0 ? -diff : 0)), dueDate: "" }])}>
                 Add installment
               </Button>
-              <p className={`text-sm tabular-nums ${Math.abs(diff) > 0.01 ? "text-amber-700" : "text-green-700"}`}>
+              <p className={`text-body-sm tabular-nums ${Math.abs(diff) > 0.01 ? "text-amber-700" : "text-success-dark"}`}>
                 Total {formatINR(total)} of {formatINR(due)}
                 {Math.abs(diff) > 0.01 && ` (${diff > 0 ? "over" : "short"} by ${formatINR(Math.abs(diff))})`}
               </p>

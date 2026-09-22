@@ -39,7 +39,7 @@ export function ChangeBatchButton({ applicationId, currentBatchId, allowed, reas
       {open && (
         <Drawer open onClose={close} title={currentBatchId ? "Change batch" : "Assign batch"} description="Only open batches of this course at this center are listed, with live seat availability." className="max-w-xl">
           <form
-            className="space-y-5"
+            className="space-y-6"
             onSubmit={async (e) => {
               e.preventDefault();
               const r = await run(() => api.put<{ batch: { code: string } | null }>(`/api/admin/applications/${applicationId}/batch`, { batchId }), {

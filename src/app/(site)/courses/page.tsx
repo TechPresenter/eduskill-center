@@ -39,7 +39,7 @@ export default async function CoursesPage({ searchParams }: Props) {
   return (
     <>
       <PageHero eyebrow={section.label} title={section.title} description={section.description} breadcrumbs={[{ label: "Home", href: "/" }, { label: "Courses" }]} />
-      <section className="bg-white py-14 sm:py-20">
+      <section className="bg-white section-y">
         <div className="container-x">
           <CourseCatalog courses={courses} categories={categories} applyHrefs={applyHrefs} initialCategory={initialCategory} />
         </div>

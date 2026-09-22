@@ -7,7 +7,7 @@ const TONES: Record<BadgeTone, string> = {
   neutral: "bg-surface text-muted border-line",
   navy: "bg-navy-soft text-navy border-navy/10",
   orange: "bg-orange-light text-orange border-orange/20",
-  success: "bg-success-light text-green-700 border-success/20",
+  success: "bg-success-light text-success-dark border-success/20",
   warning: "bg-warning-light text-amber-700 border-warning/25",
   danger: "bg-danger-light text-danger border-danger/20",
   info: "bg-info-light text-blue-700 border-info/20",
@@ -15,7 +15,7 @@ const TONES: Record<BadgeTone, string> = {
 
 export function Badge({ tone = "neutral", className, dot, children, ...props }: React.HTMLAttributes<HTMLSpanElement> & { tone?: BadgeTone; dot?: boolean }) {
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap", TONES[tone], className)} {...props}>
+    <span className={cn("text-caption inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-semibold whitespace-nowrap", TONES[tone], className)} {...props}>
       {dot && <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />}
       {children}
     </span>

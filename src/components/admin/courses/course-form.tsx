@@ -223,7 +223,7 @@ export function CourseForm({ initial, categories, documentTypes }: CourseFormPro
         {syllabusError && <Alert tone="danger">{syllabusError[1]}</Alert>}
         <div className="space-y-3">
           {syllabus.map((m, i) => (
-            <div key={m.key} className="rounded-xl border border-line bg-white p-4">
+            <div key={m.key} className="rounded-md border border-line bg-white p-4">
               <div className="grid gap-3 sm:grid-cols-[10rem_1fr_auto]">
                 <Field label="Module" htmlFor={`syl-mod-${m.key}`}>
                   <Input id={`syl-mod-${m.key}`} value={m.module} onChange={(e) => updateModule(i, { module: e.target.value })} maxLength={60} placeholder={`Module ${i + 1}`} />
@@ -293,15 +293,15 @@ export function CourseForm({ initial, categories, documentTypes }: CourseFormPro
 
       <FormSection title="Required documents" description="Students must upload these before an application can be approved.">
         {documentTypes.length === 0 ? (
-          <p className="text-sm text-muted">No student document types are configured. Add them under Settings → Document types.</p>
+          <p className="text-body-sm text-muted">No student document types are configured. Add them under Settings → Document types.</p>
         ) : (
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {documentTypes.map((d) => (
-              <Checkbox key={d.key} checked={requiredDocuments.includes(d.key)} onChange={() => { setRequiredDocuments((r) => (r.includes(d.key) ? r.filter((x) => x !== d.key) : [...r, d.key])); clearField("requiredDocuments"); }} label={d.name} description={d.description ?? (d.isRequired ? "Marked required by default" : undefined)} className="rounded-xl border border-line bg-white p-3" />
+              <Checkbox key={d.key} checked={requiredDocuments.includes(d.key)} onChange={() => { setRequiredDocuments((r) => (r.includes(d.key) ? r.filter((x) => x !== d.key) : [...r, d.key])); clearField("requiredDocuments"); }} label={d.name} description={d.description ?? (d.isRequired ? "Marked required by default" : undefined)} className="rounded-md border border-line bg-white p-3" />
             ))}
           </div>
         )}
-        {fieldErrors.requiredDocuments && <p className="text-xs font-medium text-danger">{fieldErrors.requiredDocuments}</p>}
+        {fieldErrors.requiredDocuments && <p className="text-caption font-medium text-danger">{fieldErrors.requiredDocuments}</p>}
       </FormSection>
 
       <FormSection title="Publishing & SEO">

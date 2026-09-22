@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Building2 } from "lucide-react";
+import { ButtonLink } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth/session";
 import { absoluteUrl } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/feedback";
@@ -54,17 +54,26 @@ export default async function DistrictCentersPage({ params }: Props) {
         compact
       />
 
-      <section className="bg-lavender py-14 sm:py-16">
+      <section className="bg-lavender section-y">
         <div className="container-x">
           {result.items.length === 0 ? (
-            <EmptyState title="No active centers yet" description={`We do not have a verified training center in ${d.name} at the moment.`} action={<Link href={`/training-centers/${d.state.slug}`} className="inline-flex h-10 items-center gap-2 rounded-xl bg-navy px-4 text-sm font-semibold text-white">Other centers in {d.state.name} <ArrowRight className="h-4 w-4" /></Link>} />
+            <EmptyState
+              icon={<Building2 className="h-7 w-7" />}
+              title="No active centers yet"
+              description={`We do not have a verified training center in ${d.name} at the moment. Centres in neighbouring districts may still be within reach.`}
+              action={
+                <ButtonLink href={`/training-centers/${d.state.slug}`} variant="navy" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                  Other centers in {d.state.name}
+                </ButtonLink>
+              }
+            />
           ) : (
             <div className="grid gap-8 lg:grid-cols-12">
               <div className="lg:col-span-7">
-                <h2 className="mb-6 flex items-center gap-2 text-2xl font-extrabold text-navy">
-                  <Building2 className="h-6 w-6 text-orange" aria-hidden /> Centers in {d.name}
+                <h2 className="mb-6 flex items-center gap-2 text-h2">
+                  <Building2 className="h-6 w-6 shrink-0 text-orange" aria-hidden /> Centers in {d.name}
                 </h2>
-                <ul className="grid gap-6 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                <ul className="grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-1 xl:grid-cols-2">
                   {result.items.map((c) => (
                     <li key={c.id}>
                       <CenterCard center={c} applyHref={applyHref(user, { centerId: c.id })} />
@@ -74,7 +83,7 @@ export default async function DistrictCentersPage({ params }: Props) {
               </div>
               <div className="lg:col-span-5">
                 <div className="lg:sticky lg:top-24">
-                  <h2 className="mb-6 text-2xl font-extrabold text-navy">On the map</h2>
+                  <h2 className="mb-6 text-h2">On the map</h2>
                   <CenterMap initialCenters={markers} height={440} listTitle={`Centers in ${d.name}`} />
                 </div>
               </div>

@@ -207,7 +207,7 @@ export function Markdown({ source, className }: { source: string; className?: st
             );
           case "table":
             return (
-              <div key={key} className="my-4 overflow-x-auto">
+              <div key={key} className="relative my-4 overflow-x-auto scrollbar-thin">
                 <table>
                   <thead>
                     <tr>
@@ -232,7 +232,7 @@ export function Markdown({ source, className }: { source: string; className?: st
             return <hr key={key} className="my-8 border-line" />;
           case "code":
             return (
-              <pre key={key} className="my-4 overflow-x-auto rounded-xl bg-navy p-4 text-sm text-white">
+              <pre key={key} className="relative my-4 overflow-x-auto rounded-card bg-navy p-4 text-body-sm text-white scrollbar-thin">
                 <code>{b.text}</code>
               </pre>
             );

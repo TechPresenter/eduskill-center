@@ -28,9 +28,16 @@ export interface StickyActionBarProps {
 const STICKY_BAR_VAR = "--sticky-bar-h";
 
 /**
- * Fixed bottom action bar for phones and tablets (below `lg`): white, blurred, safe-area padded, hides while
- * the on-screen keyboard is open and publishes its height as `--sticky-bar-h` on `<html>` so `pb-safe-nav`,
- * `Fab` and the Toaster clear it. From `lg` up it renders inline like `FormActions`.
+ * THE sticky bottom action bar (the deprecated `StickyCta` is now an alias of it). Fixed on phones and
+ * tablets (below `lg`): opaque white, safe-area padded, hides while the on-screen keyboard is open and
+ * publishes its height as `--sticky-bar-h` on `<html>` so `pb-safe-nav`, `Fab` and the Toaster clear it.
+ * From `lg` up it renders inline like `FormActions`.
+ *
+ * Stacking: `z-sticky` (20) — above page content, below the drawer (40) and every overlay (50), so a
+ * dialog opened from one of these buttons covers the bar instead of fighting it.
+ *
+ * No backdrop-blur: it costs a full-screen GPU pass on cheap Android phones, and `backdrop-filter`
+ * turns this element into the containing block for any `position: fixed` child.
  *
  * Usable from server components: every prop is serialisable (children are rendered on the server and passed through).
  */
@@ -63,10 +70,10 @@ export function StickyActionBar({ children, hideBottomNav = true, desktop = "sta
         ref={ref}
         data-sticky-action-bar=""
         className={cn(
-          "fixed inset-x-0 z-[45] border-t border-line bg-white/95 px-4 pt-3 backdrop-blur transition-transform duration-200 motion-reduce:transition-none",
+          "fixed inset-x-0 z-sticky border-t border-line bg-white px-4 pt-3 transition-transform duration-element ease-soft motion-reduce:transition-none",
           hideBottomNav ? "bottom-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]" : "bottom-[var(--bottom-nav-h)] pb-[max(0.75rem,calc(env(safe-area-inset-bottom)_-_var(--bottom-nav-h)))]",
           keyboardOpen && "pointer-events-none translate-y-full",
-          desktop === "hidden" ? "lg:hidden" : "lg:pointer-events-auto lg:static lg:translate-y-0 lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none lg:transition-none",
+          desktop === "hidden" ? "lg:hidden" : "lg:pointer-events-auto lg:static lg:translate-y-0 lg:border-0 lg:bg-transparent lg:p-0 lg:transition-none",
           className
         )}
       >

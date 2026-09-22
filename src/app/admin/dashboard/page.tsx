@@ -9,7 +9,8 @@ import { DashboardRangeFilter } from "@/components/admin/dashboard/range-filter"
 // Lazy (ssr:false) chart wrappers: Recharts loads in its own chunk after hydration, so the dashboard HTML
 // and the initial route chunk stay free of the charting bundle (a skeleton renders first).
 import { DonutChart, HorizontalBarChart, TrendChart, VerticalBarChart } from "@/components/admin/dashboard/charts.lazy";
-import { ActivityFeed, AnalyticsPanel, ApplicationStatusStrip, CenterPerformanceTable, KpiGrid, QuickLinks } from "@/components/admin/dashboard/panels";
+import { ActivityFeed, AnalyticsPanel, ApplicationStatusStrip, CenterPerformanceTable, CommonTasks, KpiGrid, NeedsAttention } from "@/components/admin/dashboard/panels";
+import { hasPermission } from "@/lib/rbac/permissions";
 import { formatDate } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Dashboard · Foundation Admin" };
@@ -37,35 +38,58 @@ export default async function DashboardPage({ searchParams }: PageProps<"/admin/
   const data = await getDashboard(effective);
   const label = rangeLabel(data.range.preset, data.range.from, data.range.to);
   const c = data.charts;
+  const can = {
+    applications: hasPermission(user, "applications.view"),
+    trainerApplications: hasPermission(user, "trainers.view"),
+    centers: hasPermission(user, "centers.view"),
+    payments: hasPermission(user, "payments.view"),
+    createCenter: hasPermission(user, "centers.create"),
+    createBatch: hasPermission(user, "batches.create"),
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title={`Welcome back, ${user.name.split(" ")[0]}`}
         mobileTitle="Dashboard"
-        hideMobileTitle={false}
-        description="Live overview of the EduSkill network — every number is computed from the database."
+        description="Live overview of the EduSkill network — every number on this page is computed from the database."
         actions={
           <>
             <DashboardRangeFilter range={effective.range} from={sp.from} to={sp.to} />
-            <ButtonLink href="/admin/dashboard/explore" variant="navy" size="sm" leftIcon={<Compass className="h-4 w-4" />} className="max-lg:h-12 max-lg:w-full max-lg:text-[15px]">
+            <ButtonLink href="/admin/dashboard/explore" variant="navy" size="sm" leftIcon={<Compass className="h-4 w-4" />} className="max-lg:w-full">
               Explore hierarchy
             </ButtonLink>
           </>
         }
       />
 
-      <KpiGrid kpis={data.kpis} rangeLabel={label} />
+      {/*
+        Triage first. The audit's point about this page was that it opened with eighteen totals and
+        buried "where attention is needed" at the very bottom, next to the audit log. The queues a
+        person can actually clear now come before anything they can only read.
+      */}
+      <NeedsAttention
+        counts={{
+          applications: data.kpis.applications.pendingReview,
+          trainerApplications: data.kpis.trainerApplications.pending,
+          centersPending: data.kpis.centers.pending,
+          paymentsPending: data.kpis.pendingPayments.count,
+          paymentsDue: data.kpis.pendingPayments.amountDue,
+        }}
+        can={can}
+      />
 
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <ApplicationStatusStrip byStatus={data.kpis.applications.byStatus} />
         </div>
-        <AnalyticsPanel analytics={data.analytics} rangeLabel={label} />
+        <CommonTasks can={{ centers: can.createCenter, batches: can.createBatch }} />
       </div>
 
+      <KpiGrid kpis={data.kpis} rangeLabel={label} />
+
       <section aria-labelledby="charts-heading" className="space-y-4">
-        <h2 id="charts-heading" className="text-xs font-bold tracking-[0.16em] text-muted uppercase">
+        <h2 id="charts-heading" className="text-overline text-muted">
           Analytics
         </h2>
         {/* min-w-0 on every cell: Recharts ResponsiveContainer must never widen its grid track. */}
@@ -92,7 +116,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/admin/
         <div className="xl:col-span-2">
           <ActivityFeed activity={data.activity} />
         </div>
-        <QuickLinks pending={{ applications: data.kpis.applications.pendingReview, trainerApplications: data.kpis.trainerApplications.pending, centersPending: data.kpis.centers.pending, paymentsPending: data.kpis.pendingPayments.count }} />
+        <AnalyticsPanel analytics={data.analytics} rangeLabel={label} />
       </div>
     </div>
   );

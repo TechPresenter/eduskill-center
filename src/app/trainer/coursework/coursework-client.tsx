@@ -1,34 +1,26 @@
 "use client";
 
 import * as React from "react";
-import { CalendarClock, ExternalLink, FileText, Paperclip, Pencil, Plus, Trash2, Users, X } from "lucide-react";
+import { ExternalLink, FileText, Paperclip, Pencil, Plus, X } from "lucide-react";
 import { api, ApiClientError, errorMessage } from "@/lib/api-client";
-import { cn, formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Field, FormActions, FormGrid } from "@/components/ui/form";
-import { Drawer, ConfirmDialog } from "@/components/ui/modal";
+import { ConfirmDialog } from "@/components/ui/modal";
+import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
+import { Fab } from "@/components/ui/fab";
+import { SegmentedControl } from "@/components/ui/tabs";
 import { Avatar } from "@/components/ui/misc";
 import { Badge, StatusBadge } from "@/components/ui/badge";
-import { Alert, EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
+import { Alert, EmptyState, ErrorState, SkeletonCardList } from "@/components/ui/feedback";
 import { FileUpload, type UploadedFile } from "@/components/ui/file-upload";
 import { toast } from "@/components/ui/toast";
 import { BatchPicker } from "@/components/trainer/batch-picker";
 import { useApi } from "@/components/trainer/use-api";
+import { AssignmentCard, type CourseworkRow } from "@/components/trainer/mobile";
 import type { BatchOption } from "@/components/trainer/types";
 
-interface AssignmentRow {
-  id: string;
-  batchId: string;
-  title: string;
-  description: string | null;
-  attachmentUrl: string | null;
-  dueDate: string | null;
-  maxMarks: number;
-  createdAt: string;
-  submissionCount: number;
-  gradedCount: number;
-}
 interface Submission {
   id: string;
   status: string;
@@ -73,10 +65,10 @@ export function CourseworkClient({ batches, initialBatchId, today, disabled }: {
   const defaultBatch = batches.find((b) => b.id === initialBatchId)?.id ?? batches.find((b) => b.status === "ONGOING")?.id ?? batches[0]?.id ?? "";
   const [batchId, setBatchId] = React.useState(defaultBatch);
   const batch = batches.find((b) => b.id === batchId);
-  const { data: rows, error, loading, reload } = useApi<AssignmentRow[]>(batchId ? `/api/trainer/assignments?batchId=${encodeURIComponent(batchId)}` : null);
-  const [editing, setEditing] = React.useState<AssignmentRow | "new" | null>(null);
-  const [viewing, setViewing] = React.useState<AssignmentRow | null>(null);
-  const [deleting, setDeleting] = React.useState<AssignmentRow | null>(null);
+  const { data: rows, error, loading, reload } = useApi<CourseworkRow[]>(batchId ? `/api/trainer/assignments?batchId=${encodeURIComponent(batchId)}` : null);
+  const [editing, setEditing] = React.useState<CourseworkRow | "new" | null>(null);
+  const [viewing, setViewing] = React.useState<CourseworkRow | null>(null);
+  const [deleting, setDeleting] = React.useState<CourseworkRow | null>(null);
   const [deleteBusy, setDeleteBusy] = React.useState(false);
 
   const canEdit = !disabled && !!batch && batch.status !== "CANCELLED";
@@ -102,7 +94,7 @@ export function CourseworkClient({ batches, initialBatchId, today, disabled }: {
     <>
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <BatchPicker batches={batches} value={batchId} onChange={setBatchId} className="sm:max-w-md sm:flex-1" />
-        <Button onClick={() => setEditing("new")} disabled={!canEdit} leftIcon={<Plus className="h-4 w-4" />}>
+        <Button onClick={() => setEditing("new")} disabled={!canEdit} leftIcon={<Plus className="h-4 w-4" />} className="hidden lg:inline-flex">
           New assignment
         </Button>
       </div>
@@ -115,10 +107,7 @@ export function CourseworkClient({ batches, initialBatchId, today, disabled }: {
       {error ? (
         <ErrorState description={error} onRetry={reload} />
       ) : loading || !rows ? (
-        <div className="space-y-3">
-          <SkeletonCard lines={2} />
-          <SkeletonCard lines={2} />
-        </div>
+        <SkeletonCardList count={3} lines={3} />
       ) : rows.length === 0 ? (
         <EmptyState
           icon={<FileText className="h-7 w-7" />}
@@ -133,54 +122,24 @@ export function CourseworkClient({ batches, initialBatchId, today, disabled }: {
           }
         />
       ) : (
-        <ul className="space-y-3">
-          {rows.map((a) => {
-            const overdue = !!a.dueDate && a.dueDate.slice(0, 10) < today;
-            const pending = a.submissionCount - a.gradedCount;
-            return (
-              <li key={a.id} className="card p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base font-bold text-navy">{a.title}</h3>
-                      {pending > 0 && <Badge tone="orange">{pending} to grade</Badge>}
-                      {overdue && <Badge tone="neutral">Past due</Badge>}
-                    </div>
-                    {a.description && <p className="mt-1 line-clamp-2 text-sm whitespace-pre-line text-muted">{a.description}</p>}
-                    <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-                      <span className="inline-flex items-center gap-1">
-                        <CalendarClock className="h-3.5 w-3.5" /> {a.dueDate ? `Due ${formatDateTime(a.dueDate)}` : "No due date"}
-                      </span>
-                      <span>{a.maxMarks} marks</span>
-                      <span className="inline-flex items-center gap-1">
-                        <Users className="h-3.5 w-3.5" /> {a.submissionCount} submitted · {a.gradedCount} graded
-                      </span>
-                      {a.attachmentUrl && (
-                        <a href={a.attachmentUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-navy hover:underline">
-                          <Paperclip className="h-3.5 w-3.5" /> Attachment
-                        </a>
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2 lg:shrink-0">
-                    <Button variant="navy" size="sm" onClick={() => setViewing(a)}>
-                      Submissions{a.submissionCount ? ` (${a.submissionCount})` : ""}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setEditing(a)} disabled={!canEdit} leftIcon={<Pencil className="h-4 w-4" />} aria-label={`Edit ${a.title}`}>
-                      Edit
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleting(a)} disabled={!canEdit || a.submissionCount > 0} className="text-danger hover:bg-danger-light" leftIcon={<Trash2 className="h-4 w-4" />} aria-label={`Delete ${a.title}`} title={a.submissionCount > 0 ? "Cannot delete after students have submitted" : undefined}>
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              </li>
-            );
-          })}
+        <ul className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          {rows.map((a) => (
+            <li key={a.id}>
+              <AssignmentCard assignment={a} today={today} canEdit={canEdit} onOpenSubmissions={() => setViewing(a)} onEdit={() => setEditing(a)} onDelete={() => setDeleting(a)} />
+            </li>
+          ))}
         </ul>
       )}
 
-      <Drawer open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "New assignment" : "Edit assignment"} description={batch ? `${batch.name} · ${batch.code}` : undefined} className="max-w-lg">
+      {canEdit && <Fab aria-label="New assignment" icon={<Plus className="h-6 w-6" />} label="New" onClick={() => setEditing("new")} />}
+
+      <ResponsiveSheet
+        open={editing !== null}
+        onClose={() => setEditing(null)}
+        title={editing === "new" ? "New assignment" : "Edit assignment"}
+        description={batch ? `${batch.name} · ${batch.code}` : undefined}
+        size="lg"
+      >
         {editing !== null && batch && (
           <AssignmentForm
             batch={batch}
@@ -192,18 +151,36 @@ export function CourseworkClient({ batches, initialBatchId, today, disabled }: {
             }}
           />
         )}
-      </Drawer>
-      <Drawer open={!!viewing} onClose={() => setViewing(null)} title={viewing?.title} description={viewing && batch ? `${batch.name} · ${viewing.maxMarks} marks${viewing.dueDate ? ` · due ${formatDateTime(viewing.dueDate)}` : ""}` : undefined} className="max-w-2xl">
+      </ResponsiveSheet>
+
+      <ResponsiveSheet
+        open={!!viewing}
+        onClose={() => setViewing(null)}
+        title={viewing?.title}
+        description={viewing && batch ? `${batch.name} · ${viewing.maxMarks} marks${viewing.dueDate ? ` · due ${formatDateTime(viewing.dueDate)}` : ""}` : undefined}
+        size="xl"
+        height="full"
+      >
         {viewing && <SubmissionsPanel key={viewing.id} assignmentId={viewing.id} canGrade={canEdit} onGraded={reload} />}
-      </Drawer>
-      <ConfirmDialog open={!!deleting} onClose={() => setDeleting(null)} onConfirm={confirmDelete} loading={deleteBusy} danger confirmLabel="Delete assignment" title="Delete this assignment?" description={deleting ? `"${deleting.title}" will be removed from the batch. This cannot be undone.` : undefined} />
+      </ResponsiveSheet>
+
+      <ConfirmDialog
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={confirmDelete}
+        loading={deleteBusy}
+        danger
+        confirmLabel="Delete assignment"
+        title="Delete this assignment?"
+        description={deleting ? `"${deleting.title}" will be removed from the batch. This cannot be undone.` : undefined}
+      />
     </>
   );
 }
 
 // ───────────────────────────── Create / edit ─────────────────────────────
 
-function AssignmentForm({ batch, assignment, onClose, onSaved }: { batch: BatchOption; assignment: AssignmentRow | null; onClose: () => void; onSaved: () => void }) {
+function AssignmentForm({ batch, assignment, onClose, onSaved }: { batch: BatchOption; assignment: CourseworkRow | null; onClose: () => void; onSaved: () => void }) {
   const [title, setTitle] = React.useState(assignment?.title ?? "");
   const [description, setDescription] = React.useState(assignment?.description ?? "");
   const [dueDate, setDueDate] = React.useState(() => toLocalInput(assignment?.dueDate ?? null));
@@ -254,11 +231,11 @@ function AssignmentForm({ batch, assignment, onClose, onSaved }: { batch: BatchO
       </FormGrid>
       <Field label="Attachment" error={errors.attachmentUrl} hint="Optional worksheet or reference file (PDF, Office, image, ZIP up to 20 MB).">
         {attachment ? (
-          <div className="flex items-center gap-3 rounded-xl border border-line bg-white p-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-lavender text-navy">
-              <Paperclip className="h-5 w-5" />
+          <div className="flex items-center gap-3 rounded-lg border border-line bg-white p-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">
+              <Paperclip className="h-5 w-5" aria-hidden />
             </span>
-            <a href={attachment.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-sm font-medium text-ink hover:text-navy hover:underline">
+            <a href={attachment.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-body-sm font-medium text-ink hover:text-navy hover:underline">
               {attachment.name}
             </a>
             <button
@@ -267,10 +244,10 @@ function AssignmentForm({ batch, assignment, onClose, onSaved }: { batch: BatchO
                 setAttachment(null);
                 setUpload(null);
               }}
-              className="rounded-lg p-2 text-muted hover:bg-danger-light hover:text-danger"
+              className="touch-target inline-flex items-center justify-center rounded-md text-muted ring-focus transition-colors duration-micro hover:bg-danger-light hover:text-danger motion-reduce:transition-none"
               aria-label="Remove attachment"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" aria-hidden />
             </button>
           </div>
         ) : (
@@ -290,10 +267,10 @@ function AssignmentForm({ batch, assignment, onClose, onSaved }: { batch: BatchO
         )}
       </Field>
       <FormActions>
-        <Button type="button" variant="outline" onClick={onClose}>
+        <Button type="button" variant="outline" size="md" onClick={onClose} className="w-full sm:w-auto">
           Cancel
         </Button>
-        <Button type="submit" loading={saving}>
+        <Button type="submit" size="md" loading={saving} className="w-full sm:w-auto">
           {assignment ? "Save changes" : "Create assignment"}
         </Button>
       </FormActions>
@@ -310,14 +287,7 @@ function SubmissionsPanel({ assignmentId, canGrade, onGraded }: { assignmentId: 
   const [filter, setFilter] = React.useState<SubFilter>("all");
 
   if (error) return <ErrorState description={error} onRetry={reload} />;
-  if (loading || !data) {
-    return (
-      <div className="space-y-3">
-        <SkeletonCard lines={2} />
-        <SkeletonCard lines={2} />
-      </div>
-    );
-  }
+  if (loading || !data) return <SkeletonCardList count={4} lines={2} />;
   if (data.rows.length === 0) return <EmptyState title="No students admitted to this batch" />;
 
   const counts: Record<SubFilter, number> = {
@@ -330,22 +300,19 @@ function SubmissionsPanel({ assignmentId, canGrade, onGraded }: { assignmentId: 
 
   return (
     <div className="space-y-4">
-      <div className="scrollbar-thin flex gap-1 overflow-x-auto rounded-xl bg-surface p-1" role="tablist">
-        {(
-          [
-            ["all", "All"],
-            ["pending", "To grade"],
-            ["graded", "Graded"],
-            ["missing", "Not submitted"],
-          ] as const
-        ).map(([key, label]) => (
-          <button key={key} type="button" role="tab" aria-selected={filter === key} onClick={() => setFilter(key)} className={cn("shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all", filter === key ? "bg-white text-navy shadow-sm" : "text-muted hover:text-ink")}>
-            {label} <span className="opacity-70">({counts[key]})</span>
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        value={filter}
+        onChange={(v) => setFilter(v as SubFilter)}
+        scrollable
+        items={[
+          { value: "all", label: `All (${counts.all})` },
+          { value: "pending", label: `To grade (${counts.pending})` },
+          { value: "graded", label: `Graded (${counts.graded})` },
+          { value: "missing", label: `Not submitted (${counts.missing})` },
+        ]}
+      />
       {rows.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted">Nothing here.</p>
+        <EmptyState title="Nothing in this filter" description="Switch to another filter to see the rest of the roster." size="sm" />
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => (
@@ -395,13 +362,13 @@ function SubmissionCard({ row, maxMarks, canGrade, onGraded }: { row: Submission
   };
 
   return (
-    <li className="rounded-xl border border-line bg-white p-4">
+    <li className="rounded-lg border border-line bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <Avatar name={row.student.name} src={row.student.photoUrl} size={40} />
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-ink">{row.student.name}</p>
-            <p className="text-xs text-muted">
+            <p className="truncate text-body font-semibold text-ink">{row.student.name}</p>
+            <p className="text-caption text-muted">
               <span className="font-mono">{row.student.studentId ?? "ID pending"}</span>
               {s ? ` · Submitted ${formatDateTime(s.submittedAt)}` : ""}
             </p>
@@ -411,9 +378,9 @@ function SubmissionCard({ row, maxMarks, canGrade, onGraded }: { row: Submission
           {s ? (
             s.status === "GRADED" ? (
               <>
-                <p className="font-heading text-lg font-extrabold text-navy tabular-nums">
+                <p className="font-heading text-h4 text-navy tabular-nums">
                   {s.marks}
-                  <span className="text-xs font-semibold text-muted"> / {maxMarks}</span>
+                  <span className="text-caption font-semibold text-muted"> / {maxMarks}</span>
                 </p>
                 <StatusBadge status="GRADED" />
               </>
@@ -427,31 +394,31 @@ function SubmissionCard({ row, maxMarks, canGrade, onGraded }: { row: Submission
       </div>
       {s && (
         <div className="mt-3 space-y-2">
-          {s.text && <p className="rounded-lg bg-surface p-3 text-sm whitespace-pre-wrap text-ink">{s.text}</p>}
+          {s.text && <p className="rounded-md bg-surface p-3 text-body-sm whitespace-pre-wrap text-ink">{s.text}</p>}
           {s.fileUrl && (
-            <a href={s.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy hover:underline">
-              <ExternalLink className="h-4 w-4" /> Open submitted file
+            <a href={s.fileUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-1.5 text-body-sm font-semibold text-navy hover:underline">
+              <ExternalLink className="h-4 w-4" aria-hidden /> Open submitted file
             </a>
           )}
           {s.status === "GRADED" && s.feedback && !open && (
-            <p className="text-sm text-muted">
+            <p className="text-body-sm text-muted">
               <span className="font-semibold text-ink">Feedback:</span> {s.feedback}
             </p>
           )}
           {canGrade &&
             (open ? (
-              <form onSubmit={grade} className="mt-2 space-y-3 rounded-lg border border-line bg-surface/60 p-3" noValidate>
+              <form onSubmit={grade} className="mt-2 space-y-3 rounded-md border border-line bg-surface/60 p-3" noValidate>
                 <FormGrid cols={3}>
                   <Field label={`Marks (out of ${maxMarks})`} htmlFor={`marks-${s.id}`} required error={errors.marks}>
-                    <Input id={`marks-${s.id}`} type="number" min={0} max={maxMarks} step={1} inputMode="numeric" value={marks} onChange={(e) => setMarks(e.target.value)} invalid={!!errors.marks} />
+                    <Input id={`marks-${s.id}`} type="number" min={0} max={maxMarks} step={1} inputMode="numeric" value={marks} onChange={(e) => setMarks(e.target.value)} invalid={!!errors.marks} className="tabular-nums" />
                   </Field>
                   <Field label="Feedback" htmlFor={`fb-${s.id}`} error={errors.feedback} className="sm:col-span-2">
                     <Textarea id={`fb-${s.id}`} rows={2} value={feedback} onChange={(e) => setFeedback(e.target.value)} invalid={!!errors.feedback} maxLength={2000} placeholder="What went well, what to improve" />
                   </Field>
                 </FormGrid>
-                <div className="flex justify-end gap-2">
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                   {s.status === "GRADED" && (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
                       Cancel
                     </Button>
                   )}
@@ -461,14 +428,14 @@ function SubmissionCard({ row, maxMarks, canGrade, onGraded }: { row: Submission
                 </div>
               </form>
             ) : (
-              <Button type="button" variant="outline" size="xs" onClick={() => setOpen(true)} leftIcon={<Pencil className="h-3.5 w-3.5" />}>
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)} leftIcon={<Pencil className="h-4 w-4" />}>
                 {s.status === "GRADED" ? "Edit grade" : "Grade"}
               </Button>
             ))}
         </div>
       )}
       {!s && row.admissionStatus !== "ACTIVE" && (
-        <p className="mt-2 flex items-center gap-2 text-xs text-muted">
+        <p className="mt-2 flex items-center gap-2 text-caption text-muted">
           Admission <StatusBadge status={row.admissionStatus} />
         </p>
       )}

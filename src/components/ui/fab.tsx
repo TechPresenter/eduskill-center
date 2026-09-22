@@ -33,7 +33,9 @@ const TONES = { orange: "bg-orange text-white hover:bg-orange-hover", navy: "bg-
 export function Fab({ "aria-label": ariaLabel, icon, label, extended = label !== undefined, href, onClick, disabled, tone = "orange", className, hideOnDesktop = true }: FabProps) {
   const keyboardOpen = useKeyboardOpen();
   const classes = cn(
-    "fixed z-[45] flex h-14 min-w-14 items-center justify-center gap-2 rounded-2xl text-[15px] font-semibold shadow-float tap-highlight-none transition-[transform,opacity,translate] duration-150 active:scale-95 motion-reduce:transition-none",
+    // z-sticky, shadow-e3 and duration-micro are the tokens: the FAB is the one button in the product
+    // that is genuinely floating, so it is also the only one carrying an elevation.
+    "fixed z-sticky flex h-14 min-w-14 items-center justify-center gap-2 rounded-2xl text-base font-semibold shadow-e3 tap-highlight-none ring-focus-inverse focus-visible:ring-0 focus-visible:ring-offset-0 transition-[transform,opacity,translate] duration-micro active:scale-95 motion-reduce:transition-none",
     "right-[max(1rem,env(safe-area-inset-right))] bottom-[calc(var(--bottom-nav-h)_+_var(--sticky-bar-h)_+_env(safe-area-inset-bottom)_+_1rem)]",
     TONES[tone],
     extended ? "px-5" : "w-14",

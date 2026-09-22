@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { ArrowRight, Compass, Target } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
-import { DynamicIcon } from "@/components/ui/icon";
 import { getSection, getPage } from "@/lib/cms";
 import { getBranding } from "@/lib/settings";
 import { absoluteUrl } from "@/lib/utils";
@@ -12,6 +11,7 @@ import { Reveal } from "@/components/site/reveal";
 import { Markdown } from "@/components/site/markdown";
 import { ImpactBand } from "@/components/site/impact-band";
 import { CtaBand } from "@/components/site/cta-band";
+import { SectionBg, IconTile } from "@/components/site/decor";
 import { SectionHeading } from "@/components/site/section-heading";
 import { CountUp } from "@/components/site/count-up";
 
@@ -39,48 +39,48 @@ export default async function AboutPage() {
     { label: "Training Centers", value: coverage.centers },
     { label: "Volunteer Trainers", value: coverage.trainers },
   ].filter((c) => c.value > 0);
+  const hasPurpose = Boolean(section.mission || section.vision);
 
   return (
     <>
       <PageHero eyebrow={`About ${branding.shortName}`} title={section.heroTitle} description={section.heroDescription} breadcrumbs={[{ label: "Home", href: "/" }, { label: "About" }]} />
 
-      {(section.mission || section.vision) && (
-        <section className="container-x -mt-10 relative z-10 grid gap-6 md:grid-cols-2">
+      {/*
+       * Mission and vision overlap the hero by a card's shoulder. The pull-up lives on the section,
+       * NOT inside the hero — the hero clips its own decoration, so a child would be sliced in half.
+       */}
+      {hasPurpose && (
+        <section className="relative z-raised container-x -mt-10 grid gap-5 sm:-mt-14 md:grid-cols-2 md:gap-6" aria-label="Our purpose">
           {section.mission && (
             <Reveal className="card rounded-card-lg p-7 sm:p-8">
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-light text-orange">
-                <Target className="h-6 w-6" aria-hidden />
-              </span>
-              <h2 className="mt-5 text-xl font-extrabold text-navy">Our Mission</h2>
-              <p className="mt-2 text-[15px] leading-relaxed text-muted">{section.mission}</p>
+              <IconTile icon={Target} tone="orange" size="lg" />
+              <h2 className="mt-5 text-h3 text-navy">Our mission</h2>
+              <p className="mt-2 text-body text-muted">{section.mission}</p>
             </Reveal>
           )}
           {section.vision && (
             <Reveal delay={100} className="card rounded-card-lg p-7 sm:p-8">
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-navy text-white">
-                <Compass className="h-6 w-6" aria-hidden />
-              </span>
-              <h2 className="mt-5 text-xl font-extrabold text-navy">Our Vision</h2>
-              <p className="mt-2 text-[15px] leading-relaxed text-muted">{section.vision}</p>
+              <IconTile icon={Compass} tone="navy" size="lg" />
+              <h2 className="mt-5 text-h3 text-navy">Our vision</h2>
+              <p className="mt-2 text-body text-muted">{section.vision}</p>
             </Reveal>
           )}
         </section>
       )}
 
       {values.length > 0 && (
-        <section className="bg-white py-16 sm:py-20" aria-labelledby="about-values-title">
-          <div className="container-x">
+        <section className="relative overflow-x-clip bg-white section-y" aria-labelledby="about-values-title">
+          <SectionBg variant="mesh" />
+          <div className="container-x relative z-10">
             <Reveal>
-              <SectionHeading id="about-values-title" label="Our Values" title="What Guides [[Every Decision]]" align="center" />
+              <SectionHeading id="about-values-title" label="Our values" title="What Guides [[Every Decision]]" align="center" />
             </Reveal>
             <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {values.map((v, i) => (
-                <Reveal as="li" key={i} delay={i * 70} className="card card-hover p-6 text-center">
-                  <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-orange-light text-orange">
-                    <DynamicIcon name={v.icon} className="h-6 w-6" aria-hidden />
-                  </span>
-                  <h3 className="mt-4 text-base font-bold text-navy">{v.title}</h3>
-                  {v.description && <p className="mt-1.5 text-sm leading-relaxed text-muted">{v.description}</p>}
+                <Reveal as="li" key={`${v.title}-${i}`} delay={i * 70} className="card card-hover flex h-full flex-col items-center card-p text-center">
+                  <IconTile icon={v.icon ?? "Sparkles"} tone="orange" size="lg" />
+                  <h3 className="mt-4 text-h4 text-navy">{v.title}</h3>
+                  {v.description && <p className="mt-2 text-body-sm text-muted">{v.description}</p>}
                 </Reveal>
               ))}
             </ul>
@@ -89,41 +89,45 @@ export default async function AboutPage() {
       )}
 
       {page && (
-        <section className="bg-lavender py-16 sm:py-20" aria-labelledby="about-story-title">
-          <div className="container-x">
-            <div className="mx-auto max-w-3xl">
-              <Reveal>
-                <p className="eyebrow mb-3">Our Story</p>
-                <h2 id="about-story-title" className="section-title mb-8">
-                  {page.title}
-                </h2>
-                <div className="card rounded-card-lg p-6 sm:p-10">
-                  <Markdown source={page.content} />
-                </div>
-              </Reveal>
-            </div>
+        <section className="relative overflow-x-clip bg-lavender section-y" aria-labelledby="about-story-title">
+          <SectionBg variant="grid" />
+          <div className="container-x relative z-10">
+            <Reveal className="mx-auto max-w-3xl">
+              <SectionHeading id="about-story-title" label="Our story" title={page.title} className="mb-8" />
+              <div className="card rounded-card-lg p-6 sm:p-10">
+                <Markdown source={page.content} />
+              </div>
+            </Reveal>
           </div>
         </section>
       )}
 
       {coverageItems.length > 0 && (
-        <section className="bg-white py-16 sm:py-20" aria-labelledby="about-reach-title">
-          <div className="container-x">
+        <section className="relative overflow-x-clip bg-white section-y" aria-labelledby="about-reach-title">
+          <SectionBg variant="dots" />
+          <div className="container-x relative z-10">
             <Reveal>
-              <SectionHeading id="about-reach-title" label="Where We Work" title="A Growing Network [[Across India]]" description="Every number below is counted from active training centers and verified trainers on this platform." align="center" />
+              <SectionHeading
+                id="about-reach-title"
+                label="Where we work"
+                title="A Growing Network [[Across India]]"
+                description="Every number below is counted from active training centers and verified trainers on this platform — nothing here is a claim we cannot show you."
+                align="center"
+              />
             </Reveal>
-            <ul className="mt-12 grid grid-cols-2 gap-5 md:grid-cols-4">
+            <ul className="mt-12 grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
               {coverageItems.map((c, i) => (
-                <Reveal as="li" key={c.label} delay={i * 70} className="card p-6 text-center">
-                  <span className="block font-heading text-4xl font-extrabold text-orange tabular-nums">
+                <Reveal as="li" key={c.label} delay={i * 70} className="card flex flex-col items-center card-p text-center">
+                  <span className="font-heading text-4xl font-extrabold text-orange tabular-nums">
                     <CountUp value={c.value} />
                   </span>
-                  <span className="mt-1 block text-sm font-semibold text-muted">{c.label}</span>
+                  <span aria-hidden className="mt-3 block h-px w-8 bg-line" />
+                  <span className="mt-3 text-body-sm font-semibold text-muted">{c.label}</span>
                 </Reveal>
               ))}
             </ul>
-            <div className="mt-8 text-center">
-              <ButtonLink href="/training-centers" variant="navy" rightIcon={<ArrowRight className="h-4 w-4" />}>
+            <div className="mt-10 text-center">
+              <ButtonLink href="/training-centers" variant="navy" size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
                 Find a training center
               </ButtonLink>
             </div>
@@ -133,7 +137,12 @@ export default async function AboutPage() {
 
       <ImpactBand stats={impact} />
 
-      <CtaBand title="Join the [[EduSkill]] Movement" description="Learn a skill, volunteer as a trainer or support a student's journey – there is a place for everyone." primary={{ label: "Apply as a Student", href: "/register" }} secondary={{ label: "Become a Volunteer Trainer", href: "/become-a-trainer" }} />
+      <CtaBand
+        title="Join the [[EduSkill]] Movement"
+        description="Learn a skill, volunteer as a trainer or support a student's journey – there is a place for everyone."
+        primary={{ label: "Apply as a Student", href: "/register" }}
+        secondary={{ label: "Become a Volunteer Trainer", href: "/become-a-trainer" }}
+      />
     </>
   );
 }

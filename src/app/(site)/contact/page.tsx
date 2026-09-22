@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Clock, Mail, MapPin, MessageCircle, Phone, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, Clock, Mail, MapPin, MessageCircle, Phone, type LucideIcon } from "lucide-react";
 import { getBranding } from "@/lib/settings";
 import { getPage } from "@/lib/cms";
 import { absoluteUrl } from "@/lib/utils";
 import { PageHero } from "@/components/site/page-hero";
 import { EnquiryForm } from "@/components/site/enquiry-form";
 import { Markdown } from "@/components/site/markdown";
+import { SectionBg, IconTile } from "@/components/site/decor";
 import { JsonLd } from "@/components/site/json-ld";
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
@@ -41,44 +42,64 @@ export default async function ContactPage({ searchParams }: Props) {
   return (
     <>
       <JsonLd data={{ "@context": "https://schema.org", "@type": "ContactPage", name: "Contact Us", url: absoluteUrl("/contact"), mainEntity: { "@type": "Organization", name: branding.siteName, email: c.email || undefined, telephone: c.phone || undefined } }} />
-      <PageHero eyebrow="Contact" title="We're Here to [[Help]]" description={page?.excerpt ?? "Questions about admissions, volunteering, partnerships or donations? Send us a message and our team will get back to you."} breadcrumbs={[{ label: "Home", href: "/" }, { label: "Contact" }]} compact />
 
-      <section className="container-x grid gap-10 py-14 lg:grid-cols-12 lg:py-20">
-        <div className="space-y-4 lg:col-span-4">
-          {cards.map((card) => {
-            const Icon = card.icon;
-            const body = (
-              <>
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-light text-orange">
-                  <Icon className="h-5 w-5" aria-hidden />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-xs font-semibold tracking-wide text-muted uppercase">{card.label}</span>
-                  <span className="mt-0.5 block whitespace-pre-line break-words text-sm font-medium text-ink">{card.value}</span>
-                </span>
-              </>
-            );
-            return card.href ? (
-              <a key={card.label} href={card.href} target={card.external ? "_blank" : undefined} rel={card.external ? "noopener noreferrer" : undefined} className="card card-hover flex items-start gap-4 p-5">
-                {body}
-              </a>
-            ) : (
-              <div key={card.label} className="card flex items-start gap-4 p-5">
-                {body}
+      <PageHero
+        eyebrow="Contact"
+        title="We're Here to [[Help]]"
+        description={page?.excerpt ?? "Questions about admissions, volunteering, partnerships or donations? Send us a message and our team will get back to you."}
+        breadcrumbs={[{ label: "Home", href: "/" }, { label: "Contact" }]}
+        compact
+      />
+
+      <section className="relative overflow-x-clip bg-surface section-y">
+        <SectionBg variant="mesh" />
+        <div className="container-x relative z-10 grid gap-8 lg:grid-cols-12 lg:gap-10">
+          {/* Ways to reach us first on a phone — a tap-to-call beats a form when you are on data. */}
+          <div className="lg:col-span-5 xl:col-span-4">
+            <h2 className="text-h3 text-navy">Ways to reach us</h2>
+            <ul className="mt-5 space-y-3">
+              {cards.map((card) => {
+                const body = (
+                  <>
+                    <IconTile icon={card.icon} tone="orange" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-overline text-muted">{card.label}</span>
+                      <span className="mt-1 block break-words whitespace-pre-line text-body font-semibold text-ink">{card.value}</span>
+                    </span>
+                    {card.href && <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 text-muted transition-colors duration-micro group-hover:text-orange motion-reduce:transition-none" aria-hidden />}
+                  </>
+                );
+                return (
+                  <li key={card.label}>
+                    {card.href ? (
+                      <a
+                        href={card.href}
+                        target={card.external ? "_blank" : undefined}
+                        rel={card.external ? "noopener noreferrer" : undefined}
+                        className="group card card-hover ring-focus flex items-start gap-4 p-5"
+                      >
+                        {body}
+                      </a>
+                    ) : (
+                      <div className="card flex items-start gap-4 p-5">{body}</div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            {page?.content && (
+              <div className="card mt-3 p-5">
+                <Markdown source={page.content} className="text-body-sm" />
               </div>
-            );
-          })}
-          {page?.content && (
-            <div className="card p-5">
-              <Markdown source={page.content} className="text-sm" />
+            )}
+          </div>
+
+          <div className="lg:col-span-7 xl:col-span-8">
+            <div className="card rounded-card-lg p-6 sm:p-8">
+              <h2 className="text-h2 text-navy">Send us a message</h2>
+              <p className="mt-2 mb-7 text-body text-muted">Fields marked * are required. A real person reads every message — we usually reply within two working days.</p>
+              <EnquiryForm defaultType={typeof sp.type === "string" ? sp.type : undefined} />
             </div>
-          )}
-        </div>
-        <div className="lg:col-span-8">
-          <div className="card rounded-card-lg p-6 sm:p-8">
-            <h2 className="text-2xl font-extrabold text-navy">Send us a message</h2>
-            <p className="mt-1 mb-6 text-sm text-muted">Fields marked * are required. We never share your details.</p>
-            <EnquiryForm defaultType={typeof sp.type === "string" ? sp.type : undefined} />
           </div>
         </div>
       </section>

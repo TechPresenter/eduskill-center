@@ -25,7 +25,7 @@ export default async function StudentAssignmentsPage() {
   const pending = assignments.filter((a) => a.studentStatus === "NOT_SUBMITTED" || a.studentStatus === "OVERDUE").length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       <PageHeader title="Assignments" description={assignments.length ? `${pending} pending · ${assignments.length - pending} submitted` : "Assignments set by your trainer appear here."} />
       {assignments.length === 0 ? (
         <EmptyState icon={<FileText className="h-7 w-7" />} title="No assignments yet" description="Your trainer has not set any assignments for your batch." />
@@ -50,15 +50,15 @@ export default async function StudentAssignmentsPage() {
                   action={<Badge tone={st.tone}>{st.label}</Badge>}
                 />
                 <CardBody className="space-y-4">
-                  {a.description && <p className="text-sm whitespace-pre-line text-ink">{a.description}</p>}
+                  {a.description && <p className="text-body-sm whitespace-pre-line text-ink">{a.description}</p>}
                   {a.attachmentUrl && (
-                    <a href={a.attachmentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-semibold text-navy hover:underline">
+                    <a href={a.attachmentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-body-sm font-semibold text-navy hover:underline">
                       <Paperclip className="h-4 w-4" /> Assignment attachment
                     </a>
                   )}
                   {a.submission && (
-                    <div className="rounded-xl border border-line bg-surface/60 p-4 text-sm">
-                      <p className="text-xs font-semibold tracking-wide text-muted uppercase">Your submission · {formatDateTime(a.submission.submittedAt)}</p>
+                    <div className="rounded-md border border-line bg-surface/60 p-4 text-body-sm">
+                      <p className="text-caption font-semibold tracking-wide text-muted uppercase">Your submission · {formatDateTime(a.submission.submittedAt)}</p>
                       {a.submission.text && <p className="mt-1 whitespace-pre-line text-ink">{a.submission.text}</p>}
                       {a.submission.fileUrl && (
                         <a href={a.submission.fileUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 font-semibold text-navy hover:underline">
@@ -66,12 +66,12 @@ export default async function StudentAssignmentsPage() {
                         </a>
                       )}
                       {a.submission.status === "GRADED" && (
-                        <div className="mt-3 rounded-lg bg-success-light p-3">
+                        <div className="mt-3 rounded-md bg-success-light p-3">
                           <p className="font-bold text-green-800">
                             Marks: {a.submission.marks ?? "—"} / {a.maxMarks}
                           </p>
                           {a.submission.feedback && <p className="mt-0.5 text-green-900">Feedback: {a.submission.feedback}</p>}
-                          {a.submission.gradedAt && <p className="mt-0.5 text-xs text-green-800/80">Graded {formatDateTime(a.submission.gradedAt)}</p>}
+                          {a.submission.gradedAt && <p className="mt-0.5 text-caption text-green-800/80">Graded {formatDateTime(a.submission.gradedAt)}</p>}
                         </div>
                       )}
                     </div>

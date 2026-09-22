@@ -8,12 +8,13 @@ import { optionalUuid, paginationSchema } from "@/lib/api/query";
 import { formatDate, formatNumber, titleCase } from "@/lib/utils";
 import { certificateListSchema, gradeFor, listCertificateCandidates, listCertificates } from "@/server/certificates";
 import { getAdminLookups, progressNumbers } from "@/server/admissions";
-import { PageHeader } from "@/components/ui/misc";
+import { ButtonLink } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/badge";
 import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
 import { Pager } from "@/components/admin/pickers/pager";
 import { EmptyState } from "@/components/ui/feedback";
 import { StatsCard } from "@/components/ui/stats";
+import { AdminListPage } from "@/components/admin/shared/list-page";
 import { FilterBar } from "@/components/admin/pickers/filter-bar";
 import { QueryTabs } from "@/components/admin/pickers/query-tabs";
 import { ExportButton } from "@/components/admin/pickers/export-button";
@@ -66,7 +67,7 @@ export default async function CertificatesPage({ searchParams }: { searchParams:
           ]}
         />
         {data.meta.total === 0 && !Object.keys(sp).some((k) => k !== "tab") ? (
-          <EmptyState icon={<Award className="h-7 w-7" />} title="No certificates issued yet" description="Issue certificates to eligible students from the Eligible tab." action={<Link href={withParams(base, {}, { tab: "eligible" })} className="text-sm font-semibold text-navy hover:underline">View eligible students</Link>} />
+          <EmptyState icon={<Award className="h-7 w-7" />} title="No certificates issued yet" description="Students who meet the attendance and assessment bar appear under Eligible, ready to be issued." action={<ButtonLink href={withParams(base, {}, { tab: "eligible" })} variant="outline">View eligible students</ButtonLink>} />
         ) : (
           <>
             <TableWrap>
@@ -90,8 +91,8 @@ export default async function CertificatesPage({ searchParams }: { searchParams:
                     <TD primary>
                       <span className="flex items-start justify-between gap-2">
                         <span className="min-w-0">
-                          <span className="font-mono text-xs font-semibold text-navy">{c.certificateNo}</span>
-                          <span className="block text-[11px] font-normal text-muted">
+                          <span className="font-mono text-caption font-semibold text-navy">{c.certificateNo}</span>
+                          <span className="block text-caption font-normal text-muted">
                             {formatNumber(c.verificationCount)} verification{c.verificationCount === 1 ? "" : "s"}
                           </span>
                         </span>
@@ -101,7 +102,7 @@ export default async function CertificatesPage({ searchParams }: { searchParams:
                         </span>
                       </span>
                       {c.revokedAt && (
-                        <span className="mt-1 block text-[11px] font-normal text-danger md:hidden">
+                        <span className="mt-1 block text-caption font-normal text-danger md:hidden">
                           {formatDate(c.revokedAt)} · {c.revokedReason}
                         </span>
                       )}
@@ -110,15 +111,15 @@ export default async function CertificatesPage({ searchParams }: { searchParams:
                       <Link href={`/admin/students/${c.student.id}`} className="font-semibold hover:text-navy">
                         {c.studentName}
                       </Link>
-                      <span className="block font-mono text-xs text-muted">{c.student.studentId ?? "—"}</span>
+                      <span className="block font-mono text-caption text-muted">{c.student.studentId ?? "—"}</span>
                     </TD>
                     <TD label="Course">
                       {c.courseName}
-                      <span className="block text-xs text-muted">{c.durationText}</span>
+                      <span className="block text-caption text-muted">{c.durationText}</span>
                     </TD>
                     <TD label="Center & batch">
                       <span className="block">{c.centerName}</span>
-                      <Link href={`/admin/admissions/${c.admission.id}`} className="font-mono text-xs text-muted hover:text-navy">
+                      <Link href={`/admin/admissions/${c.admission.id}`} className="font-mono text-caption text-muted hover:text-navy">
                         {c.admission.batch.code} · {c.admission.admissionNo}
                       </Link>
                     </TD>
@@ -132,7 +133,7 @@ export default async function CertificatesPage({ searchParams }: { searchParams:
                     <TD mobile="hidden">
                       <StatusBadge status={c.status} />
                       {c.revokedAt && (
-                        <span className="block max-w-48 text-[11px] text-danger" title={c.revokedReason ?? undefined}>
+                        <span className="block max-w-48 text-caption text-danger" title={c.revokedReason ?? undefined}>
                           {formatDate(c.revokedAt)} · {c.revokedReason}
                         </span>
                       )}
@@ -144,7 +145,7 @@ export default async function CertificatesPage({ searchParams }: { searchParams:
                 ))}
               </TBody>
             </TableWrap>
-            <Pager className="mt-4" page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} base={base} params={sp} />
+            <Pager page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} base={base} params={sp} />
           </>
         )}
       </>
@@ -175,7 +176,7 @@ export default async function CertificatesPage({ searchParams }: { searchParams:
       <>
         <FilterBar lookups={lookups} preserve={["tab"]} fields={[{ type: "center" }, { type: "course" }, { type: "batch", statuses: ["ONGOING", "COMPLETED"] }]} />
         <EligibleTable items={items} canIssue={can.issue} />
-        <Pager className="mt-4" page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} base={base} params={sp} />
+        <Pager page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} base={base} params={sp} />
       </>
     );
   } else {
@@ -184,29 +185,33 @@ export default async function CertificatesPage({ searchParams }: { searchParams:
   }
 
   return (
-    <div>
-      <PageHeader
-        title="Certificates"
-        description="Issue, download, verify and revoke course completion certificates."
-        actions={tab === "issued" ? <ExportButton href={withParams("/api/admin/certificates/export", sp, { page: undefined, limit: undefined, tab: undefined })} disabled={!can.export} /> : undefined}
-      />
-      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatsCard label="Issued" value={issuedCount} tone="success" href={withParams(base, {}, { status: "ISSUED" })} />
-        <StatsCard label="Revoked" value={revokedCount} tone="warning" href={withParams(base, {}, { status: "REVOKED" })} />
-        <StatsCard label="Eligible, not issued" value={eligibleCount} tone="orange" href={withParams(base, {}, { tab: "eligible" })} />
-        <StatsCard label="Public verifications" value={verifications._sum.verificationCount ?? 0} tone="navy" hint={titleCase("all time")} />
-      </div>
-      <QueryTabs
-        param="tab"
-        defaultValue="issued"
-        className="mb-4"
-        items={[
-          { value: "issued", label: "Issued", count: issuedCount + revokedCount },
-          { value: "eligible", label: "Eligible", count: eligibleCount },
-          { value: "force", label: "Force issue" },
-        ]}
-      />
+    <AdminListPage
+      header={{
+        title: "Certificates",
+        description: "Issue, download, verify and revoke course completion certificates.",
+        actions: tab === "issued" ? <ExportButton href={withParams("/api/admin/certificates/export", sp, { page: undefined, limit: undefined, tab: undefined })} disabled={!can.export} /> : undefined,
+      }}
+      tabs={
+        <>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatsCard label="Issued" value={issuedCount} tone="success" href={withParams(base, {}, { status: "ISSUED" })} />
+            <StatsCard label="Revoked" value={revokedCount} tone="warning" href={withParams(base, {}, { status: "REVOKED" })} />
+            <StatsCard label="Eligible, not issued" value={eligibleCount} tone="orange" href={withParams(base, {}, { tab: "eligible" })} />
+            <StatsCard label="Public verifications" value={verifications._sum.verificationCount ?? 0} tone="navy" hint={titleCase("all time")} />
+          </div>
+          <QueryTabs
+            param="tab"
+            defaultValue="issued"
+            items={[
+              { value: "issued", label: "Issued", count: issuedCount + revokedCount },
+              { value: "eligible", label: "Eligible", count: eligibleCount },
+              { value: "force", label: "Force issue" },
+            ]}
+          />
+        </>
+      }
+    >
       {body}
-    </div>
+    </AdminListPage>
   );
 }

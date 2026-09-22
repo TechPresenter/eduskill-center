@@ -17,10 +17,10 @@ export function profileCompletionPct(student: ProfileCompletionInput): number {
   return Math.round((filled / REQUIRED_FIELDS.length) * 100);
 }
 
-const ROW = "flex min-h-14 items-center gap-3 px-4 py-2.5 text-left tap-highlight-none transition-colors active:bg-surface";
+const ROW = "flex min-h-14 items-center gap-3 px-4 py-2.5 text-left tap-highlight-none transition-colors motion-reduce:transition-none active:bg-surface";
 
 function RowIcon({ children, tone = "navy" }: { children: React.ReactNode; tone?: "navy" | "danger" }) {
-  return <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", tone === "danger" ? "bg-danger-light text-danger" : "bg-lavender text-navy")}>{children}</span>;
+  return <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-md", tone === "danger" ? "bg-danger-light text-danger" : "bg-lavender text-navy")}>{children}</span>;
 }
 
 function HubRow({ href, icon, label, hint, badge }: { href: string; icon: React.ReactNode; label: string; hint?: string; badge?: number }) {
@@ -29,10 +29,10 @@ function HubRow({ href, icon, label, hint, badge }: { href: string; icon: React.
       <Link href={href} className={ROW}>
         <RowIcon>{icon}</RowIcon>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-semibold text-ink">{label}</span>
-          {hint && <span className="block truncate text-[12px] text-muted">{hint}</span>}
+          <span className="block truncate text-body font-semibold text-ink">{label}</span>
+          {hint && <span className="block truncate text-caption text-muted">{hint}</span>}
         </span>
-        {badge ? <span className="shrink-0 rounded-full bg-orange px-2 py-0.5 text-[12px] font-bold text-white tabular-nums">{badge}</span> : null}
+        {badge ? <span className="shrink-0 rounded-full bg-orange px-2 py-0.5 text-caption font-bold text-white tabular-nums">{badge}</span> : null}
         <ChevronRight className="h-5 w-5 shrink-0 text-muted" aria-hidden />
       </Link>
     </li>
@@ -75,15 +75,15 @@ export function ProfileHub({ name, studentId, photoUrl, mobile, email, location,
 
       <section className="flex flex-col items-center gap-1.5 py-2 text-center" aria-label="Your identity">
         <Avatar name={name} src={photoUrl} size={88} className="ring-4 ring-lavender" />
-        <h2 className="mt-1 font-heading text-xl font-extrabold text-navy">{name}</h2>
+        <h2 className="mt-1 text-h3 text-navy">{name}</h2>
         {studentId ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-navy-soft px-2.5 py-1 font-mono text-[12px] font-semibold text-navy">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-navy-soft px-2.5 py-1 font-mono text-caption font-semibold text-navy">
             <IdCard className="h-3.5 w-3.5" aria-hidden /> {studentId}
           </span>
         ) : (
-          <span className="text-[12px] text-muted">Student ID is issued on admission</span>
+          <span className="text-caption text-muted">Student ID is issued on admission</span>
         )}
-        <div className="flex flex-col items-center text-[13px] text-muted">
+        <div className="flex flex-col items-center text-body-sm text-muted">
           {mobile && (
             <a href={`tel:${mobile}`} className="inline-flex min-h-11 items-center gap-1.5 text-navy">
               <Phone className="h-4 w-4" aria-hidden /> {mobile}
@@ -100,10 +100,10 @@ export function ProfileHub({ name, studentId, photoUrl, mobile, email, location,
       {!profileCompleted && (
         <div className="card p-4">
           <ProgressBar label={`Profile ${completion}% complete`} value={completion} tone={completion >= 80 ? "success" : "orange"} />
-          <p className="mt-2 text-[13px] text-muted">A complete profile is required before you can apply for a course.</p>
+          <p className="mt-2 text-body-sm text-muted">A complete profile is required before you can apply for a course.</p>
           <Link
             href="/student/profile/edit"
-            className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-orange px-4 text-[15px] font-semibold text-white tap-highlight-none transition-transform active:scale-[0.98] motion-reduce:transition-none"
+            className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-orange px-4 text-body font-semibold text-white tap-highlight-none transition-transform active:scale-[0.98] motion-reduce:transition-none"
           >
             Complete profile
           </Link>
@@ -111,7 +111,7 @@ export function ProfileHub({ name, studentId, photoUrl, mobile, email, location,
       )}
 
       <div>
-        <h3 className="mb-2 px-1 text-[12px] font-bold tracking-[0.14em] text-muted uppercase">My details</h3>
+        <h3 className="mb-2 px-1 text-overline text-muted">My details</h3>
         <ul className="card divide-y divide-line overflow-hidden">
           <HubRow href="/student/profile/edit#personal" icon={<UserCircle className="h-5 w-5" aria-hidden />} label="Personal details" hint="Name, guardian, date of birth" />
           <HubRow href="/student/profile/edit#contact" icon={<Phone className="h-5 w-5" aria-hidden />} label="Contact" hint={[mobile, email].filter(Boolean).join(" · ") || "Mobile, WhatsApp, email"} />
@@ -122,7 +122,7 @@ export function ProfileHub({ name, studentId, photoUrl, mobile, email, location,
       </div>
 
       <div>
-        <h3 className="mb-2 px-1 text-[12px] font-bold tracking-[0.14em] text-muted uppercase">Account</h3>
+        <h3 className="mb-2 px-1 text-overline text-muted">Account</h3>
         <ul className="card divide-y divide-line overflow-hidden">
           <HubRow href="/student/profile/edit" icon={<UserPen className="h-5 w-5" aria-hidden />} label="Edit profile" />
           <HubRow href="/student/settings" icon={<KeyRound className="h-5 w-5" aria-hidden />} label="Change password" hint="And manage logged-in devices" />
@@ -134,7 +134,7 @@ export function ProfileHub({ name, studentId, photoUrl, mobile, email, location,
               <RowIcon tone="danger">
                 <LogOut className="h-5 w-5" aria-hidden />
               </RowIcon>
-              <span className="min-w-0 flex-1 text-[15px] font-semibold">Log out</span>
+              <span className="min-w-0 flex-1 text-body font-semibold">Log out</span>
             </LogoutButton>
           </li>
         </ul>

@@ -34,7 +34,7 @@ export default async function ProgressDetailPage({ params }: { params: Promise<{
             <Avatar name={s.name} src={s.photoUrl} size={56} />
             <span>
               {s.name}
-              <span className="mt-1 flex flex-wrap items-center gap-2 text-sm font-medium text-muted">
+              <span className="mt-1 flex flex-wrap items-center gap-2 text-body-sm font-medium text-muted">
                 <span className="font-mono text-navy">{s.studentId ?? a.admissionNo}</span>
                 <StatusBadge status={a.status} />
               </span>
@@ -56,7 +56,7 @@ export default async function ProgressDetailPage({ params }: { params: Promise<{
       <div className="mb-4 flex items-center gap-3 lg:hidden">
         <Avatar name={s.name} src={s.photoUrl} size={44} />
         <span className="min-w-0">
-          <span className="block truncate font-mono text-sm font-semibold text-navy">{s.studentId ?? a.admissionNo}</span>
+          <span className="block truncate font-mono text-body-sm font-semibold text-navy">{s.studentId ?? a.admissionNo}</span>
           <span className="mt-0.5 flex flex-wrap items-center gap-2">
             <StatusBadge status={a.status} />
           </span>
@@ -66,12 +66,12 @@ export default async function ProgressDetailPage({ params }: { params: Promise<{
       {!p ? (
         <Card>
           <CardBody>
-            <p className="text-sm text-muted">Progress has not been computed for this admission yet. Use “Recompute” to calculate attendance, assessment and completion metrics.</p>
+            <p className="text-body-sm text-muted">Progress has not been computed for this admission yet. Use “Recompute” to calculate attendance, assessment and completion metrics.</p>
           </CardBody>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-          <div className="space-y-5 xl:col-span-2">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+          <div className="space-y-6 xl:col-span-2">
             <Card>
               <CardHeader title="Overview" description={`Last computed ${formatDateTime(p.updatedAt)}`} />
               <CardBody className="grid grid-cols-1 gap-6 md:grid-cols-[auto_1fr]">
@@ -79,7 +79,7 @@ export default async function ProgressDetailPage({ params }: { params: Promise<{
                   <RingProgress value={p.completionPct} size={140} label="Course" />
                   {p.isCompleted ? <Badge tone="navy">Completed {formatDate(p.completedAt)}</Badge> : <Badge tone="info">In training</Badge>}
                 </div>
-                <div className="space-y-5">
+                <div className="space-y-6">
                   <ProgressBar value={p.attendancePct} label={`Attendance – ${p.classesAttended} of ${p.classesHeld} classes held`} tone={p.attendancePct >= a.course.minAttendancePct ? "success" : "warning"} />
                   <ProgressBar value={p.assessmentAvgPct} label={p.assessmentAvgPct > 0 ? `Assessment average${p.finalMarksPct !== null ? ` (final exam ${p.finalMarksPct}%)` : ""}` : "Assessment average – no graded assessments yet"} tone={p.assessmentAvgPct === 0 ? "navy" : p.assessmentAvgPct >= a.course.passingMarksPct ? "success" : "warning"} />
                   <ProgressBar value={p.assignmentsTotal ? (p.assignmentsCompleted / p.assignmentsTotal) * 100 : 0} label={`Assignments – ${p.assignmentsCompleted} of ${p.assignmentsTotal} submitted`} tone="orange" />
@@ -109,7 +109,7 @@ export default async function ProgressDetailPage({ params }: { params: Promise<{
             </Card>
           </div>
 
-          <div className="order-first space-y-5 xl:order-none">
+          <div className="order-first space-y-6 xl:order-none">
             <Card>
               <CardHeader title="Certificate eligibility" />
               <CardBody className="space-y-4">
@@ -122,7 +122,7 @@ export default async function ProgressDetailPage({ params }: { params: Promise<{
                   certificate={a.certificate ? { id: a.certificate.id, certificateNo: a.certificate.certificateNo, status: a.certificate.status, issuedAt: a.certificate.issuedAt } : null}
                 />
                 {!a.certificate && p.certificateEligible && (
-                  <Link href="/admin/certificates?tab=eligible" className="inline-flex text-sm font-semibold text-navy hover:underline">
+                  <Link href="/admin/certificates?tab=eligible" className="inline-flex text-body-sm font-semibold text-navy hover:underline">
                     Issue from the Certificates module →
                   </Link>
                 )}
@@ -130,7 +130,7 @@ export default async function ProgressDetailPage({ params }: { params: Promise<{
             </Card>
             <Card>
               <CardHeader title="Links" />
-              <CardBody className="divide-y divide-line/70 text-sm">
+              <CardBody className="divide-y divide-line/70 text-body-sm">
                 {[
                   { href: `/admin/students/${s.id}`, label: "Student profile" },
                   { href: `/admin/applications/${a.applicationId}`, label: `Application ${a.application.applicationNo}` },

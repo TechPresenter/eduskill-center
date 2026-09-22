@@ -69,7 +69,7 @@ export function TicketForm({ topic }: { topic?: string } = {}) {
             <Select id="priority" value={form.priority} onChange={(e) => set("priority", e.target.value)} options={[{ value: "LOW", label: "Low" }, { value: "MEDIUM", label: "Medium" }, { value: "HIGH", label: "High – urgent" }]} />
           </Field>
         ) : (
-          <button type="button" onClick={() => setMoreOpen(true)} className="inline-flex min-h-11 items-center text-[13px] font-semibold text-navy underline">
+          <button type="button" onClick={() => setMoreOpen(true)} className="inline-flex min-h-11 items-center text-body-sm font-semibold text-navy underline">
             More options (priority)
           </button>
         )}

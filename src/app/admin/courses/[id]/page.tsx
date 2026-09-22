@@ -30,11 +30,11 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   const docName = (key: string) => docTypes.find((d) => d.key === key)?.name ?? key;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-lavender text-navy">
+            <span className="flex h-11 w-11 items-center justify-center rounded-md bg-lavender text-navy">
               <DynamicIcon name={course.icon ?? undefined} className="h-5 w-5" />
             </span>
             {course.name}
@@ -68,10 +68,10 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
       {/* The app bar shows only the course code on phones – keep the name and status in the page. */}
       <div className="flex flex-wrap items-center gap-2 lg:hidden">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lavender text-navy">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">
           <DynamicIcon name={course.icon ?? undefined} className="h-4 w-4" />
         </span>
-        <span className="text-base font-bold text-navy">{course.name}</span>
+        <h2 className="text-h4 min-w-0 text-navy">{course.name}</h2>
         <StatusBadge status={course.status} />
         {course.isFeatured && (
           <Badge tone="orange">
@@ -122,14 +122,14 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
             <CardHeader title="Syllabus" description={`${syllabus.length} module${syllabus.length === 1 ? "" : "s"}`} />
             <CardBody>
               {syllabus.length === 0 ? (
-                <p className="text-sm text-muted">No syllabus added yet.</p>
+                <p className="text-body-sm text-muted">No syllabus added yet.</p>
               ) : (
                 <ol className="space-y-3">
                   {syllabus.map((m, i) => (
-                    <li key={i} className="rounded-xl border border-line p-4">
-                      <p className="text-xs font-semibold tracking-wide text-orange uppercase">{m.module}</p>
+                    <li key={i} className="rounded-md border border-line p-4">
+                      <p className="text-caption font-semibold tracking-wide text-orange uppercase">{m.module}</p>
                       <p className="font-semibold text-navy">{m.title || "Untitled"}</p>
-                      {m.topics.length > 0 && <p className="mt-1 text-sm text-muted">{m.topics.join(" · ")}</p>}
+                      {m.topics.length > 0 && <p className="mt-1 text-body-sm text-muted">{m.topics.join(" · ")}</p>}
                     </li>
                   ))}
                 </ol>
@@ -138,7 +138,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
           </Card>
 
           <Card>
-            <CardHeader title="Recent batches" description="Latest 25 batches for this course." action={<Link href={`/admin/batches?courseId=${course.id}`} className="text-xs font-semibold text-orange hover:underline">All batches</Link>} />
+            <CardHeader title="Recent batches" description="Latest 25 batches for this course." action={<Link href={`/admin/batches?courseId=${course.id}`} className="text-caption font-semibold text-orange hover:underline">All batches</Link>} />
             <TableWrap className="rounded-none border-0">
               <THead>
                 <tr>
@@ -160,7 +160,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                           <Link href={`/admin/batches/${b.id}`} className="font-medium text-navy hover:underline">
                             {b.name}
                           </Link>
-                          <span className="block font-mono text-xs font-normal text-muted">{b.code}</span>
+                          <span className="block font-mono text-caption font-normal text-muted">{b.code}</span>
                         </span>
                         <span className="shrink-0 md:hidden">
                           <StatusBadge status={b.status} />
@@ -172,7 +172,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                         {b.center.name}
                       </Link>
                     </TD>
-                    <TD label="Dates" className="text-xs md:whitespace-nowrap">
+                    <TD label="Dates" className="text-caption md:whitespace-nowrap">
                       {formatDate(b.startDate)} – {formatDate(b.endDate)}
                     </TD>
                     <TD label="Trainer">{b.trainer?.user.name ?? <span className="text-muted">—</span>}</TD>
@@ -197,7 +197,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
           <Card>
             <CardHeader title="Fees" />
             <CardBody>
-              <dl className="space-y-2 text-sm">
+              <dl className="space-y-2 text-body-sm">
                 {[
                   ["Course fee", course.courseFee],
                   ["Registration fee", course.registrationFee],
@@ -214,16 +214,16 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                   <dd className="tabular-nums">{totalFee === 0 ? "Free" : formatINR(totalFee)}</dd>
                 </div>
               </dl>
-              <p className="mt-3 text-xs text-muted">{course.scholarshipAvailable ? `Scholarship available. ${course.scholarshipNote ?? ""}` : "No scholarship for this course."}</p>
+              <p className="mt-3 text-caption text-muted">{course.scholarshipAvailable ? `Scholarship available. ${course.scholarshipNote ?? ""}` : "No scholarship for this course."}</p>
             </CardBody>
           </Card>
 
           <Card>
             <CardHeader title="Applications by status" />
             <CardBody className="flex flex-wrap gap-2">
-              {appTotal === 0 && <p className="text-sm text-muted">No applications yet.</p>}
+              {appTotal === 0 && <p className="text-body-sm text-muted">No applications yet.</p>}
               {APP_ORDER.filter((s) => course.stats.applicationsByStatus[s]).map((s) => (
-                <Link key={s} href={`/admin/applications?courseId=${course.id}&status=${s}`} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs font-medium text-ink hover:border-navy/40 sm:min-h-0">
+                <Link key={s} href={`/admin/applications?courseId=${course.id}&status=${s}`} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-caption font-medium text-ink hover:border-navy/40 sm:min-h-0">
                   {titleCase(s)} <span className="rounded-full bg-white px-1.5 font-bold text-navy tabular-nums">{formatNumber(course.stats.applicationsByStatus[s])}</span>
                 </Link>
               ))}
@@ -233,12 +233,12 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
           <Card>
             <CardHeader title="Centers offering this course" description={`${course.centers.length} center${course.centers.length === 1 ? "" : "s"}`} />
             <ul className="divide-y divide-line">
-              {course.centers.length === 0 && <li className="px-5 py-4 text-sm text-muted">Not offered at any center yet. Add it from a center&apos;s Courses tab.</li>}
+              {course.centers.length === 0 && <li className="px-5 py-4 text-body-sm text-muted">Not offered at any center yet. Add it from a center&apos;s Courses tab.</li>}
               {course.centers.map((cc) => (
-                <li key={cc.centerId} className="flex min-h-14 items-center justify-between gap-3 px-5 py-3 text-sm sm:min-h-0">
+                <li key={cc.centerId} className="flex min-h-14 items-center justify-between gap-3 px-5 py-3 text-body-sm sm:min-h-0">
                   <Link href={`/admin/centers/${cc.center.id}`} className="min-w-0">
                     <span className="block truncate font-medium text-navy hover:underline">{cc.center.name}</span>
-                    <span className="block text-xs text-muted">
+                    <span className="block text-caption text-muted">
                       {cc.center.code} · {cc.center.district.name}, {cc.center.state.name}
                     </span>
                   </Link>
@@ -253,7 +253,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
             <CardBody className="space-y-3">
               <KeyValue label="Title" value={course.seoTitle ?? "—"} />
               <KeyValue label="Description" value={course.seoDescription ?? "—"} />
-              <KeyValue label="Slug" value={<span className="font-mono text-xs">{course.slug}</span>} />
+              <KeyValue label="Slug" value={<span className="font-mono text-caption">{course.slug}</span>} />
             </CardBody>
           </Card>
         </div>

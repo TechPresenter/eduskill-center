@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CalendarDays, Newspaper, UserRound } from "lucide-react";
+import { CalendarDays, Newspaper, UserRound, X } from "lucide-react";
 import { db } from "@/lib/db";
 import { absoluteUrl, formatDate } from "@/lib/utils";
+import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
 import { SitePagination } from "@/components/site/pagination";
 import { PageHero } from "@/components/site/page-hero";
-import { SafeImage } from "@/components/site/safe-image";
+import { Media } from "@/components/site/safe-image";
 import { markdownExcerpt } from "@/components/site/markdown";
+import { SectionBg } from "@/components/site/decor";
 import { Reveal } from "@/components/site/reveal";
+import { CtaBand } from "@/components/site/cta-band";
 
 const PAGE_SIZE = 9;
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
@@ -19,6 +22,9 @@ export const metadata: Metadata = {
   alternates: { canonical: absoluteUrl("/blog") },
   openGraph: { title: "Blog", description: "Updates and insights from EduSkill India Foundation.", url: absoluteUrl("/blog"), type: "website" },
 };
+
+/** A tag pill. Sits above the card's stretched link on its own raised layer so it stays clickable. */
+const TAG = "ring-focus inline-flex min-h-11 items-center rounded-full bg-lavender px-4 text-body-sm font-semibold text-navy transition-colors duration-micro hover:bg-navy hover:text-white motion-reduce:transition-none";
 
 export default async function BlogIndexPage({ searchParams }: Props) {
   const sp = await searchParams;
@@ -34,54 +40,83 @@ export default async function BlogIndexPage({ searchParams }: Props) {
   return (
     <>
       <PageHero compact eyebrow="Blog" title="News, Stories & [[Insights]]" description="Updates from our centers, trainers and students across India." breadcrumbs={[{ label: "Home", href: "/" }, { label: "Blog" }]} />
-      <section className="bg-lavender py-14 sm:py-20">
-        <div className="container-x">
+
+      <section className="relative overflow-x-clip bg-surface section-y" aria-labelledby="blog-list-title">
+        <SectionBg variant="mesh" />
+        <div className="container-x relative z-10">
+          <h2 id="blog-list-title" className="sr-only">
+            {tag ? `Posts tagged ${tag}` : "Latest posts"}
+          </h2>
+
           {tag && (
-            <p className="mb-6 text-sm text-muted">
-              Showing posts tagged <span className="font-semibold text-navy">#{tag}</span> ·{" "}
-              <Link href="/blog" className="font-semibold text-orange">
-                clear
+            <div className="mb-8 flex flex-wrap items-center gap-3">
+              <p className="text-body text-muted">
+                Showing posts tagged <span className="font-semibold text-navy">#{tag}</span>
+              </p>
+              <Link href="/blog" className="ring-focus inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-white px-4 text-body-sm font-semibold text-navy transition-colors duration-micro hover:bg-lavender motion-reduce:transition-none">
+                <X className="h-4 w-4" aria-hidden /> Clear filter
               </Link>
-            </p>
+            </div>
           )}
+
           {posts.length === 0 ? (
-            <EmptyState icon={<Newspaper className="h-7 w-7" />} title="No posts yet" description="Articles will appear here once published." />
+            <EmptyState
+              className="mx-auto max-w-2xl"
+              icon={<Newspaper className="h-7 w-7" />}
+              title={tag ? "No posts with this tag" : "The first posts are on their way"}
+              description={
+                tag
+                  ? "Nothing has been published under this tag yet. Clear the filter to read everything we have."
+                  : "Updates from our centres, notes from trainers and news about new courses will all be published here."
+              }
+              action={
+                tag ? (
+                  <ButtonLink href="/blog" variant="navy">
+                    Read all posts
+                  </ButtonLink>
+                ) : (
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <ButtonLink href="/events" variant="navy">
+                      See upcoming events
+                    </ButtonLink>
+                    <ButtonLink href="/about" variant="outline">
+                      About the Foundation
+                    </ButtonLink>
+                  </div>
+                )
+              }
+            />
           ) : (
-            <ul className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
               {posts.map((p, i) => (
                 <Reveal as="li" key={p.id} delay={Math.min(i, 5) * 60}>
-                  <article className="card card-hover flex h-full flex-col overflow-hidden">
-                    <Link href={`/blog/${p.slug}`} className="relative block h-48 bg-navy" aria-hidden tabIndex={-1}>
-                      {p.coverImage ? (
-                        <SafeImage src={p.coverImage} alt="" sizes="(max-width: 768px) 100vw, 33vw" />
-                      ) : (
-                        <span className="flex h-full items-center justify-center bg-linear-to-br from-navy to-navy-light">
-                          <Newspaper className="h-10 w-10 text-white/60" />
-                        </span>
-                      )}
-                    </Link>
-                    <div className="flex flex-1 flex-col p-5">
-                      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-                        <span className="inline-flex items-center gap-1">
+                  <article className="group card card-hover relative flex h-full flex-col overflow-hidden">
+                    <div className="rounded-t-card">
+                      <Media src={p.coverImage} alt={p.coverImage ? p.title : ""} seed={p.slug} ratio="16x9" tone="navy" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
+                    </div>
+                    <div className="flex flex-1 flex-col card-p">
+                      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted">
+                        <span className="inline-flex items-center gap-1.5">
                           <CalendarDays className="h-3.5 w-3.5 text-orange" aria-hidden /> {formatDate(p.publishedAt ?? p.createdAt)}
                         </span>
                         {p.authorName && (
-                          <span className="inline-flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1.5">
                             <UserRound className="h-3.5 w-3.5 text-orange" aria-hidden /> {p.authorName}
                           </span>
                         )}
                       </p>
-                      <h2 className="mt-2 text-lg font-bold leading-snug text-navy">
-                        <Link href={`/blog/${p.slug}`} className="hover:text-orange">
+                      <h3 className="mt-2 text-h3 text-navy">
+                        {/* Stretched link: one tab stop, one announcement, the whole card is the target. */}
+                        <Link href={`/blog/${p.slug}`} className="transition-colors duration-micro after:absolute after:inset-0 hover:text-orange focus-visible:text-orange motion-reduce:transition-none">
                           {p.title}
                         </Link>
-                      </h2>
-                      <p className="mt-2 flex-1 text-sm text-muted">{p.excerpt || markdownExcerpt(p.content, 140)}</p>
+                      </h3>
+                      <p className="mt-2 line-clamp-3 flex-1 text-body text-muted">{p.excerpt || markdownExcerpt(p.content, 140)}</p>
                       {p.tags.length > 0 && (
-                        <ul className="mt-4 flex flex-wrap gap-1.5">
+                        <ul className="relative z-raised mt-4 flex flex-wrap gap-1.5 border-t border-line pt-4">
                           {p.tags.slice(0, 3).map((t) => (
                             <li key={t}>
-                              <Link href={`/blog?tag=${encodeURIComponent(t)}`} className="rounded-full bg-lavender px-2.5 py-0.5 text-xs font-medium text-navy hover:bg-navy hover:text-white">
+                              <Link href={`/blog?tag=${encodeURIComponent(t)}`} className={TAG}>
                                 #{t}
                               </Link>
                             </li>
@@ -94,9 +129,12 @@ export default async function BlogIndexPage({ searchParams }: Props) {
               ))}
             </ul>
           )}
-          <SitePagination page={page} totalPages={totalPages} total={total} limit={PAGE_SIZE} hrefFor={(p) => `/blog?${new URLSearchParams({ ...(tag ? { tag } : {}), ...(p > 1 ? { page: String(p) } : {}) }).toString()}`} className="mt-10" />
+
+          <SitePagination page={page} totalPages={totalPages} total={total} limit={PAGE_SIZE} hrefFor={(p) => `/blog?${new URLSearchParams({ ...(tag ? { tag } : {}), ...(p > 1 ? { page: String(p) } : {}) }).toString()}`} className="mt-12" />
         </div>
       </section>
+
+      <CtaBand title="Be part of the [[change]]" description="Learn a skill, teach one, or fund a student's training." primary={{ label: "Apply Now", href: "/register" }} secondary={{ label: "Donate", href: "/donate" }} />
     </>
   );
 }

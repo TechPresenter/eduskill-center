@@ -94,20 +94,20 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         </span>
       </TD>
       <TD label="File">
-        <span className="block truncate text-xs text-muted md:max-w-56">{d.name}</span>
-        <span className="text-[11px] text-muted">{formatDate(d.createdAt)}</span>
+        <span className="block truncate text-caption text-muted md:max-w-56">{d.name}</span>
+        <span className="text-caption text-muted">{formatDate(d.createdAt)}</span>
       </TD>
       <TD label="Verified">
         <span className="hidden md:inline">
           <StatusBadge status={d.status} />
         </span>
         {d.verifiedById && (
-          <span className="block text-[11px] text-muted">
+          <span className="block text-caption text-muted">
             {actorName.get(d.verifiedById) ?? "Staff"} · {formatDate(d.verifiedAt)}
           </span>
         )}
-        {d.remarks && <span className="block text-[11px] text-muted md:max-w-56">{d.remarks}</span>}
-        {!d.verifiedById && !d.remarks && <span className="text-[11px] text-muted md:hidden">Not verified yet</span>}
+        {d.remarks && <span className="block text-caption text-muted md:max-w-56">{d.remarks}</span>}
+        {!d.verifiedById && !d.remarks && <span className="text-caption text-muted md:hidden">Not verified yet</span>}
       </TD>
       <TD actions>
         <DocumentActions endpoint={`/api/admin/applications/${app.id}/documents/${d.id}`} url={d.url} name={d.name} status={d.status} canDecide={can.update} />
@@ -124,7 +124,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         title={
           <span className="flex flex-wrap items-center gap-3">
             <span className="font-mono">{app.applicationNo}</span>
-            <StatusBadge status={app.status} className="text-sm" />
+            <StatusBadge status={app.status} className="text-body-sm" />
             {app.waitlistPosition && app.status === "WAITLISTED" && <Badge tone="warning">Waitlist #{app.waitlistPosition}</Badge>}
           </span>
         }
@@ -149,20 +149,20 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         {app.waitlistPosition && app.status === "WAITLISTED" && <Badge tone="warning">Waitlist #{app.waitlistPosition}</Badge>}
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <div className="space-y-5 xl:col-span-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
           <Card>
             <CardHeader title="Applicant" />
             <CardBody>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                 <Avatar name={s.name} src={s.photoUrl} size={64} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-lg font-bold text-navy">
+                  <p className="text-h3 text-navy">
                     <Link href={`/admin/students/${s.id}`} className="hover:underline">
                       {s.name}
                     </Link>
                   </p>
-                  <p className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-body-sm text-muted">
                     {s.studentId ? <span className="font-mono text-navy">{s.studentId}</span> : <Badge tone="warning">No Student ID yet</Badge>}
                     <span className="inline-flex items-center gap-1">
                       <Phone className="h-3.5 w-3.5" /> {s.mobile}
@@ -198,40 +198,40 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                 </div>
               }
             />
-            <CardBody className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            <CardBody className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <div className="space-y-1">
-                <p className="text-xs font-medium tracking-wide text-muted uppercase">Course</p>
+                <p className="text-caption font-medium tracking-wide text-muted uppercase">Course</p>
                 <p className="font-semibold text-ink">{app.course.name}</p>
-                <p className="text-xs text-muted">
+                <p className="text-caption text-muted">
                   {app.course.code} · {app.course.durationText} · {titleCase(app.course.level)} · {titleCase(app.course.mode)}
                 </p>
-                <p className="text-xs text-muted">
+                <p className="text-caption text-muted">
                   Min attendance {app.course.minAttendancePct}% · Passing {app.course.passingMarksPct}%
                 </p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-medium tracking-wide text-muted uppercase">Training center</p>
+                <p className="text-caption font-medium tracking-wide text-muted uppercase">Training center</p>
                 <p className="font-semibold text-ink">{app.center.name}</p>
-                <p className="text-xs text-muted">
+                <p className="text-caption text-muted">
                   {app.center.code} · <StatusBadge status={app.center.status} />
                 </p>
-                <p className="text-xs text-muted">{centerLocation}</p>
+                <p className="text-caption text-muted">{centerLocation}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-medium tracking-wide text-muted uppercase">Batch</p>
+                <p className="text-caption font-medium tracking-wide text-muted uppercase">Batch</p>
                 {app.batch ? (
                   <>
                     <p className="font-semibold text-ink">{app.batch.name}</p>
-                    <p className="text-xs text-muted">
+                    <p className="text-caption text-muted">
                       {app.batch.code} · <StatusBadge status={app.batch.status} />
                     </p>
-                    <p className="text-xs text-muted">
+                    <p className="text-caption text-muted">
                       {formatDate(app.batch.startDate)} – {formatDate(app.batch.endDate)}
                     </p>
-                    <p className="text-xs text-muted">{formatSchedule(app.batch)}</p>
+                    <p className="text-caption text-muted">{formatSchedule(app.batch)}</p>
                   </>
                 ) : (
-                  <p className="text-sm text-amber-700">Not allocated yet – required before admission is confirmed.</p>
+                  <p className="text-body-sm text-amber-700">Not allocated yet – required before admission is confirmed.</p>
                 )}
               </div>
             </CardBody>
@@ -269,16 +269,16 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                             </span>
                           </span>
                         </TD>
-                        <TD label="File" className="text-xs text-muted">
+                        <TD label="File" className="text-caption text-muted">
                           {d ? `Rejected upload: ${d.name}` : "Not uploaded"}
                         </TD>
                         <TD label="Verified">
                           <span className="hidden md:inline">
                             <Badge tone="danger">Missing</Badge>
                           </span>
-                          {d?.remarks && <span className="block text-[11px] text-muted md:max-w-56">{d.remarks}</span>}
+                          {d?.remarks && <span className="block text-caption text-muted md:max-w-56">{d.remarks}</span>}
                         </TD>
-                        <TD actions>{d ? <DocumentActions endpoint={`/api/admin/applications/${app.id}/documents/${d.id}`} url={d.url} name={d.name} status={d.status} canDecide={can.update} /> : <span className="text-xs text-muted">Ask the student to upload</span>}</TD>
+                        <TD actions>{d ? <DocumentActions endpoint={`/api/admin/applications/${app.id}/documents/${d.id}`} url={d.url} name={d.name} status={d.status} canDecide={can.update} /> : <span className="text-caption text-muted">Ask the student to upload</span>}</TD>
                       </TR>
                     );
                   })}
@@ -294,29 +294,29 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
               description={app.originalFee === 0 ? "This course is free of charge." : `${formatINR(app.paidAmount)} received of ${formatINR(app.payableAmount)} payable`}
               action={<DiscountButton applicationId={app.id} originalFee={app.originalFee} scholarshipAmount={app.scholarshipAmount} discountAmount={app.discountAmount} allowed={can.update && FEE_EDITABLE.includes(app.status) && app.originalFee > 0} reason={!can.update ? "You do not have permission to edit applications" : "Discount cannot be changed after admission"} />}
             />
-            <CardBody className="space-y-5">
+            <CardBody className="space-y-6">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                 {[
                   { label: "Original", value: app.originalFee, cls: "text-ink" },
-                  { label: "Scholarship", value: -app.scholarshipAmount, cls: "text-green-700" },
-                  { label: "Discount", value: -app.discountAmount, cls: "text-green-700" },
+                  { label: "Scholarship", value: -app.scholarshipAmount, cls: "text-success-dark" },
+                  { label: "Discount", value: -app.discountAmount, cls: "text-success-dark" },
                   { label: "Payable", value: app.payableAmount, cls: "text-navy" },
-                  { label: "Paid", value: app.paidAmount, cls: "text-green-700" },
-                  { label: "Due", value: due, cls: due > 0 ? "text-amber-700" : "text-green-700" },
+                  { label: "Paid", value: app.paidAmount, cls: "text-success-dark" },
+                  { label: "Due", value: due, cls: due > 0 ? "text-amber-700" : "text-success-dark" },
                 ].map((x) => (
-                  <div key={x.label} className="rounded-xl bg-surface p-3">
-                    <p className="text-[11px] font-medium tracking-wide text-muted uppercase">{x.label}</p>
-                    <p className={`mt-0.5 text-base font-bold tabular-nums ${x.cls}`}>{x.value < 0 ? `− ${formatINR(-x.value)}` : formatINR(x.value)}</p>
+                  <div key={x.label} className="rounded-md bg-surface p-3">
+                    <p className="text-caption font-medium tracking-wide text-muted uppercase">{x.label}</p>
+                    <p className={`mt-0.5 text-h4 tabular-nums ${x.cls}`}>{x.value < 0 ? `− ${formatINR(-x.value)}` : formatINR(x.value)}</p>
                   </div>
                 ))}
               </div>
               {app.fees.length > 0 && (
-                <p className="text-xs text-muted">
+                <p className="text-caption text-muted">
                   Fee lines: {app.fees.map((f) => `${f.description} ${formatINR(f.amount)}`).join(" · ")}
                 </p>
               )}
 
-              <div className="flex flex-col gap-3 rounded-xl border border-line p-4 sm:flex-row sm:items-start sm:justify-between [&>*]:min-w-0">
+              <div className="flex flex-col gap-3 rounded-md border border-line p-4 sm:flex-row sm:items-start sm:justify-between [&>*]:min-w-0">
                 <InstallmentsToggle applicationId={app.id} value={app.installmentsAllowed} allowed={can.update && FEE_EDITABLE.includes(app.status) && app.originalFee > 0} />
                 <InstallmentPlanButton applicationId={app.id} due={due} existing={app.installments} allowed={can.pay && PAYABLE.includes(app.status)} />
               </div>
@@ -360,7 +360,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
               )}
 
               <div>
-                <p className="mb-2 text-sm font-semibold text-navy">Payments</p>
+                <p className="mb-2 text-body-sm font-semibold text-navy">Payments</p>
                 <TableWrap>
                   <THead>
                     <tr>
@@ -379,11 +379,11 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                         <TD primary>
                           <span className="flex items-start justify-between gap-2">
                             <span className="min-w-0">
-                              <Link href={`/admin/payments/${pm.id}`} className="font-mono text-xs font-semibold text-navy hover:underline">
+                              <Link href={`/admin/payments/${pm.id}`} className="font-mono text-caption font-semibold text-navy hover:underline">
                                 {pm.paymentNo}
                               </Link>
-                              {pm.receiptNo && <span className="block text-[11px] font-normal text-muted">Receipt {pm.receiptNo}</span>}
-                              {pm.referenceNo && <span className="block text-[11px] font-normal text-muted">Ref {pm.referenceNo}</span>}
+                              {pm.receiptNo && <span className="block text-caption font-normal text-muted">Receipt {pm.receiptNo}</span>}
+                              {pm.referenceNo && <span className="block text-caption font-normal text-muted">Ref {pm.referenceNo}</span>}
                             </span>
                             <span className="shrink-0 text-right md:hidden">
                               <span className="block tabular-nums">{formatINR(pm.amount)}</span>
@@ -406,7 +406,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                             href={withBasePath(`/api/admin/payments/${pm.id}/document`)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex min-h-11 items-center text-xs font-semibold text-orange hover:underline md:min-h-0"
+                            className="inline-flex min-h-11 items-center text-caption font-semibold text-orange hover:underline md:min-h-0"
                           >
                             {pm.status === "COMPLETED" ? "Receipt" : "Invoice"}
                           </a>
@@ -423,7 +423,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
             <CardHeader title="Timeline" description="Every status change with who made it." />
             <CardBody>
               {app.statusHistory.length === 0 ? (
-                <p className="text-sm text-muted">No history recorded.</p>
+                <p className="text-body-sm text-muted">No history recorded.</p>
               ) : (
                 <Timeline
                   items={[...app.statusHistory].reverse().map((h) => ({
@@ -449,7 +449,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         </div>
 
         {/* Workflow actions lead on phones instead of sitting ~2000px below the fold. */}
-        <div className="order-first space-y-5 xl:order-none">
+        <div className="order-first space-y-6 xl:order-none">
           <Card>
             <CardHeader title="Status & actions" description={app.reviewedById ? `Last handled by ${actorName.get(app.reviewedById) ?? "staff"}` : undefined} />
             <CardBody>
@@ -468,22 +468,22 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                 can={can}
               />
               {(app.reviewNotes || app.rejectionReason || app.documentsRequestNote) && (
-                <dl className="mt-4 space-y-2 border-t border-line pt-4 text-sm">
+                <dl className="mt-4 space-y-2 border-t border-line pt-4 text-body-sm">
                   {app.rejectionReason && (
                     <div>
-                      <dt className="text-[11px] font-medium text-muted uppercase">Rejection reason</dt>
+                      <dt className="text-caption font-medium text-muted uppercase">Rejection reason</dt>
                       <dd className="text-danger">{app.rejectionReason}</dd>
                     </div>
                   )}
                   {app.documentsRequestNote && (
                     <div>
-                      <dt className="text-[11px] font-medium text-muted uppercase">Last document request</dt>
+                      <dt className="text-caption font-medium text-muted uppercase">Last document request</dt>
                       <dd className="text-muted">{app.documentsRequestNote}</dd>
                     </div>
                   )}
                   {app.reviewNotes && (
                     <div>
-                      <dt className="text-[11px] font-medium text-muted uppercase">Review notes</dt>
+                      <dt className="text-caption font-medium text-muted uppercase">Review notes</dt>
                       <dd className="text-muted">{app.reviewNotes}</dd>
                     </div>
                   )}
@@ -561,8 +561,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                   {notifications.map((n) => (
                     <li key={n.id} className="flex items-start justify-between gap-3 px-5 py-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-ink">{n.title}</p>
-                        <p className="text-xs text-muted">
+                        <p className="truncate text-body-sm font-medium text-ink">{n.title}</p>
+                        <p className="text-caption text-muted">
                           {titleCase(n.channel)} · {formatDateTime(n.sentAt ?? n.createdAt)}
                           {n.readAt ? " · read" : ""}
                         </p>

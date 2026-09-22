@@ -135,6 +135,8 @@ export function LocationCascade({ value, onChange, depth = "block", required, er
       onChange={(e) => onChange({ stateId: value.stateId, districtId: e.target.value || undefined, blockId: undefined })}
       options={districts.map((d) => ({ value: d.id, label: d.name }))}
       placeholder={loading.d ? "Loading…" : value.stateId ? `${placeholderPrefix} district` : "Select state first"}
+      // The placeholder says "Loading…" visually; aria-busy says the same thing to a screen reader.
+      aria-busy={loading.d || undefined}
       required={required}
       disabled={disabled || !value.stateId}
       invalid={!!errors?.districtId}
@@ -148,6 +150,7 @@ export function LocationCascade({ value, onChange, depth = "block", required, er
       onChange={(e) => onChange({ ...value, blockId: e.target.value || undefined })}
       options={blocks.map((b) => ({ value: b.id, label: b.name }))}
       placeholder={loading.b ? "Loading…" : value.districtId ? `${placeholderPrefix} block` : "Select district first"}
+      aria-busy={loading.b || undefined}
       required={required}
       disabled={disabled || !value.districtId}
       invalid={!!errors?.blockId}
@@ -168,7 +171,10 @@ export function LocationCascade({ value, onChange, depth = "block", required, er
   }
 
   return (
-    <div className={className}>
+    // Same contract as `bare`: an explicit `className` replaces the default, otherwise the three
+    // labelled fields get the standard stack gap. Without this they sat flush against each other
+    // wherever a caller passed no className at all.
+    <div className={className ?? "space-y-4"}>
       <Field label={labels?.state ?? "State"} required={required} error={errors?.stateId}>
         {stateSelect}
       </Field>

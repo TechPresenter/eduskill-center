@@ -17,8 +17,8 @@ export interface StudentIdCardProps {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline gap-3">
-      <dt className="w-[4.5rem] shrink-0 text-[11px] font-semibold tracking-wide text-white/55 uppercase">{label}</dt>
-      <dd className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white">{value}</dd>
+      <dt className="w-[4.5rem] shrink-0 text-caption font-semibold tracking-wide text-white/55 uppercase">{label}</dt>
+      <dd className="min-w-0 flex-1 truncate text-body-sm font-semibold text-white">{value}</dd>
     </div>
   );
 }
@@ -29,19 +29,19 @@ function Row({ label, value }: { label: string; value: string }) {
  */
 export function StudentIdCard({ name, studentId, photoUrl, course, center, batch, location, applyHref = "/student/apply" }: StudentIdCardProps) {
   return (
-    <section className="overflow-hidden rounded-2xl bg-navy text-white shadow-card" aria-label="Student card">
+    <section className="overflow-hidden rounded-card bg-navy text-white shadow-e1" aria-label="Student card">
       <div className="flex items-center gap-3 p-4">
         <Avatar name={name} src={photoUrl} size={56} className="ring-2 ring-white/25" />
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold tracking-[0.18em] text-white/55 uppercase">Student</p>
-          <h2 className="truncate font-heading text-[17px] font-extrabold text-white">{name}</h2>
+          <p className="text-overline text-white/55">Student</p>
+          <h2 className="truncate text-h4 text-white">{name}</h2>
           {studentId ? (
-            <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-orange-light/15 px-2 py-0.5 font-mono text-[12px] font-semibold text-orange-light">
+            <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-orange-light/15 px-2 py-0.5 font-mono text-caption font-semibold text-orange-light">
               <IdCard className="h-3.5 w-3.5" aria-hidden />
               {studentId}
             </span>
           ) : (
-            <p className="mt-0.5 text-[12px] text-white/60">ID issued on admission</p>
+            <p className="mt-0.5 text-caption text-white/60">ID issued on admission</p>
           )}
         </div>
       </div>
@@ -54,9 +54,9 @@ export function StudentIdCard({ name, studentId, photoUrl, course, center, batch
         </dl>
       ) : (
         <div className="border-t border-white/10 px-4 py-3.5">
-          <p className="text-[13px] text-white/75">No active admission yet.</p>
+          <p className="text-body-sm text-white/75">No active admission yet.</p>
           {location && (
-            <p className="mt-0.5 flex items-center gap-1 text-[12px] text-white/55">
+            <p className="mt-0.5 flex items-center gap-1 text-caption text-white/55">
               <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden /> {location}
             </p>
           )}

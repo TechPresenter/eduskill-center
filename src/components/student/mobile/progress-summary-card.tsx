@@ -26,9 +26,9 @@ export interface ProgressSummaryCardProps {
 
 function Figure({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-surface px-2.5 py-2">
-      <p className="truncate text-[15px] font-bold text-navy tabular-nums">{value}</p>
-      <p className="truncate text-[12px] text-muted">{label}</p>
+    <div className="rounded-md bg-surface px-2.5 py-2">
+      <p className="truncate text-body font-bold text-navy tabular-nums">{value}</p>
+      <p className="truncate text-caption text-muted">{label}</p>
     </div>
   );
 }
@@ -45,12 +45,12 @@ export function ProgressSummaryCard({ courseName, progress, minAttendancePct, pa
 
   return (
     <section className={cn("card p-4", className)} aria-label="Course progress">
-      <Link href={href} className="-m-1 mb-2 flex min-h-11 items-center gap-2 rounded-xl p-1 tap-highlight-none">
+      <Link href={href} className="-m-1 mb-2 flex min-h-11 items-center gap-2 rounded-md p-1 tap-highlight-none">
         <span className="min-w-0 flex-1">
-          <span className="block text-[13px] font-bold text-navy">Course progress</span>
-          <span className="block truncate text-[12px] text-muted">{courseName}</span>
+          <span className="block text-body-sm font-bold text-navy">Course progress</span>
+          <span className="block truncate text-caption text-muted">{courseName}</span>
         </span>
-        <span className="shrink-0 text-[13px] font-semibold text-orange">View</span>
+        <span className="shrink-0 text-body-sm font-semibold text-orange">View</span>
         <ChevronRight className="h-4 w-4 shrink-0 text-orange" aria-hidden />
       </Link>
 

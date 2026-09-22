@@ -245,17 +245,17 @@ export function PayForm({ summary, contact }: { summary: PaymentSummary; contact
                 {error && <Alert tone="danger">{error}</Alert>}
 
                 {payingOnline ? (
-                  <p className="flex items-start gap-2 text-sm text-muted">
+                  <p className="flex items-start gap-2 text-body-sm text-muted">
                     <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" /> Payments are processed securely by Razorpay. Your receipt is generated instantly.
                   </p>
                 ) : (
                   <form id={OFFLINE_FORM_ID} onSubmit={payOffline} className="space-y-4" noValidate>
                     {summary.bankDetails ? (
-                      <div className="rounded-xl border border-line bg-surface p-4">
-                        <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-navy">
+                      <div className="rounded-md border border-line bg-surface p-4">
+                        <p className="mb-1 flex items-center gap-2 text-body-sm font-semibold text-navy">
                           <Banknote className="h-4 w-4" /> Bank / UPI details
                         </p>
-                        <pre className="font-sans text-sm break-words whitespace-pre-wrap text-ink">{summary.bankDetails}</pre>
+                        <pre className="font-sans text-body-sm break-words whitespace-pre-wrap text-ink">{summary.bankDetails}</pre>
                       </div>
                     ) : (
                       <Alert tone="info">Pay at your training center or ask the Foundation for bank details ({contact.phone}), then record the payment here.</Alert>
@@ -272,7 +272,7 @@ export function PayForm({ summary, contact }: { summary: PaymentSummary; contact
                     <Field label="Notes (optional)" htmlFor="notes" error={errors.notes}>
                       <Textarea id="notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Paid at Kolkata center on 12 Sep" />
                     </Field>
-                    <p className="text-xs text-muted">After submission the payment shows as “Processing” until the Foundation verifies it. Your receipt is issued on verification.</p>
+                    <p className="text-caption text-muted">After submission the payment shows as “Processing” until the Foundation verifies it. Your receipt is issued on verification.</p>
                   </form>
                 )}
               </CardBody>
@@ -289,8 +289,8 @@ export function PayForm({ summary, contact }: { summary: PaymentSummary; contact
             <Row label="Payable" value={formatINR(summary.payableAmount)} strong />
             {summary.paidAmount > 0 && <Row label="Paid so far" value={formatINR(summary.paidAmount)} tone="success" />}
             <div className="flex items-center justify-between gap-3 py-3">
-              <span className="text-base font-semibold text-ink">Due now</span>
-              <span className="text-2xl font-extrabold text-orange tabular-nums">{formatINR(summary.due)}</span>
+              <span className="text-body font-semibold text-ink">Due now</span>
+              <span className="text-h2 text-orange tabular-nums">{formatINR(summary.due)}</span>
             </div>
           </CardBody>
         </Card>
@@ -315,7 +315,7 @@ export function PayForm({ summary, contact }: { summary: PaymentSummary; contact
 
 function Row({ label, value, strong, tone }: { label: string; value: string; strong?: boolean; tone?: "success" }) {
   return (
-    <div className={`flex items-center justify-between gap-3 py-2 text-base ${strong ? "font-semibold text-ink" : tone === "success" ? "text-green-700" : "text-muted"}`}>
+    <div className={`flex items-center justify-between gap-3 py-2 text-body ${strong ? "font-semibold text-ink" : tone === "success" ? "text-green-700" : "text-muted"}`}>
       <span>{label}</span>
       <span className="tabular-nums">{value}</span>
     </div>

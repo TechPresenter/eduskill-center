@@ -13,7 +13,7 @@ export default async function StudentDocumentsPage() {
   const [types, documents] = await Promise.all([listStudentDocumentTypes(), db.studentDocument.findMany({ where: { studentId: user.student.id }, orderBy: { createdAt: "desc" } })]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       <PageHeader title="Documents" description="Upload once – your documents are attached to every application. Verified documents cannot be removed." backHref="/student/profile" />
       <Alert tone="info">Accepted formats: PDF, JPG or PNG up to 5 MB. Make sure the scan is clear and all four corners are visible.</Alert>
       <DocumentsManager

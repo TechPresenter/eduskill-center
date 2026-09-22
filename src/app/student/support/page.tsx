@@ -35,10 +35,10 @@ export default async function StudentSupportPage({ searchParams }: { searchParam
         {faqs.length > 0 && (
           <section className="lg:order-4 lg:col-span-3" aria-label="Frequently asked questions">
             <div className="mb-2 flex items-baseline justify-between gap-3 px-1">
-              <h2 className="flex items-center gap-1.5 text-[13px] font-bold tracking-[0.14em] text-muted uppercase">
+              <h2 className="flex items-center gap-1.5 text-overline text-muted">
                 <HelpCircle className="h-4 w-4" aria-hidden /> FAQs
               </h2>
-              <Link href="/faq" className="inline-flex min-h-11 items-center text-[13px] font-semibold text-orange">
+              <Link href="/faq" className="inline-flex min-h-11 items-center text-body-sm font-semibold text-orange">
                 View all
               </Link>
             </div>
@@ -67,16 +67,16 @@ export default async function StudentSupportPage({ searchParams }: { searchParam
                     <Link href={`/student/support/${t.id}`} className="flex min-h-16 items-center gap-3 px-4 py-3 tap-highlight-none hover:bg-surface active:bg-surface">
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-[12px] text-muted">{t.ticketNo}</span>
+                          <span className="font-mono text-caption text-muted">{t.ticketNo}</span>
                           <StatusBadge status={t.status} />
                           <Badge tone={t.priority === "HIGH" ? "danger" : t.priority === "LOW" ? "neutral" : "warning"}>{titleCase(t.priority)}</Badge>
                         </span>
-                        <span className="mt-1 block truncate text-[14px] font-semibold text-ink">{t.subject}</span>
-                        <span className="block truncate text-[12px] text-muted">
+                        <span className="mt-1 block truncate text-body font-semibold text-ink">{t.subject}</span>
+                        <span className="block truncate text-caption text-muted">
                           {t.category ? `${t.category} · ` : ""}Updated {formatDateTime(t.updatedAt)}
                         </span>
                       </span>
-                      <span className="flex shrink-0 items-center gap-1 text-[12px] text-muted">
+                      <span className="flex shrink-0 items-center gap-1 text-caption text-muted">
                         <MessageSquare className="h-3.5 w-3.5" aria-hidden /> {t._count.messages}
                       </span>
                       <ChevronRight className="h-5 w-5 shrink-0 text-muted" aria-hidden />

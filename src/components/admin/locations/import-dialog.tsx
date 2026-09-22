@@ -78,10 +78,10 @@ export function LocationImportDialog({ disabled }: { disabled?: boolean }) {
         size="xl"
       >
         <div className="space-y-4">
-          <label className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line bg-surface/60 px-4 py-6 text-center hover:border-navy/40", busy && "pointer-events-none opacity-60")}>
+          <label className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-line bg-surface/60 px-4 py-6 text-center hover:border-navy/40", busy && "pointer-events-none opacity-60")}>
             <FileUp className="h-6 w-6 text-navy" />
-            <span className="text-sm font-semibold break-all text-ink">{file ? file.name : "Choose a .csv file"}</span>
-            <span className="text-xs text-muted">Up to 10 MB · 5,000 rows</span>
+            <span className="text-body-sm font-semibold break-all text-ink">{file ? file.name : "Choose a .csv file"}</span>
+            <span className="text-caption text-muted">Up to 10 MB · 5,000 rows</span>
             <input
               type="file"
               accept=".csv,text/csv"
@@ -104,21 +104,21 @@ export function LocationImportDialog({ disabled }: { disabled?: boolean }) {
               {/* Phones: one card per row (the preview table needs 640px). */}
               <ul className="scrollbar-thin max-h-72 space-y-2 overflow-y-auto md:hidden">
                 {(problemRows.length ? problemRows : report.rows.slice(0, 200)).map((r) => (
-                  <li key={r.row} className={cn("rounded-xl border border-line p-3", r.error ? "border-danger/40 bg-danger-light/40" : "bg-white")}>
-                    <p className="flex items-center justify-between gap-2 text-xs font-semibold text-muted">
+                  <li key={r.row} className={cn("rounded-md border border-line p-3", r.error ? "border-danger/40 bg-danger-light/40" : "bg-white")}>
+                    <p className="flex items-center justify-between gap-2 text-caption font-semibold text-muted">
                       <span>Row {r.row}</span>
                       {r.error && <Badge tone="danger">error</Badge>}
                     </p>
-                    <dl className="mt-1.5 space-y-1 text-sm">
+                    <dl className="mt-1.5 space-y-1 text-body-sm">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <dt className="text-xs font-semibold tracking-wide text-muted uppercase">State</dt>
+                        <dt className="text-caption font-semibold tracking-wide text-muted uppercase">State</dt>
                         <dd className="flex flex-wrap items-center gap-1.5 text-ink">
                           {r.state || "—"} <Badge tone={TONE[r.stateAction]}>{r.stateAction}</Badge>
                         </dd>
                       </div>
                       {r.district && (
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <dt className="text-xs font-semibold tracking-wide text-muted uppercase">District</dt>
+                          <dt className="text-caption font-semibold tracking-wide text-muted uppercase">District</dt>
                           <dd className="flex flex-wrap items-center gap-1.5 text-ink">
                             {r.district} <Badge tone={TONE[r.districtAction]}>{r.districtAction}</Badge>
                           </dd>
@@ -126,20 +126,20 @@ export function LocationImportDialog({ disabled }: { disabled?: boolean }) {
                       )}
                       {r.block && (
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <dt className="text-xs font-semibold tracking-wide text-muted uppercase">Block</dt>
+                          <dt className="text-caption font-semibold tracking-wide text-muted uppercase">Block</dt>
                           <dd className="flex flex-wrap items-center gap-1.5 text-ink">
                             {r.block} <Badge tone={TONE[r.blockAction]}>{r.blockAction}</Badge>
                           </dd>
                         </div>
                       )}
                     </dl>
-                    {r.error && <p className="mt-1.5 text-xs font-medium text-danger">{r.error}</p>}
+                    {r.error && <p className="mt-1.5 text-caption font-medium text-danger">{r.error}</p>}
                   </li>
                 ))}
               </ul>
-              <div className="scrollbar-thin hidden max-h-72 overflow-auto rounded-xl border border-line md:block">
-                <table className="w-full min-w-[640px] text-left text-xs">
-                  <thead className="sticky top-0 bg-surface text-[11px] font-semibold tracking-wide text-muted uppercase">
+              <div className="scrollbar-thin hidden max-h-72 overflow-auto rounded-md border border-line md:block">
+                <table className="w-full min-w-[640px] text-left text-caption">
+                  <thead className="sticky top-0 bg-surface text-caption font-semibold tracking-wide text-muted uppercase">
                     <tr>
                       <th className="px-3 py-2">Row</th>
                       <th className="px-3 py-2">State</th>
@@ -170,8 +170,8 @@ export function LocationImportDialog({ disabled }: { disabled?: boolean }) {
                   </tbody>
                 </table>
               </div>
-              {problemRows.length > 0 && <p className="text-xs text-muted">Showing only rows with problems ({problemRows.length}). Rows with errors are skipped; the rest can still be imported.</p>}
-              {problemRows.length === 0 && report.rows.length > 200 && <p className="text-xs text-muted">Showing the first 200 of {report.rows.length} rows.</p>}
+              {problemRows.length > 0 && <p className="text-caption text-muted">Showing only rows with problems ({problemRows.length}). Rows with errors are skipped; the rest can still be imported.</p>}
+              {problemRows.length === 0 && report.rows.length > 200 && <p className="text-caption text-muted">Showing the first 200 of {report.rows.length} rows.</p>}
             </div>
           )}
 

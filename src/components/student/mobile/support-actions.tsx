@@ -24,9 +24,9 @@ function Tile({ href, icon, label, hint, tone = "navy", external }: { href: stri
   const wrap = tone === "green" ? "bg-success-light text-green-700" : tone === "orange" ? "bg-orange-light text-orange" : "bg-lavender text-navy";
   return (
     <a href={href} className={TILE} {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
-      <span className={cn("flex h-9 w-9 items-center justify-center rounded-xl", wrap)}>{icon}</span>
-      <span className="text-[13px] font-semibold text-ink">{label}</span>
-      {hint && <span className="truncate text-[12px] text-muted">{hint}</span>}
+      <span className={cn("flex h-9 w-9 items-center justify-center rounded-md", wrap)}>{icon}</span>
+      <span className="text-body-sm font-semibold text-ink">{label}</span>
+      {hint && <span className="truncate text-caption text-muted">{hint}</span>}
     </a>
   );
 }
@@ -47,7 +47,7 @@ export function SupportActions({ contact, studentId, enquiryHref = "#new-ticket"
         {contact.email && <Tile href={`mailto:${contact.email}`} icon={<Mail className="h-[18px] w-[18px]" aria-hidden />} label="Email us" hint={contact.email} />}
         <Tile href={enquiryHref} icon={<MessageSquarePlus className="h-[18px] w-[18px]" aria-hidden />} label="Submit enquiry" hint="Raise a ticket" tone="orange" />
       </div>
-      <div className="card space-y-1.5 p-4 text-[13px] text-muted">
+      <div className="card space-y-1.5 p-4 text-body-sm text-muted">
         {contact.hours && (
           <p className="flex items-start gap-2">
             <Clock className="mt-0.5 h-4 w-4 shrink-0 text-navy" aria-hidden /> {contact.hours}

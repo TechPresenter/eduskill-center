@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Building2 } from "lucide-react";
+import { ButtonLink } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth/session";
 import { absoluteUrl } from "@/lib/utils";
 import { SitePagination } from "@/components/site/pagination";
@@ -43,17 +44,20 @@ export default async function StateCentersPage({ params, searchParams }: Props) 
       />
 
       {districts.length > 0 && (
-        <section className="bg-lavender py-10" aria-labelledby="districts-title">
+        <section className="border-b border-line bg-lavender py-8 sm:py-10" aria-labelledby="districts-title">
           <div className="container-x">
-            <h2 id="districts-title" className="text-lg font-extrabold text-navy">
+            <h2 id="districts-title" className="text-overline text-navy">
               Districts with centers
             </h2>
-            <ul className="mt-4 flex flex-wrap gap-2.5">
+            <ul className="mt-4 flex flex-wrap gap-2">
               {districts.map((d) => (
                 <li key={d.id}>
-                  <Link href={`/training-centers/${st.slug}/${d.slug}`} className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-navy transition-colors hover:border-orange hover:text-orange">
+                  <Link
+                    href={`/training-centers/${st.slug}/${d.slug}`}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-white px-4 text-sm font-semibold text-navy transition-colors duration-micro tap-highlight-none ring-focus hover:border-orange hover:text-orange motion-reduce:transition-none"
+                  >
                     {d.name}
-                    <span className="rounded-full bg-lavender px-2 py-0.5 text-xs">{d.centerCount}</span>
+                    <span className="rounded-full bg-lavender px-2 py-0.5 text-caption text-navy tabular-nums">{d.centerCount}</span>
                   </Link>
                 </li>
               ))}
@@ -62,16 +66,25 @@ export default async function StateCentersPage({ params, searchParams }: Props) 
         </section>
       )}
 
-      <section className="bg-white py-14 sm:py-16">
+      <section className="bg-white section-y">
         <div className="container-x">
-          <h2 className="mb-6 flex items-center gap-2 text-2xl font-extrabold text-navy">
-            <Building2 className="h-6 w-6 text-orange" aria-hidden /> All centers in {st.name}
+          <h2 className="mb-6 flex items-center gap-2 text-h2">
+            <Building2 className="h-6 w-6 shrink-0 text-orange" aria-hidden /> All centers in {st.name}
           </h2>
           {result.items.length === 0 ? (
-            <EmptyState title="No active centers yet" description={`We do not have a verified training center in ${st.name} at the moment.`} action={<Link href="/training-centers" className="inline-flex h-10 items-center gap-2 rounded-xl bg-navy px-4 text-sm font-semibold text-white">Browse all centers <ArrowRight className="h-4 w-4" /></Link>} />
+            <EmptyState
+              icon={<Building2 className="h-7 w-7" />}
+              title="No active centers yet"
+              description={`We do not have a verified training center in ${st.name} at the moment. New centres open every month.`}
+              action={
+                <ButtonLink href="/training-centers" variant="navy" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                  Browse all centers
+                </ButtonLink>
+              }
+            />
           ) : (
             <>
-              <ul className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              <ul className="grid gap-5 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
                 {result.items.map((c) => (
                   <li key={c.id}>
                     <CenterCard center={c} applyHref={applyHref(user, { centerId: c.id })} />

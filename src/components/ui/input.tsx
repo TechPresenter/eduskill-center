@@ -1,13 +1,25 @@
 import * as React from "react";
-import { Check, CheckCircle2 } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Shared control styling (Input, Textarea, Select, DateInput). Mobile-first: 44px tall and 16px text on
- * phones (prevents iOS focus zoom), compact 14px on sm+. `aria-invalid` gives a red border, `data-valid="true"` a green one.
+ * Shared control styling (Input, Textarea, Select, DateInput, TagInput) — ONE height scale, one border,
+ * one focus treatment.
+ *
+ *   height   44px on phones (`min-h-11`), 40px from `sm` — the same pair everywhere, so a filter row
+ *            and a wizard field line up without per-screen tweaking.
+ *   text     16px on phones so Android never zooms the viewport on focus, 14px from `sm`.
+ *   radius   `md` (12px), the same shape as Button — controls read as one family.
+ *   focus    navy border + a 2px navy halo. Calm enough to sit in a dense admin form and still obvious.
+ *   state    `aria-invalid` → danger border, `data-valid="true"` → success border. Colour is never the
+ *            only signal: `Input` also renders a state glyph, and `<Field error>` puts an icon + message
+ *            under the control.
  */
 export const inputClasses =
-  "block w-full min-h-11 sm:min-h-0 rounded-xl border border-line bg-white px-3.5 py-3 sm:py-2.5 text-base sm:text-sm text-ink placeholder:text-muted/70 transition-colors focus:border-navy focus:outline-none focus:ring-2 focus:ring-navy/15 disabled:cursor-not-allowed disabled:bg-surface disabled:text-muted aria-[invalid=true]:border-danger aria-[invalid=true]:focus:ring-danger/15 data-[valid=true]:border-success data-[valid=true]:focus:ring-success/15";
+  "block w-full min-h-11 sm:min-h-10 rounded-md border border-line bg-white px-3.5 py-2.5 sm:py-2 text-base sm:text-sm text-ink placeholder:text-muted/70 transition-colors duration-micro motion-reduce:transition-none focus:border-navy focus:outline-none focus:ring-2 focus:ring-navy/20 disabled:cursor-not-allowed disabled:bg-surface disabled:text-muted aria-[invalid=true]:border-danger aria-[invalid=true]:focus:ring-danger/20 data-[valid=true]:border-success data-[valid=true]:focus:ring-success/20";
+
+/** Native pickers paint their own control on the right edge; an auto state glyph would sit on top of it. */
+const OWN_RIGHT_AFFORDANCE = new Set(["date", "datetime-local", "month", "time", "week", "color", "range", "file"]);
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   /** Red border + `aria-invalid` (pair with `<Field error>`). */
@@ -20,14 +32,25 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input({ className, invalid, valid, leftIcon, rightIcon, ...props }, ref) {
   const state = { "aria-invalid": invalid || undefined, "data-valid": valid && !invalid ? "true" : undefined } as const;
-  if (!leftIcon && !rightIcon) {
+
+  // Validity is announced by a glyph as well as by colour (WCAG 1.4.1) — unless the caller already
+  // owns the right slot, or the browser does.
+  const autoGlyph =
+    rightIcon || OWN_RIGHT_AFFORDANCE.has(props.type ?? "text") ? null : invalid ? (
+      <AlertCircle className="h-4 w-4 text-danger" aria-hidden />
+    ) : valid ? (
+      <CheckCircle2 className="h-4 w-4 text-success" aria-hidden />
+    ) : null;
+  const right = rightIcon ?? autoGlyph;
+
+  if (!leftIcon && !right) {
     return <input ref={ref} {...state} className={cn(inputClasses, className)} {...props} />;
   }
   return (
     <div className="relative">
       {leftIcon && <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-muted">{leftIcon}</span>}
-      <input ref={ref} {...state} className={cn(inputClasses, leftIcon && "pl-10", rightIcon && "pr-10", className)} {...props} />
-      {rightIcon && <span className="absolute inset-y-0 right-3 flex items-center text-muted">{rightIcon}</span>}
+      <input ref={ref} {...state} className={cn(inputClasses, leftIcon && "pl-10", right && "pr-10", className)} {...props} />
+      {right && <span className={cn("absolute inset-y-0 right-3 flex items-center text-muted", autoGlyph && !rightIcon && "pointer-events-none")}>{right}</span>}
     </div>
   );
 });
@@ -72,7 +95,10 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(functi
         ref={ref}
         id={inputId}
         type="checkbox"
-        className={cn("h-5 w-5 sm:h-4.5 sm:w-4.5 shrink-0 rounded border-line text-orange accent-orange focus:ring-2 focus:ring-orange/30", description && "mt-0.5")}
+        className={cn(
+          "h-5 w-5 sm:h-4.5 sm:w-4.5 shrink-0 rounded-xs border-line text-orange accent-orange ring-focus focus-visible:ring-0 focus-visible:ring-offset-0",
+          description && "mt-0.5"
+        )}
         {...props}
       />
       {(label || description) && (
@@ -99,13 +125,16 @@ export type OptionCardColumns = 1 | 2 | 3 | 4;
 
 const OPTION_COLS: Record<OptionCardColumns, string> = { 1: "sm:grid-cols-1", 2: "sm:grid-cols-2", 3: "sm:grid-cols-3", 4: "sm:grid-cols-4" };
 
-/** Shared card chrome for RadioCards / CheckboxCards. */
+/**
+ * Shared card chrome for RadioCards / CheckboxCards. The real control is `sr-only`, so the focus ring
+ * has to be carried by the card (`has-focus-visible:`) rather than by `ring-focus`.
+ */
 function optionCardClasses({ selected, disabled, size }: { selected: boolean; disabled?: boolean; size: OptionCardSize }) {
   return cn(
-    "relative flex cursor-pointer items-start gap-3 rounded-xl border bg-white text-left transition-all tap-highlight-none active:scale-[0.99]",
+    "relative flex cursor-pointer items-start gap-3 rounded-lg border bg-white text-left transition duration-micro tap-highlight-none active:scale-[0.99] motion-reduce:transition-none",
     "has-focus-visible:ring-2 has-focus-visible:ring-orange has-focus-visible:ring-offset-2",
-    size === "lg" ? "min-h-28 rounded-2xl border-2 p-5" : "min-h-14 p-4",
-    selected ? "border-orange bg-orange-light/60 ring-2 ring-orange/30" : "border-line hover:border-navy/40",
+    size === "lg" ? "min-h-28 rounded-xl border-2 p-5" : "min-h-14 p-4",
+    selected ? "border-orange bg-orange-light/60 shadow-e1" : "border-line hover:border-navy/40",
     disabled && "cursor-not-allowed opacity-50"
   );
 }
@@ -116,7 +145,7 @@ function OptionCardBody({ option, selected, size }: { option: RadioGroupOption; 
       {option.icon && (
         <span
           className={cn(
-            "flex shrink-0 items-center justify-center rounded-xl transition-colors",
+            "flex shrink-0 items-center justify-center rounded-md transition-colors duration-micro motion-reduce:transition-none",
             size === "lg" ? "h-11 w-11" : "h-9 w-9",
             selected ? "bg-orange text-white" : "bg-lavender text-navy"
           )}
@@ -186,7 +215,7 @@ export function CheckboxCards({ name, value, onChange, options, columns = 2, siz
             <OptionCardBody option={o} selected={selected} size={size} />
             <span
               className={cn(
-                "absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-md border transition-colors",
+                "absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-xs border transition-colors duration-micro motion-reduce:transition-none",
                 selected ? "border-orange bg-orange text-white" : "border-line bg-white"
               )}
               aria-hidden

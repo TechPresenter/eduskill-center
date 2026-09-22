@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Award, CheckSquare, Square } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { cn, formatDate } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog, Modal } from "@/components/ui/modal";
 import { Field } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -95,7 +95,7 @@ export function EligibleTable({ items, canIssue }: { items: Candidate[]; canIssu
           <Link href={`/admin/admissions/${c.admissionId}`} className="font-semibold hover:text-navy">
             {c.studentName}
           </Link>
-          <span className="block font-mono text-xs font-normal text-muted">{c.studentCode ?? c.admissionNo}</span>
+          <span className="block font-mono text-caption font-normal text-muted">{c.studentCode ?? c.admissionNo}</span>
         </>
       ),
     },
@@ -106,21 +106,21 @@ export function EligibleTable({ items, canIssue }: { items: Candidate[]; canIssu
       cell: (c) => (
         <>
           <span className="block">{c.centerName}</span>
-          <span className="font-mono text-xs text-muted">{c.batchCode}</span>
+          <span className="font-mono text-caption text-muted">{c.batchCode}</span>
         </>
       ),
     },
     { key: "attendance", header: "Attendance", align: "center", className: "tabular-nums", cell: (c) => `${c.attendancePct}%` },
     { key: "assessment", header: "Assessment", align: "center", className: "tabular-nums", cell: marksOf },
     { key: "completed", header: "Completed", className: "whitespace-nowrap text-muted", cell: (c) => (c.completedAt ? formatDate(c.completedAt) : "—") },
-    { key: "grade", header: "Grade", cell: (c) => c.autoGrade ?? <span className="text-xs text-muted">None</span> },
+    { key: "grade", header: "Grade", cell: (c) => c.autoGrade ?? <span className="text-caption text-muted">None</span> },
   ];
 
   /** Phone card: the whole header row toggles selection, the footer issues a single certificate. */
   const renderCard = (c: Candidate) => {
     const on = selected.has(c.admissionId);
     return (
-      <article className={cn("card p-4 transition-colors", on && "border-orange bg-orange-light/30")}>
+      <article className={cn("card p-4 transition-colors duration-micro motion-reduce:transition-none", on && "border-orange bg-orange-light/30")}>
         <button
           type="button"
           onClick={() => toggle(c.admissionId)}
@@ -131,9 +131,9 @@ export function EligibleTable({ items, canIssue }: { items: Candidate[]; canIssu
             {on ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5" />}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-base font-semibold text-navy">{c.studentName}</span>
-            <span className="block font-mono text-xs text-muted">{c.studentCode ?? c.admissionNo}</span>
-            <span className="mt-0.5 block text-[13px] text-muted">
+            <span className="block text-h4 font-semibold text-navy">{c.studentName}</span>
+            <span className="block font-mono text-caption text-muted">{c.studentCode ?? c.admissionNo}</span>
+            <span className="mt-0.5 block text-body-sm text-muted">
               {c.courseName} · {c.batchCode}
             </span>
           </span>
@@ -145,9 +145,9 @@ export function EligibleTable({ items, canIssue }: { items: Candidate[]; canIssu
           <KeyValue label="Grade" value={c.autoGrade ?? "None"} />
         </div>
         <div className="mt-3 flex items-center gap-2 border-t border-line/70 pt-3">
-          <Link href={`/admin/admissions/${c.admissionId}`} className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-line bg-white text-sm font-semibold text-ink active:bg-surface">
+          <ButtonLink href={`/admin/admissions/${c.admissionId}`} variant="outline" size="sm" className="flex-1">
             Admission
-          </Link>
+          </ButtonLink>
           <span className="flex-1 *:w-full">{issueButton(c, true)}</span>
         </div>
       </article>
@@ -157,10 +157,10 @@ export function EligibleTable({ items, canIssue }: { items: Candidate[]; canIssu
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted">{selected.size ? `${selected.size} selected` : `${items.length} eligible admission${items.length === 1 ? "" : "s"} on this page`}</p>
+        <p className="text-body-sm text-muted">{selected.size ? `${selected.size} selected` : `${items.length} eligible admission${items.length === 1 ? "" : "s"} on this page`}</p>
         <div className="flex items-center gap-2">
           {items.length > 0 && (
-            <button type="button" onClick={toggleAll} className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-navy md:hidden">
+            <button type="button" onClick={toggleAll} className="inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-body-sm font-semibold text-navy md:hidden">
               {allSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
               {allSelected ? "Clear all" : "Select all"}
             </button>

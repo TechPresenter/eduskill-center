@@ -1,12 +1,16 @@
 /**
  * Design-system barrel: `import { Button, Field, BottomSheet } from "@/components/ui"`.
  *
+ * Every module of the kit is listed here — if a component is not re-exported below it is either an
+ * internal (`carousel-hooks`, `table-wrap`, both surfaced through their public module) or it does not
+ * exist yet. Keep this list complete: a half-barrel is how two import styles for one component start.
+ *
  * No "use client" here: each module keeps its own boundary, so server pages may still pass functions
  * (e.g. `Pagination hrefFor`) to the server-safe primitives while the client ones (BottomSheet, Toaster,
- * TableWrap, Tabs…) stay client components.
+ * TableWrap, Tabs, Carousel…) stay client components.
  */
 
-// Buttons & inputs
+// Controls: buttons, fields and everything the user types into
 export * from "./button";
 export * from "./input";
 export * from "./select";
@@ -17,12 +21,13 @@ export * from "./file-upload";
 // Data display
 export * from "./badge";
 export * from "./card";
-export * from "./table";
+export * from "./table"; // also re-exports TableWrap from ./table-wrap
 export * from "./responsive-table";
 export * from "./stats";
 export * from "./misc";
 export * from "./highlight";
 export * from "./icon";
+export * from "./carousel";
 
 // Feedback & navigation
 export * from "./feedback";

@@ -5,13 +5,15 @@ import { ArrowRight } from "lucide-react";
 import { DynamicIcon } from "@/components/ui/icon";
 import { ButtonLink } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth/session";
-import { absoluteUrl } from "@/lib/utils";
+import { absoluteUrl, cn } from "@/lib/utils";
 import { getProgram, listPrograms, listPublicCourses } from "@/server/public";
 import { PageHero } from "@/components/site/page-hero";
 import { Markdown, markdownExcerpt } from "@/components/site/markdown";
 import { CourseCard } from "@/components/site/course-card";
 import { Reveal } from "@/components/site/reveal";
-import { SafeImage } from "@/components/site/safe-image";
+import { Media } from "@/components/site/safe-image";
+import { SectionBg, IconTile } from "@/components/site/decor";
+import { SectionHeading } from "@/components/site/section-heading";
 import { CtaBand } from "@/components/site/cta-band";
 import { applyHref } from "@/components/site/apply-link";
 
@@ -45,64 +47,68 @@ export default async function ProgramDetailPage({ params }: Props) {
         </ButtonLink>
       </PageHero>
 
-      <section className="container-x grid gap-10 py-14 lg:grid-cols-12 lg:py-20">
-        <article className="lg:col-span-8">
-          {program.image && (
-            <div className="relative mb-8 aspect-[16/9] overflow-hidden rounded-card-lg bg-lavender">
-              <SafeImage src={program.image} alt={program.title} sizes="(max-width: 1024px) 100vw, 800px" />
+      <section className="relative overflow-x-clip bg-surface section-y">
+        <SectionBg variant="mesh" />
+        <div className="container-x relative z-10 grid gap-8 lg:grid-cols-12 lg:gap-10">
+          <article className="lg:col-span-8">
+            {/* Only when the programme actually has a photo. See the note in events/[slug]. */}
+            {program.image && (
+              <div className="rounded-card-lg shadow-e1">
+                <Media src={program.image} alt={program.title} seed={program.slug} ratio="16x9" priority sizes="(max-width: 1024px) 100vw, 800px" />
+              </div>
+            )}
+            <div className={cn("card rounded-card-lg p-6 sm:p-10", program.image && "mt-8")}>
+              {program.content ? <Markdown source={program.content} /> : <p className="text-body-lg text-muted">{program.summary}</p>}
             </div>
-          )}
-          {program.content ? <Markdown source={program.content} /> : <p className="text-muted">{program.summary}</p>}
-        </article>
-        <aside className="space-y-6 lg:col-span-4">
-          <div className="card p-6">
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-light text-orange">
-              <DynamicIcon name={program.icon ?? undefined} className="h-6 w-6" aria-hidden />
-            </span>
-            <h2 className="mt-4 text-lg font-extrabold text-navy">Start with this program</h2>
-            <p className="mt-1.5 text-sm text-muted">Register, pick a course and a training center near you. Scholarship support is assessed during your application.</p>
-            <ButtonLink href={applyHref(user)} fullWidth className="mt-5">
-              Apply Now
-            </ButtonLink>
-            <ButtonLink href="/training-centers" variant="outline" fullWidth className="mt-2">
-              Find a Training Center
-            </ButtonLink>
-          </div>
-          {others.length > 0 && (
-            <nav className="card p-6" aria-labelledby="other-programs">
-              <h2 id="other-programs" className="text-sm font-bold tracking-wide text-muted uppercase">
-                Other programs
-              </h2>
-              <ul className="mt-3 divide-y divide-line">
-                {others.map((p) => (
-                  <li key={p.id}>
-                    <Link href={`/programs/${p.slug}`} className="flex items-center gap-3 py-2.5 text-sm font-semibold text-navy hover:text-orange">
-                      <DynamicIcon name={p.icon ?? undefined} className="h-4 w-4 text-orange" aria-hidden />
-                      {p.title}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          )}
-        </aside>
+          </article>
+
+          <aside className="space-y-5 lg:col-span-4">
+            {/* Sticky on desktop so the apply action follows a long read; static on phones. */}
+            <div className="card rounded-card-lg card-p lg:sticky lg:top-24">
+              <IconTile icon={program.icon ?? "Sparkles"} tone="orange" size="lg" />
+              <h2 className="mt-4 text-h3 text-navy">Start with this program</h2>
+              <p className="mt-2 text-body text-muted">Register, pick a course and a training centre near you. Scholarship support is assessed during your application.</p>
+              <ButtonLink href={applyHref(user)} size="lg" fullWidth className="mt-5">
+                Apply now
+              </ButtonLink>
+              <ButtonLink href="/training-centers" variant="outline" size="lg" fullWidth className="mt-2">
+                Find a training centre
+              </ButtonLink>
+            </div>
+
+            {others.length > 0 && (
+              <nav className="card card-p" aria-labelledby="other-programs">
+                <h2 id="other-programs" className="text-overline text-muted">
+                  Other programs
+                </h2>
+                <ul className="mt-2 divide-y divide-line">
+                  {others.map((p) => (
+                    <li key={p.id}>
+                      <Link href={`/programs/${p.slug}`} className="ring-focus group flex min-h-11 items-center gap-3 rounded-xs py-3 text-body font-semibold text-navy transition-colors duration-micro hover:text-orange motion-reduce:transition-none">
+                        <DynamicIcon name={p.icon ?? undefined} className="h-4 w-4 shrink-0 text-orange" aria-hidden />
+                        <span className="min-w-0 flex-1">{p.title}</span>
+                        <ArrowRight className="h-4 w-4 shrink-0 text-muted transition-transform duration-micro group-hover:translate-x-0.5 group-hover:text-orange motion-reduce:transition-none" aria-hidden />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            )}
+          </aside>
+        </div>
       </section>
 
       {courses.length > 0 && (
-        <section className="bg-lavender py-16 sm:py-20" aria-labelledby="program-courses-title">
-          <div className="container-x">
-            <Reveal className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="eyebrow mb-3">Courses</p>
-                <h2 id="program-courses-title" className="section-title">
-                  Courses you can join
-                </h2>
-              </div>
-              <ButtonLink href="/courses" variant="outline" rightIcon={<ArrowRight className="h-4 w-4" />}>
+        <section className="relative overflow-x-clip bg-white section-y" aria-labelledby="program-courses-title">
+          <SectionBg variant="dots" />
+          <div className="container-x relative z-10">
+            <Reveal className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+              <SectionHeading id="program-courses-title" label="Courses" title="Courses You Can [[Join]]" className="max-w-2xl" />
+              <ButtonLink href="/courses" variant="outline" className="shrink-0" rightIcon={<ArrowRight className="h-4 w-4" />}>
                 All courses
               </ButtonLink>
             </Reveal>
-            <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
               {courses.slice(0, 6).map((c, i) => (
                 <Reveal as="li" key={c.id} delay={Math.min(i, 5) * 60}>
                   <CourseCard course={c} applyHref={applyHref(user, { courseId: c.id })} />
@@ -113,7 +119,12 @@ export default async function ProgramDetailPage({ params }: Props) {
         </section>
       )}
 
-      <CtaBand title="Ready to take the [[first step]]?" description="Applications are reviewed by the Foundation and you will be guided at every stage." primary={{ label: "Apply Now", href: applyHref(user) }} secondary={{ label: "Talk to Us", href: "/contact" }} />
+      <CtaBand
+        title="Ready to take the [[first step]]?"
+        description="Applications are reviewed by the Foundation and you will be guided at every stage."
+        primary={{ label: "Apply Now", href: applyHref(user) }}
+        secondary={{ label: "Talk to Us", href: "/contact" }}
+      />
     </>
   );
 }

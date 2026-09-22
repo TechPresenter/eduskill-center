@@ -46,7 +46,7 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
             <Avatar name={app.name} src={app.photoUrl} size={56} />
             <span>
               {app.name}
-              <span className="mt-1 flex flex-wrap items-center gap-2 text-sm font-medium text-muted">
+              <span className="mt-1 flex flex-wrap items-center gap-2 text-body-sm font-medium text-muted">
                 <span className="font-mono text-navy">{app.applicationNo}</span>
                 <StatusBadge status={app.status} />
                 <Badge tone="navy">{titleCase(app.level)} level</Badge>
@@ -70,8 +70,20 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
         }
       />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="space-y-5 max-lg:order-2 lg:col-span-2">
+      {/* The app bar shows only the application number on phones – keep the applicant and status in the page. */}
+      <div className="mb-4 flex items-center gap-3 lg:hidden">
+        <Avatar name={app.name} src={app.photoUrl} size={44} />
+        <div className="min-w-0">
+          <h2 className="text-h4 truncate text-navy">{app.name}</h2>
+          <span className="mt-1 flex flex-wrap items-center gap-2">
+            <StatusBadge status={app.status} />
+            <Badge tone="navy">{titleCase(app.level)} level</Badge>
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 max-lg:order-2 lg:col-span-2">
           {app.status === "DOCUMENTS_REQUIRED" && app.reviewNotes && (
             <Alert tone="warning" title="Waiting for documents from the applicant">
               {app.reviewNotes}
@@ -153,7 +165,7 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
                   app.preferredCourses.length ? (
                     <span className="flex flex-wrap gap-1">
                       {app.preferredCourses.map((c) => (
-                        <Link key={c.id} href={`/admin/courses/${c.id}`} className="inline-flex items-center rounded-full border border-navy/10 bg-navy-soft px-2.5 py-0.5 text-xs font-semibold text-navy hover:bg-lavender">
+                        <Link key={c.id} href={`/admin/courses/${c.id}`} className="inline-flex items-center rounded-full border border-navy/10 bg-navy-soft px-2.5 py-0.5 text-caption font-semibold text-navy hover:bg-lavender">
                           {c.name} <span className="ml-1 font-normal text-muted">({c.code})</span>
                         </Link>
                       ))}
@@ -170,7 +182,7 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
           <Card>
             <CardHeader title="Motivation" description="Why the applicant wants to volunteer with the Foundation." />
             <CardBody>
-              <p className="text-sm leading-relaxed whitespace-pre-line text-ink">{app.motivation}</p>
+              <p className="text-body-sm leading-relaxed whitespace-pre-line text-ink">{app.motivation}</p>
             </CardBody>
           </Card>
 
@@ -199,19 +211,19 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
                         {docName.get(d.type) ?? titleCase(d.type)}
                       </TD>
                       <TD label="File">
-                        <a href={d.url} target="_blank" rel="noopener noreferrer" className="block truncate text-xs font-semibold text-orange hover:underline md:max-w-[14rem]">
+                        <a href={d.url} target="_blank" rel="noopener noreferrer" className="block truncate text-caption font-semibold text-orange hover:underline md:max-w-[14rem]">
                           {d.name}
                         </a>
-                        <span className="text-xs text-muted">
+                        <span className="text-caption text-muted">
                           {d.mimeType ?? ""}
                           {d.size ? ` · ${(d.size / 1024).toFixed(0)} KB` : ""}
                         </span>
                       </TD>
                       <TD label="Status">
                         <StatusBadge status={d.status} />
-                        {d.verifiedAt && <span className="block text-xs text-muted">{formatDate(d.verifiedAt)}</span>}
+                        {d.verifiedAt && <span className="block text-caption text-muted">{formatDate(d.verifiedAt)}</span>}
                       </TD>
-                      <TD label="Remarks" className="text-xs text-muted md:max-w-[16rem]">
+                      <TD label="Remarks" className="text-caption text-muted md:max-w-[16rem]">
                         {d.remarks ?? "—"}
                       </TD>
                       <TD label="Uploaded" className="text-muted md:whitespace-nowrap">
@@ -219,7 +231,7 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
                       </TD>
                       <TD mobile="actions">
                         <div className="flex items-center gap-2 max-md:w-full max-md:justify-end">
-                          <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold text-navy hover:underline md:min-h-0 md:px-0">
+                          <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-md px-2 text-caption font-semibold text-navy hover:underline md:min-h-0 md:px-0">
                             View
                           </a>
                           {app.status !== "APPROVED" && <DocumentActions docId={d.id} status={d.status} canUpdate={can.update} />}
@@ -256,7 +268,7 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
           </Card>
         </div>
 
-        <div className="space-y-5 max-lg:order-1">
+        <div className="space-y-6 max-lg:order-1">
           <Card>
             <CardHeader title="Actions" description={app.status === "VERIFIED" ? "All checks done – approve to issue a Trainer ID." : app.status === "APPROVED" ? "This application is complete." : "Move the application through the review workflow."} />
             <CardBody>
@@ -281,7 +293,7 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
                   <KeyValue label="Interview notes" value={app.interviewNotes ? <span className="whitespace-pre-line">{app.interviewNotes}</span> : "—"} />
                 </>
               ) : (
-                <p className="text-sm text-muted">No interview scheduled yet. Shortlist the applicant, then use “Schedule Interview”.</p>
+                <p className="text-body-sm text-muted">No interview scheduled yet. Shortlist the applicant, then use “Schedule Interview”.</p>
               )}
             </CardBody>
           </Card>
@@ -305,7 +317,7 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
                 <KeyValue label="Status" value={<StatusBadge status={app.trainer.status} />} />
                 <KeyValue label="Login" value={app.trainer.user.email ?? app.trainer.user.mobile ?? "—"} />
                 <KeyValue label="Joined" value={formatDate(app.trainer.joinedAt)} />
-                <Link href={`/admin/trainers/${app.trainer.id}`} className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-navy px-4 text-sm font-semibold text-white tap-highlight-none hover:bg-navy-dark lg:h-11">
+                <Link href={`/admin/trainers/${app.trainer.id}`} className="inline-flex h-12 w-full items-center justify-center rounded-md bg-navy px-4 text-body-sm font-semibold text-white tap-highlight-none hover:bg-navy-dark lg:h-11">
                   Open trainer profile
                 </Link>
               </CardBody>

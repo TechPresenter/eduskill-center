@@ -65,7 +65,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const location = [s.villageTown, s.block?.name, s.district?.name, s.state?.name].filter(Boolean).join(", ");
 
   const profile = (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <Card className="lg:col-span-2">
         <CardHeader title="Profile" />
         <CardBody className="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-3">
@@ -137,17 +137,17 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                   </span>
                 </TD>
                 <TD label="File">
-                  <span className="block truncate text-xs text-muted md:max-w-56">{d.name}</span>
-                  <span className="text-[11px] text-muted">
+                  <span className="block truncate text-caption text-muted md:max-w-56">{d.name}</span>
+                  <span className="text-caption text-muted">
                     {d.mimeType ?? ""}
                     {d.size ? ` · ${(d.size / 1024).toFixed(0)} KB` : ""}
                   </span>
                 </TD>
                 <TD mobile="hidden">
                   <StatusBadge status={d.status} />
-                  {d.verifiedAt && <span className="block text-[11px] text-muted">{formatDate(d.verifiedAt)}</span>}
+                  {d.verifiedAt && <span className="block text-caption text-muted">{formatDate(d.verifiedAt)}</span>}
                 </TD>
-                <TD label="Remarks" className="text-xs text-muted md:max-w-64">
+                <TD label="Remarks" className="text-caption text-muted md:max-w-64">
                   {d.remarks ?? "—"}
                 </TD>
                 <TD label="Uploaded" className="text-muted md:whitespace-nowrap">
@@ -184,7 +184,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
           <TR key={a.id}>
             <TD primary>
               <span className="flex items-start justify-between gap-2">
-                <Link href={`/admin/applications/${a.id}`} className="font-mono text-xs font-semibold text-navy hover:underline">
+                <Link href={`/admin/applications/${a.id}`} className="font-mono text-caption font-semibold text-navy hover:underline">
                   {a.applicationNo}
                 </Link>
                 <span className="shrink-0 md:hidden">
@@ -194,9 +194,9 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             </TD>
             <TD label="Course">{a.course.name}</TD>
             <TD label="Center">
-              {a.center.name} <span className="text-xs text-muted">({a.center.code})</span>
+              {a.center.name} <span className="text-caption text-muted">({a.center.code})</span>
             </TD>
-            <TD label="Batch" className="text-xs">
+            <TD label="Batch" className="text-caption">
               {a.batch ? `${a.batch.code}` : "—"}
             </TD>
             <TD mobile="hidden">
@@ -237,7 +237,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
           <TR key={a.id}>
             <TD primary>
               <span className="flex items-start justify-between gap-2">
-                <Link href={`/admin/admissions/${a.id}`} className="font-mono text-xs font-semibold text-navy hover:underline">
+                <Link href={`/admin/admissions/${a.id}`} className="font-mono text-caption font-semibold text-navy hover:underline">
                   {a.admissionNo}
                 </Link>
                 <span className="shrink-0 md:hidden">
@@ -247,7 +247,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             </TD>
             <TD label="Course">{a.course.name}</TD>
             <TD label="Center">{a.center.name}</TD>
-            <TD label="Batch" className="text-xs">
+            <TD label="Batch" className="text-caption">
               {a.batch.code} <StatusBadge status={a.batch.status} className="ml-1" />
             </TD>
             <TD label="Trainer">{a.trainer?.user.name ?? "—"}</TD>
@@ -255,7 +255,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
               <StatusBadge status={a.status} />
             </TD>
             <TD label="" className="md:min-w-40">
-              {a.progress ? <ProgressBar value={a.progress.completionPct} label={`Attendance ${a.progress.attendancePct}%`} tone={a.progress.certificateEligible ? "success" : "orange"} /> : <span className="text-xs text-muted">Progress not computed</span>}
+              {a.progress ? <ProgressBar value={a.progress.completionPct} label={`Attendance ${a.progress.attendancePct}%`} tone={a.progress.certificateEligible ? "success" : "orange"} /> : <span className="text-caption text-muted">Progress not computed</span>}
             </TD>
             <TD label="Admitted" className="text-muted md:whitespace-nowrap">
               {formatDate(a.admittedAt)}
@@ -267,7 +267,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   );
 
   const attendanceTab = (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {attendance.summary.length === 0 ? (
         <EmptyState title="No attendance recorded" description="Attendance appears once the trainer or staff marks it for an admitted batch." />
       ) : (
@@ -276,17 +276,17 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             <Card key={b.batchId}>
               <CardBody>
                 <p className="font-semibold text-navy">{b.batch.name}</p>
-                <p className="text-xs text-muted">
+                <p className="text-caption text-muted">
                   {b.batch.code} · {b.batch.course.name}
                 </p>
                 <ProgressBar className="mt-3" value={b.pct} label="Attendance" tone={b.pct >= 75 ? "success" : b.pct >= 50 ? "warning" : "danger"} />
-                <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs sm:grid-cols-5">
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center text-caption sm:grid-cols-5">
                   <div>
                     <p className="font-bold text-ink tabular-nums">{b.held}</p>
                     <p className="text-muted">Held</p>
                   </div>
                   <div>
-                    <p className="font-bold text-green-700 tabular-nums">{b.present}</p>
+                    <p className="font-bold text-success-dark tabular-nums">{b.present}</p>
                     <p className="text-muted">Present</p>
                   </div>
                   <div>
@@ -328,13 +328,13 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                     </span>
                   </span>
                 </TD>
-                <TD label="Batch" className="text-xs">
+                <TD label="Batch" className="text-caption">
                   {r.batch.code} · {r.batch.course.name}
                 </TD>
                 <TD mobile="hidden">
                   <StatusBadge status={r.status} />
                 </TD>
-                <TD label="Remarks" className="text-xs text-muted">
+                <TD label="Remarks" className="text-caption text-muted">
                   {r.remarks ?? "—"}
                 </TD>
               </TR>
@@ -365,10 +365,10 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             <TD primary>
               <span className="flex items-start justify-between gap-2">
                 <span className="min-w-0">
-                  <Link href={`/admin/payments/${p.id}`} className="font-mono text-xs font-semibold text-navy hover:underline">
+                  <Link href={`/admin/payments/${p.id}`} className="font-mono text-caption font-semibold text-navy hover:underline">
                     {p.paymentNo}
                   </Link>
-                  {p.receiptNo && <span className="block text-[11px] font-normal text-muted">Receipt {p.receiptNo}</span>}
+                  {p.receiptNo && <span className="block text-caption font-normal text-muted">Receipt {p.receiptNo}</span>}
                 </span>
                 <span className="shrink-0 text-right md:hidden">
                   <span className="block tabular-nums">{formatINR(p.amount)}</span>
@@ -376,7 +376,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 </span>
               </span>
             </TD>
-            <TD label="Application" className="font-mono text-xs">
+            <TD label="Application" className="font-mono text-caption">
               {p.application.applicationNo}
             </TD>
             <TD mobile="hidden" className="text-right tabular-nums">
@@ -394,7 +394,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 href={withBasePath(`/api/admin/payments/${p.id}/document`)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-11 items-center text-xs font-semibold text-orange hover:underline md:min-h-0"
+                className="inline-flex min-h-11 items-center text-caption font-semibold text-orange hover:underline md:min-h-0"
               >
                 {p.status === "COMPLETED" ? "Receipt" : "Invoice"}
               </a>
@@ -422,7 +422,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         {s.certificates.length === 0 && <EmptyRow colSpan={7}>No certificates issued.</EmptyRow>}
         {s.certificates.map((c) => (
           <TR key={c.id}>
-            <TD primary className="font-mono text-xs font-semibold text-navy">
+            <TD primary className="font-mono text-caption font-semibold text-navy">
               <span className="flex items-start justify-between gap-2">
                 <span className="min-w-0">{c.certificateNo}</span>
                 <span className="shrink-0 font-sans md:hidden">
@@ -439,7 +439,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             <TD label="Issued" className="text-muted md:whitespace-nowrap">
               {formatDate(c.issuedAt)}
             </TD>
-            <TD actions className="space-x-3 text-xs font-semibold">
+            <TD actions className="space-x-3 text-caption font-semibold">
               <a href={withBasePath(`/api/admin/certificates/${c.id}/download`)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-orange hover:underline md:min-h-0">
                 Download
               </a>
@@ -482,7 +482,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             <Avatar name={s.name} src={s.photoUrl} size={56} />
             <span>
               {s.name}
-              <span className="mt-1 flex flex-wrap items-center gap-2 text-sm font-medium text-muted">
+              <span className="mt-1 flex flex-wrap items-center gap-2 text-body-sm font-medium text-muted">
                 {s.studentId ? <span className="font-mono text-navy">{s.studentId}</span> : <Badge tone="warning">No Student ID</Badge>}
                 <StatusBadge status={s.user.status} />
               </span>
@@ -509,10 +509,10 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         <Avatar name={s.name} src={s.photoUrl} size={44} />
         <span className="min-w-0">
           <span className="flex flex-wrap items-center gap-2">
-            {s.studentId ? <span className="font-mono text-sm font-semibold text-navy">{s.studentId}</span> : <Badge tone="warning">No Student ID</Badge>}
+            {s.studentId ? <span className="font-mono text-body-sm font-semibold text-navy">{s.studentId}</span> : <Badge tone="warning">No Student ID</Badge>}
             <StatusBadge status={s.user.status} />
           </span>
-          <span className="mt-0.5 block truncate text-xs text-muted">{s.mobile}</span>
+          <span className="mt-0.5 block truncate text-caption text-muted">{s.mobile}</span>
         </span>
       </div>
 

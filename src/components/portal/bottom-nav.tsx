@@ -44,12 +44,13 @@ export interface BottomNavProps {
   className?: string;
 }
 
+/** 56px row. One 150ms colour change, one focus treatment — inset, because the bar has no room for an offset ring. */
 const ITEM_CLASS =
-  "flex min-h-14 w-full flex-col items-center justify-center gap-1 px-1 pt-1.5 pb-1.5 tap-highlight-none outline-none transition-colors duration-200 active:bg-surface/80 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orange";
+  "flex min-h-14 w-full flex-col items-center justify-center gap-1 px-1 pt-1.5 pb-1.5 tap-highlight-none outline-none transition-colors duration-micro active:bg-surface/80 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orange motion-reduce:transition-none";
 
 function Badge({ count }: { count: number }) {
   return (
-    <span className="absolute -top-0.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white" aria-hidden>
+    <span className="absolute -top-0.5 right-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-orange px-1 text-caption leading-none font-bold text-white ring-2 ring-white" aria-hidden>
       {count > 99 ? "99+" : count}
     </span>
   );
@@ -73,7 +74,7 @@ export function BottomNav({ items, pathname, onMore, menuOpen = false, className
     <nav
       aria-label="Primary"
       hidden={hidden}
-      className={cn("fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 pb-safe shadow-[0_-1px_0_rgba(23,32,51,0.02)] backdrop-blur lg:hidden", className)}
+      className={cn("fixed inset-x-0 bottom-0 z-header border-t border-line bg-white pb-safe lg:hidden", className)}
     >
       <ul className="grid" style={{ gridTemplateColumns: `repeat(${visible.length}, minmax(0, 1fr))` }}>
         {visible.map((item) => {
@@ -81,11 +82,11 @@ export function BottomNav({ items, pathname, onMore, menuOpen = false, className
           const on = isMenu ? menuOpen : active === item;
           const inner = (
             <>
-              <span className={cn("relative flex h-8 w-14 items-center justify-center rounded-full transition-colors duration-200", on ? "bg-orange-light text-orange" : "text-muted")}>
-                <item.icon className="h-[22px] w-[22px]" strokeWidth={on ? 2.25 : 2} aria-hidden />
+              <span className={cn("relative flex h-8 w-14 items-center justify-center rounded-full transition-colors duration-micro motion-reduce:transition-none", on ? "bg-orange-light text-orange" : "text-muted")}>
+                <item.icon className="h-5.5 w-5.5" strokeWidth={on ? 2.25 : 2} aria-hidden />
                 {item.badge ? <Badge count={item.badge} /> : null}
               </span>
-              <span className={cn("max-w-full truncate text-[11px] font-semibold leading-none tracking-wide", on ? "text-orange" : "text-muted")}>{item.label}</span>
+              <span className={cn("max-w-full truncate text-caption leading-none font-semibold tracking-wide", on ? "text-orange" : "text-muted")}>{item.label}</span>
             </>
           );
           return (
