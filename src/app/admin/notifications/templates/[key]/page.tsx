@@ -21,7 +21,9 @@ export default async function TemplateEditPage({ params }: { params: Promise<{ k
       <PageHeader
         breadcrumbs={[{ label: "Templates", href: "/admin/notifications/templates" }, { label: template.name }, { label: channel }]}
         title={`${template.name} · ${channel}`}
-        description={template.channel === "SMS" || template.channel === "WHATSAPP" ? "Keep it short – long messages are split into several SMS segments." : "Use the variables below; they are replaced with live data when the message is sent."}
+        mobileTitle={template.name}
+        backHref="/admin/notifications/templates"
+        description={template.channel === "SMS" || template.channel === "WHATSAPP" ? "Keep it short – long messages are split into several SMS parts." : "Use the variables; they are replaced with live data when the message is sent."}
       />
       <TemplateEditor template={template} canEdit={hasPermission(user, "notifications.templates")} />
     </div>

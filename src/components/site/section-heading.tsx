@@ -30,7 +30,7 @@ export function SectionHeading({
   return (
     <div className={cn("max-w-3xl", align === "center" && "mx-auto text-center", className)}>
       {label && (
-        <p className={cn("eyebrow mb-3 flex items-center gap-1.5", align === "center" && "justify-center")}>
+        <p className={cn("eyebrow mb-2 flex items-center gap-1.5 lg:mb-3", align === "center" && "justify-center")}>
           {emoji && (
             <span aria-hidden="true" className="text-base leading-none">
               {emoji}
@@ -42,7 +42,8 @@ export function SectionHeading({
       <Tag id={id} className={cn("section-title", light && "text-white")}>
         <Highlight text={title} />
       </Tag>
-      {description && <p className={cn("mt-4 text-base leading-relaxed sm:text-lg", light ? "text-white/80" : "text-muted")}>{description}</p>}
+      {/* Body step on phones (the h2 above is already the phone's biggest type), body-lg from lg. */}
+      {description && <p className={cn("mt-2 text-body lg:mt-4 lg:text-body-lg", light ? "text-white/80" : "text-muted")}>{description}</p>}
     </div>
   );
 }

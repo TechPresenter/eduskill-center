@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 /**
- * App-style route transition: remounts on every pathname change and plays the 220ms `animate-page`
- * fade/slide (disabled under prefers-reduced-motion). The animation class is dropped once it finishes
+ * App-style route transition: remounts on every pathname change and plays the 150ms `animate-page`
+ * fade + 6px rise (`--duration-micro`, the one easing) (disabled under prefers-reduced-motion). The animation class is dropped once it finishes
  * so no transform lingers on the wrapper — `animate-page` has `fill-mode: both`, so even after it ends
  * the computed transform stays an identity `matrix(...)` rather than `none`, and any non-`none`
  * transform makes the wrapper the containing block for `position: fixed` descendants (a Fab or a
@@ -25,7 +25,7 @@ function Animated({ children, className }: { children: React.ReactNode; classNam
   const ref = React.useRef<HTMLDivElement>(null);
   const [done, setDone] = React.useState(false);
 
-  // `onAnimationEnd` alone is not enough: on a server-rendered page the 220ms animation usually
+  // `onAnimationEnd` alone is not enough: on a server-rendered page the 150ms animation usually
   // finishes before React hydrates, so the event is never seen and the class would stay forever.
   React.useEffect(() => {
     const el = ref.current;

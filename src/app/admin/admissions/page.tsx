@@ -15,6 +15,7 @@ import { ProgressBar } from "@/components/ui/stats";
 import { AdminListPage } from "@/components/admin/shared/list-page";
 import { FilterBar } from "@/components/admin/pickers/filter-bar";
 import { QueryTabs } from "@/components/admin/pickers/query-tabs";
+import { RowLead } from "@/components/admin/locations/list-kit";
 import { ExportButton } from "@/components/admin/pickers/export-button";
 import { flattenSearchParams, parseListQuery, withParams, type RawSearchParams } from "@/components/admin/pickers/search-params";
 
@@ -80,21 +81,34 @@ export default async function AdmissionsPage({ searchParams }: { searchParams: P
             {data.items.map((a) => (
               <TR key={a.id}>
                 <TD primary>
-                  <span className="flex items-start justify-between gap-2">
+                  {/* Phones: an app list row led by the student, with the status trailing. */}
+                  <RowLead
+                    className="md:hidden"
+                    href={`${base}/${a.id}`}
+                    lead={<Avatar name={a.student.name} src={a.student.photoUrl} size={40} />}
+                    title={a.student.name}
+                    meta={
+                      <>
+                        <span className="font-mono font-semibold text-navy">{a.admissionNo}</span> · {a.course.name}
+                      </>
+                    }
+                    trailing={
+                      <span className="flex flex-col items-end gap-1">
+                        <StatusBadge status={a.status} />
+                        {a.certificate && <Badge tone="success">Certified</Badge>}
+                      </span>
+                    }
+                  />
+                  <span className="hidden items-start justify-between gap-2 md:flex">
                     <span className="min-w-0">
                       <Link href={`${base}/${a.id}`} className="font-mono text-caption font-semibold text-navy hover:underline">
                         {a.admissionNo}
                       </Link>
                       <span className="block text-caption font-normal text-muted">{a.application.applicationNo}</span>
                     </span>
-                    {/* Status column is dropped on phones – badges ride in the card title. */}
-                    <span className="flex shrink-0 flex-wrap justify-end gap-1 md:hidden">
-                      <StatusBadge status={a.status} />
-                      {a.certificate && <Badge tone="success">Certified</Badge>}
-                    </span>
                   </span>
                 </TD>
-                <TD label="Student">
+                <TD label="Student" mobile="hidden">
                   <Link href={`/admin/students/${a.student.id}`} className="flex items-center justify-end gap-3 hover:text-navy md:justify-start">
                     <Avatar name={a.student.name} src={a.student.photoUrl} size={34} />
                     <span className="min-w-0 text-left">

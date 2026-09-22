@@ -35,7 +35,7 @@ export function MaterialCard({ material: m, canDelete, onDelete }: { material: M
   return (
     <li className="card card-p flex flex-col">
       <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lavender text-navy">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">
           <FileGlyph type={m.fileType} />
         </span>
         <div className="min-w-0 flex-1">

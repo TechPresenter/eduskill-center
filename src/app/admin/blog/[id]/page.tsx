@@ -23,6 +23,8 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
     <div>
       <PageHeader
         breadcrumbs={[{ label: "Blog", href: "/admin/blog" }, { label: blog.title }]}
+        mobileTitle={blog.title}
+        backHref="/admin/blog"
         title={
           <span className="flex flex-wrap items-center gap-2">
             {blog.title}
@@ -32,6 +34,7 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
         description={<span className="font-mono">/blog/{blog.slug}</span>}
       />
       <ContentEditor
+        publicPrefix="/blog"
         endpoint="/api/admin/blog"
         id={blog.id}
         itemLabel="blog post"

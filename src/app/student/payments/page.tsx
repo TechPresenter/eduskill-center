@@ -52,7 +52,7 @@ export default async function StudentPaymentsPage() {
                   <Stat label="Due" value={formatINR(a.due)} strong />
                 </div>
                 <ProgressBar value={a.paidAmount} max={a.payableAmount || 1} tone={a.due > 0 ? "orange" : "success"} label={`Paid ${formatINR(a.paidAmount)} of ${formatINR(a.payableAmount)}`} />
-                {a.installmentsAllowed && a.due > 0 && <p className="text-caption text-green-700">Installments are allowed for this application.</p>}
+                {a.installmentsAllowed && a.due > 0 && <p className="text-caption text-success-dark">Installments are allowed for this application.</p>}
                 {a.installments.length > 0 && (
                   <ul className="space-y-1 rounded-md bg-surface p-3 text-caption">
                     {a.installments.map((i) => (

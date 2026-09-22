@@ -46,6 +46,7 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
     fields: [
       { key: "eyebrow", label: "Eyebrow", type: "text" },
       { key: "title", label: "Headline", type: "textarea", help: "Wrap words in [[ ]] to highlight in orange. Use line breaks for new lines." },
+      { key: "mobileTitle", label: "Phone headline (optional)", type: "text", help: "Shown on phones, where the hero has room for two short lines. Leave empty to use the first line of the headline." },
       { key: "subtitle", label: "Supporting text", type: "textarea" },
       ...cta("primary", "Primary button"),
       ...cta("secondary", "Secondary button"),
@@ -63,6 +64,7 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
         itemFields: [
           { key: "eyebrow", label: "Eyebrow", type: "text" },
           { key: "title", label: "Headline", type: "textarea", help: "Wrap words in [[ ]] to highlight in orange." },
+          { key: "mobileTitle", label: "Phone headline (optional)", type: "text", help: "Leave empty to use the first line of the headline." },
           { key: "subtitle", label: "Supporting text", type: "textarea" },
           ...cta("primary", "Primary button"),
           ...cta("secondary", "Secondary button"),
@@ -509,6 +511,44 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
       description:
         "A non-profit foundation creating accessible skill development, education and career opportunities for underserved communities across India.",
       legalLine: "",
+    },
+  },
+  {
+    key: "nav.coursesMenu",
+    name: "Courses mega menu",
+    page: "Global",
+    description:
+      "The panel that opens from \"Courses\" in the header: the feature card and the Quick Links column. The Popular Courses column lists active course categories automatically.",
+    fields: [
+      { key: "featureTitle", label: "Feature card heading", type: "text" },
+      { key: "featureDescription", label: "Feature card text", type: "textarea", help: "Two short lines read best." },
+      ...cta("cta", "Feature card button"),
+      {
+        key: "quickLinks",
+        label: "Quick links",
+        type: "list",
+        max: 4,
+        itemFields: [
+          { key: "title", label: "Title", type: "text" },
+          { key: "subtitle", label: "Secondary line", type: "text" },
+          { key: "href", label: "Link", type: "url", help: "A page on this website such as /scholarship, or a full https:// address." },
+          { key: "icon", label: "Icon", type: "icon" },
+          { key: "tone", label: "Tile colour", type: "text", help: "One of: orange, blue, purple, rose, green, amber, navy." },
+        ],
+      },
+    ],
+    defaults: {
+      featureTitle: "Explore Our Courses",
+      featureDescription: "Practical, job-ready courses taught at EduSkill training centres close to home.",
+      ctaLabel: "View All Courses",
+      ctaHref: "/courses",
+      // Every link points at a live public route. Edit in Admin → CMS → Website sections → Global.
+      quickLinks: [
+        { title: "Verify a Certificate", subtitle: "Check any EduSkill certificate", href: "/verify-certificate", icon: "BadgeCheck", tone: "green" },
+        { title: "Find a Training Centre", subtitle: "Centres near your home", href: "/training-centers", icon: "MapPin", tone: "rose" },
+        { title: "Become a Trainer", subtitle: "Volunteer and teach locally", href: "/become-a-trainer", icon: "UserCheck", tone: "amber" },
+        { title: "Scholarship Programs", subtitle: "Support for your education", href: "/scholarship", icon: "GraduationCap", tone: "navy" },
+      ],
     },
   },
 ];

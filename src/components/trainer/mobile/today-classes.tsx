@@ -50,7 +50,7 @@ export function TodayClasses({ classes, dayLabel, canMark = true, className }: T
 
       {classes.length === 0 ? (
         <div className="flex items-center gap-3 px-4 py-5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lavender text-navy">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">
             <CalendarCheck className="h-5 w-5" aria-hidden />
           </span>
           <p className="text-body-sm text-muted">No classes scheduled today. Your weekly timetable shows what is coming up.</p>

@@ -2,13 +2,17 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, Pencil, Power, RefreshCw, ShieldAlert, Trash2 } from "lucide-react";
+import { KeyRound, Pencil, Power, RefreshCw, Save, ShieldAlert, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Field, FormGrid } from "@/components/ui/form";
 import { Input, RadioCards } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Alert } from "@/components/ui/feedback";
+import { StickyActionBar } from "@/components/ui/sticky-action-bar";
+import { DropdownItem } from "@/components/ui/dropdown";
+import { SaveStatus } from "@/components/admin/content/app-list";
+import { useUnsavedChangesWarning } from "@/components/admin/content/use-unsaved";
 import { toast } from "@/components/ui/toast";
 import { api } from "@/lib/api-client";
 import { useApiForm } from "@/components/admin/shared/use-api-form";
@@ -133,39 +137,49 @@ function ResetPasswordForm({ staff, onDone, onCancel }: { staff: StaffProfile; o
   );
 }
 
-export function StaffHeaderActions({ staff, perms }: { staff: StaffProfile; perms: StaffPerms }) {
+/**
+ * Record actions for a staff profile. `buttons` (desktop header): Edit + Reset as buttons and the rest
+ * in a "…" menu. `menu` (phone app bar): ONE 44px control whose sheet lists every action, so the phone
+ * screen is not topped by a row of wrapped buttons.
+ */
+export function StaffHeaderActions({ staff, perms, variant = "buttons" }: { staff: StaffProfile; perms: StaffPerms; variant?: "buttons" | "menu" }) {
   const router = useRouter();
   const [edit, setEdit] = React.useState(false);
   const [reset, setReset] = React.useState(false);
   const [temp, setTemp] = React.useState<string | null>(null);
   const active = staff.status === "ACTIVE";
+  const statusActions = perms.superAdmin && !perms.isSelf;
+  if (variant === "menu" && !perms.update && !perms.superAdmin) return null;
   return (
     <>
-      {perms.update && (
+      {variant === "buttons" && perms.update && (
         <Button size="sm" variant="outline" leftIcon={<Pencil className="h-4 w-4" />} onClick={() => setEdit(true)}>
           Edit profile
         </Button>
       )}
-      {perms.superAdmin && (
+      {variant === "buttons" && perms.superAdmin && (
         <Button size="sm" variant="outline" leftIcon={<KeyRound className="h-4 w-4" />} onClick={() => setReset(true)}>
           Reset password
         </Button>
       )}
-      {perms.superAdmin && !perms.isSelf && (
+      {variant === "buttons" && statusActions && (
         <RecordActions label="More actions">
-          <ConfirmAction asMenuItem icon={<Power className="h-4 w-4" />} method="patch" url={`/api/admin/staff/${staff.id}/status`} body={{ status: active ? "INACTIVE" : "ACTIVE" }} title={active ? `Deactivate ${staff.name}?` : `Activate ${staff.name}?`} description={active ? "They are logged out everywhere and cannot sign in until reactivated." : "They can sign in again."} confirmLabel={active ? "Deactivate" : "Activate"} successMessage={active ? "Account deactivated" : "Account activated"}>
-            {active ? "Deactivate account" : "Activate account"}
-          </ConfirmAction>
-          {staff.status !== "SUSPENDED" && (
-            <ConfirmAction asMenuItem danger icon={<ShieldAlert className="h-4 w-4" />} method="patch" url={`/api/admin/staff/${staff.id}/status`} body={{ status: "SUSPENDED" }} title={`Suspend ${staff.name}?`} description="Suspension blocks login and ends every session. Use for security incidents." confirmLabel="Suspend" successMessage="Account suspended">
-              Suspend account
-            </ConfirmAction>
+          <StatusMenuItems staff={staff} perms={perms} active={active} />
+        </RecordActions>
+      )}
+      {variant === "menu" && (
+        <RecordActions label={`Actions for ${staff.name}`}>
+          {perms.update && (
+            <DropdownItem icon={<Pencil className="h-4 w-4" />} onClick={() => setEdit(true)}>
+              Edit profile
+            </DropdownItem>
           )}
-          {perms.delete && (
-            <ConfirmAction asMenuItem danger icon={<Trash2 className="h-4 w-4" />} method="delete" url={`/api/admin/staff/${staff.id}`} title={`Delete ${staff.name}'s account?`} description="The staff record is archived, the login is disabled and all sessions are revoked. Audit history is kept." confirmLabel="Delete account" successMessage="Staff account deleted" redirectTo="/admin/staff">
-              Delete account
-            </ConfirmAction>
+          {perms.superAdmin && (
+            <DropdownItem icon={<KeyRound className="h-4 w-4" />} onClick={() => setReset(true)}>
+              Reset password
+            </DropdownItem>
           )}
+          {statusActions && <StatusMenuItems staff={staff} perms={perms} active={active} />}
         </RecordActions>
       )}
       <Modal open={edit} onClose={() => setEdit(false)} title="Edit profile" size="lg">
@@ -190,6 +204,27 @@ export function StaffHeaderActions({ staff, perms }: { staff: StaffProfile; perm
         />
       </Modal>
       {temp && <TemporaryPasswordModal open onClose={() => setTemp(null)} password={temp} email={staff.email} title="New temporary password" />}
+    </>
+  );
+}
+
+/** Activate / deactivate, suspend and delete — the confirmations shared by both header variants. */
+function StatusMenuItems({ staff, perms, active }: { staff: StaffProfile; perms: StaffPerms; active: boolean }) {
+  return (
+    <>
+      <ConfirmAction asMenuItem icon={<Power className="h-4 w-4" />} method="patch" url={`/api/admin/staff/${staff.id}/status`} body={{ status: active ? "INACTIVE" : "ACTIVE" }} title={active ? `Deactivate ${staff.name}?` : `Activate ${staff.name}?`} description={active ? "They are logged out everywhere and cannot sign in until reactivated." : "They can sign in again."} confirmLabel={active ? "Deactivate" : "Activate"} successMessage={active ? "Account deactivated" : "Account activated"}>
+        {active ? "Deactivate account" : "Activate account"}
+      </ConfirmAction>
+      {staff.status !== "SUSPENDED" && (
+        <ConfirmAction asMenuItem danger icon={<ShieldAlert className="h-4 w-4" />} method="patch" url={`/api/admin/staff/${staff.id}/status`} body={{ status: "SUSPENDED" }} title={`Suspend ${staff.name}?`} description="Suspension blocks login and ends every session. Use for security incidents." confirmLabel="Suspend" successMessage="Account suspended">
+          Suspend account
+        </ConfirmAction>
+      )}
+      {perms.delete && (
+        <ConfirmAction asMenuItem danger icon={<Trash2 className="h-4 w-4" />} method="delete" url={`/api/admin/staff/${staff.id}`} title={`Delete ${staff.name}'s account?`} description="The staff record is archived, the login is disabled and all sessions are revoked. Audit history is kept." confirmLabel="Delete account" successMessage="Staff account deleted" redirectTo="/admin/staff">
+          Delete account
+        </ConfirmAction>
+      )}
     </>
   );
 }
@@ -226,28 +261,56 @@ export function StaffRoleCard({ staff, roles, editable }: { staff: StaffProfile;
 export function StaffPermissionsCard({ staff, editable }: { staff: StaffProfile; editable: boolean }) {
   const router = useRouter();
   const [value, setValue] = React.useState<string[]>(staff.permissions);
+  const [justSaved, setJustSaved] = React.useState(false);
   const { loading, error, submit } = useApiForm();
   const dirty = value.length !== staff.permissions.length || value.some((k) => !staff.permissions.includes(k));
+  useUnsavedChangesWarning(dirty && editable);
   const save = async () => {
     const res = await submit(() => api.put(`/api/admin/staff/${staff.id}/permissions`, { permissions: value }), { silent: true });
     if (res !== undefined) {
+      setJustSaved(true);
       toast.success("Direct permissions saved", `${value.length} granted directly.`);
       router.refresh();
     }
   };
+  const state = loading ? "saving" : error ? "error" : dirty ? "dirty" : justSaved ? "saved" : "clean";
+  const buttons = (
+    <>
+      <Button size="sm" variant="outline" onClick={() => setValue(staff.permissions)} disabled={!dirty || loading} className="max-lg:flex-1">
+        Discard
+      </Button>
+      <Button size="sm" onClick={save} loading={loading} disabled={!dirty} leftIcon={<Save className="h-4 w-4" />} className="max-lg:flex-2">
+        Save permissions
+      </Button>
+    </>
+  );
   return (
     <div className="space-y-3">
       {error && <Alert tone="danger">{error}</Alert>}
-      <PermissionMatrix value={value} onChange={setValue} inherited={staff.rolePermissions} disabled={!editable || loading} />
+      <PermissionMatrix
+        value={value}
+        onChange={(v) => {
+          setValue(v);
+          setJustSaved(false);
+        }}
+        inherited={staff.rolePermissions}
+        disabled={!editable || loading}
+      />
       {editable && (
-        <div className="flex justify-end gap-2">
-          <Button size="sm" variant="outline" onClick={() => setValue(staff.permissions)} disabled={!dirty || loading}>
-            Reset
-          </Button>
-          <Button size="sm" onClick={save} loading={loading} disabled={!dirty}>
-            Save permissions
-          </Button>
-        </div>
+        <>
+          {/* Desktop: inline row. */}
+          <div className="hidden items-center justify-between gap-3 border-t border-line pt-4 lg:flex">
+            <SaveStatus state={state} idle={`${staff.permissions.length} granted directly`} />
+            <div className="flex gap-2">{buttons}</div>
+          </div>
+          {/* Phones: the matrix is long, so Save follows the thumb once something changes. */}
+          {dirty && (
+            <StickyActionBar desktop="hidden" innerClassName="flex-col">
+              <SaveStatus state={state} className="justify-center" />
+              <div className="flex w-full gap-2">{buttons}</div>
+            </StickyActionBar>
+          )}
+        </>
       )}
     </div>
   );

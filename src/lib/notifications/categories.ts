@@ -30,6 +30,7 @@ export const EVENT_CATEGORY = {
   CERTIFICATE_REVOKED: "Certificate",
   REGISTRATION: "System",
   PASSWORD_RESET: "System",
+  LOGIN_OTP: "System",
   SUPPORT_REPLY: "System",
   SUPPORT_TICKET_CREATED: "System",
   ENQUIRY_RECEIVED: "System",

@@ -44,13 +44,13 @@ export default async function StudentAttendancePage() {
                         {s.present + s.late} of {s.held} classes attended · required {required}%
                       </p>
                     </div>
-                    <span className={`rounded-full px-2.5 py-1 text-caption font-semibold ${ok ? "bg-success-light text-green-700" : "bg-warning-light text-amber-700"}`}>{ok ? "On track" : `Below ${required}%`}</span>
+                    <span className={`rounded-full px-2.5 py-1 text-caption font-semibold ${ok ? "bg-success-light text-success-dark" : "bg-warning-light text-warning-dark"}`}>{ok ? "On track" : `Below ${required}%`}</span>
                   </div>
                   <ProgressBar value={s.pct} tone={ok ? "success" : "warning"} />
                   <div className="grid grid-cols-4 gap-2 text-center text-caption">
-                    <Stat label="Present" value={s.present} tone="text-green-700" />
-                    <Stat label="Late" value={s.late} tone="text-amber-700" />
-                    <Stat label="Leave" value={s.leave} tone="text-blue-700" />
+                    <Stat label="Present" value={s.present} tone="text-success-dark" />
+                    <Stat label="Late" value={s.late} tone="text-warning-dark" />
+                    <Stat label="Leave" value={s.leave} tone="text-info-dark" />
                     <Stat label="Absent" value={s.absent} tone="text-danger" />
                   </div>
                 </CardBody>

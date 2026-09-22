@@ -28,7 +28,7 @@ export function QuickToggle({ endpoint, body, field, onLabel, offLabel, disabled
     }
   };
   return (
-    <Button size="xs" variant={current ? "ghost" : "outline"} onClick={run} loading={busy} disabled={disabled} title={title} aria-pressed={current}>
+    <Button size="sm" variant={current ? "ghost" : "outline"} onClick={run} loading={busy} disabled={disabled} title={title} aria-pressed={current}>
       {current ? offLabel : onLabel}
     </Button>
   );

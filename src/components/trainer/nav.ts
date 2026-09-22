@@ -1,13 +1,14 @@
 "use client";
 
-import { Bell, BookOpen, Building2, CalendarDays, ClipboardCheck, FileText, LayoutDashboard, ListChecks, Megaphone, Settings, UserCircle, Users, UsersRound } from "lucide-react";
+import { Bell, BookOpen, Building2, CalendarDays, ClipboardCheck, FileText, FolderOpen, LayoutDashboard, ListChecks, Megaphone, Settings, UserCircle, Users, UsersRound } from "lucide-react";
 import type { NavGroup, NavItem } from "@/components/portal/shell";
 
 export const TRAINER_NAV: NavGroup[] = [
   {
     items: [
       { label: "Dashboard", href: "/trainer/dashboard", icon: LayoutDashboard },
-      { label: "My Profile", href: "/trainer/profile", icon: UserCircle },
+      { label: "My Profile", href: "/trainer/profile", icon: UserCircle, exact: true },
+      { label: "My Documents", href: "/trainer/profile/documents", icon: FolderOpen },
       { label: "My Assignments", href: "/trainer/assignments", icon: Building2 },
     ],
   },

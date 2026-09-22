@@ -11,6 +11,12 @@ export default function Loading() {
         <Skeleton className="h-7 w-48 max-w-full" />
         <Skeleton className="h-4 w-80 max-w-full" />
       </div>
+      {/* Status chips (QueryTabs). */}
+      <div className="flex gap-2 overflow-x-clip border-b border-line pb-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-8 w-24 shrink-0 rounded-md" />
+        ))}
+      </div>
       <Skeleton className="h-11 w-full rounded-md lg:h-[4.5rem] lg:rounded-card" />
       <SkeletonTable rows={8} cols={7} />
     </div>

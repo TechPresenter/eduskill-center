@@ -158,7 +158,7 @@ export function CenterForm({ initial, courses, canVerify, codeFormat }: { initia
               errors={locErrors}
               className="grid grid-cols-1 gap-4 sm:grid-cols-3"
             />
-            {initial && (initial.stateId !== loc.stateId || initial.districtId !== loc.districtId) && <p className="mt-2 text-caption text-amber-700">Changing the state or district does not change the existing center code.</p>}
+            {initial && (initial.stateId !== loc.stateId || initial.districtId !== loc.districtId) && <p className="mt-2 text-caption text-warning-dark">Changing the state or district does not change the existing center code.</p>}
           </div>
           <Field label="Address" htmlFor="cf-address" required error={fieldErrors.address} className="sm:col-span-2">
             <Textarea id="cf-address" value={address} onChange={(e) => { setAddress(e.target.value); clearField("address"); }} rows={2} required maxLength={500} invalid={!!fieldErrors.address} />

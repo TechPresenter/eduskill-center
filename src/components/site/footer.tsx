@@ -91,11 +91,11 @@ function FooterColumn({ id, title, links }: { id: string; title: string; links: 
   return (
     <div className="group max-md:border-t max-md:border-white/10">
       <input id={toggleId} type="checkbox" className="peer sr-only md:hidden" aria-controls={listId} />
-      <h3 className="rounded-lg font-heading text-[13px] font-bold tracking-[0.14em] text-white uppercase peer-focus-visible:ring-2 peer-focus-visible:ring-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-navy-dark">
+      <h3 className="rounded-lg text-overline font-heading text-white peer-focus-visible:ring-2 peer-focus-visible:ring-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-navy-dark">
         <label htmlFor={toggleId} className="flex min-h-12 cursor-pointer items-center justify-between gap-3 select-none md:pointer-events-none md:min-h-0 md:cursor-default">
           <span>{title}</span>
           <ChevronDown
-            className="h-[18px] w-[18px] shrink-0 text-white/70 transition-transform duration-200 group-has-[:checked]:-rotate-180 motion-reduce:transition-none md:hidden"
+            className="size-4.5 shrink-0 text-white/70 transition-transform duration-element ease-soft group-has-[:checked]:-rotate-180 motion-reduce:transition-none md:hidden"
             aria-hidden
           />
         </label>
@@ -104,8 +104,8 @@ function FooterColumn({ id, title, links }: { id: string; title: string; links: 
       <ul id={listId} className="max-md:hidden max-md:pb-3 max-md:group-has-[:checked]:block md:mt-3.5">
         {links.map((l) => (
           <li key={l.href + l.label}>
-            <Link href={l.href} className="group/link flex min-h-11 items-center gap-2.5 text-[15px] leading-snug text-white/75 transition-colors hover:text-white motion-reduce:transition-none md:min-h-8">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange transition-transform duration-200 group-hover/link:translate-x-1 motion-reduce:transition-none" aria-hidden />
+            <Link href={l.href} className="group/link flex min-h-11 items-center gap-2.5 text-body text-white/75 transition-colors duration-micro hover:text-white active:text-white motion-reduce:transition-none md:min-h-8">
+              <span className="size-1.5 shrink-0 rounded-full bg-orange transition-transform duration-micro ease-soft group-hover/link:translate-x-1 motion-reduce:transition-none" aria-hidden />
               <span>{l.label}</span>
             </Link>
           </li>
@@ -119,12 +119,10 @@ function FooterColumn({ id, title, links }: { id: string; title: string; links: 
 function ContactRow({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-orange ring-1 ring-inset ring-white/15" aria-hidden>
-        <Icon className="h-[18px] w-[18px]" />
-      </span>
+      <IconTile icon={Icon} tone="white" size="sm" className="text-orange" />
       <div className="min-w-0 pt-0.5">
-        <dt className="text-[12px] font-bold tracking-[0.12em] text-white/70 uppercase">{label}</dt>
-        <dd className="mt-1 text-[15px] leading-snug text-white/85">{children}</dd>
+        <dt className="text-overline text-white/70">{label}</dt>
+        <dd className="mt-1 text-body text-white/85">{children}</dd>
       </div>
     </div>
   );
@@ -140,7 +138,7 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
   const legalLine = [footer.legalLine, branding.registrationInfo].filter(Boolean).join(" · ");
 
   return (
-    <footer className="relative isolate overflow-hidden bg-navy-dark text-white pb-safe" aria-labelledby="site-footer-heading">
+    <footer className="relative isolate overflow-x-clip bg-navy-dark text-white pb-safe" aria-labelledby="site-footer-heading">
       {/* Depth on the flat navy: a soft brand wash plus a faint edge-faded grid. Both are clipped by
           this element's own overflow-hidden, so neither can ever widen the page. The dot variant is
           avoided here on purpose — the closing CtaBand above the footer already uses a dot field. */}
@@ -157,23 +155,23 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
           <div className="grid gap-10 lg:grid-cols-12 lg:gap-10">
             {/* Brand lockup, tagline, contact, social */}
             <div className="lg:col-span-4">
-              <Link href="/" aria-label={`${branding.siteName} – home`} className="inline-flex rounded-xl">
+              <Link href="/" aria-label={`${branding.siteName} – home`} className="inline-flex min-h-11 items-center rounded-xl">
                 <BrandMark branding={branding} variant="footer" light />
               </Link>
 
               {branding.tagline && (
                 <p className="mt-6 flex items-start gap-3">
                   <span className="mt-1 h-4 w-1 shrink-0 rounded-full bg-orange" aria-hidden />
-                  <span className="font-heading text-[13px] font-bold tracking-[0.12em] text-white uppercase">{branding.tagline}</span>
+                  <span className="text-overline font-heading text-white">{branding.tagline}</span>
                 </p>
               )}
-              {footer.description && <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/80">{footer.description}</p>}
+              {footer.description && <p className="mt-4 max-w-md text-body text-white/80">{footer.description}</p>}
 
               {hasContact && (
                 <dl className="mt-7 grid gap-4 rounded-2xl bg-white/5 p-4 ring-1 ring-inset ring-white/10 sm:p-5">
                   {branding.contact.email && (
                     <ContactRow icon={Mail} label="Email">
-                      <a href={`mailto:${branding.contact.email}`} className="break-all transition-colors hover:text-white motion-reduce:transition-none">
+                      <a href={`mailto:${branding.contact.email}`} className="inline-flex min-h-11 items-center break-all transition-colors hover:text-white motion-reduce:transition-none">
                         {branding.contact.email}
                       </a>
                     </ContactRow>
@@ -181,7 +179,7 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
                   {branding.contact.phone && (
                     <ContactRow icon={Phone} label="Phone">
                       {phoneHref ? (
-                        <a href={phoneHref} className="transition-colors hover:text-white motion-reduce:transition-none">
+                        <a href={phoneHref} className="inline-flex min-h-11 items-center transition-colors hover:text-white motion-reduce:transition-none">
                           {branding.contact.phone}
                         </a>
                       ) : (
@@ -192,7 +190,7 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
                           href={waHref}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="mt-1 flex min-h-9 w-fit items-center text-[13px] font-semibold text-white underline decoration-orange decoration-2 underline-offset-4"
+                          className="mt-1 flex min-h-11 w-fit items-center text-body-sm font-semibold text-white underline decoration-orange decoration-2 underline-offset-4"
                         >
                           WhatsApp
                         </a>
@@ -214,7 +212,7 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
 
               {socials.length > 0 && (
                 <div className="mt-7">
-                  <h3 className="text-[12px] font-bold tracking-[0.14em] text-white/70 uppercase">Follow Us</h3>
+                  <h3 className="text-overline text-white/70">Follow Us</h3>
                   <ul className="mt-3 flex flex-wrap gap-2.5">
                     {socials.map(([key, url]) => {
                       const icon = SOCIAL_ICONS[key];
@@ -226,7 +224,7 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label={icon.label}
-                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-inset ring-white/20 transition duration-200 hover:bg-orange hover:ring-orange motion-reduce:transition-none"
+                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-inset ring-white/20 transition duration-micro ease-soft hover:bg-orange hover:ring-orange active:scale-95 motion-reduce:transition-none"
                           >
                             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
                               <path d={icon.path} />
@@ -259,23 +257,23 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
                 <div className="flex items-start gap-3.5">
                   <IconTile icon={Compass} tone="white" size="sm" className="max-sm:hidden" />
                   <div>
-                    <p className="font-heading text-base font-extrabold text-white sm:text-[17px]">Ready to start learning or teaching?</p>
-                    <p className="mt-1 text-[13px] leading-relaxed text-white/75 sm:text-sm">Find a training center near you, apply for a course, or volunteer as a trainer.</p>
+                    <p className="text-h4 text-white">Ready to start learning or teaching?</p>
+                    <p className="mt-1 text-body-sm text-white/75">Find a training center near you, apply for a course, or volunteer as a trainer.</p>
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-col gap-2.5 sm:flex-row">
                   <Link
                     href="/training-centers"
-                    className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white/10 px-5 text-[15px] font-semibold text-white ring-1 ring-inset ring-white/20 transition-colors hover:bg-white/20 motion-reduce:transition-none sm:h-11 sm:text-sm"
+                    className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-white/10 px-5 text-body font-semibold text-white ring-1 ring-inset ring-white/20 transition duration-micro ease-soft hover:bg-white/20 active:scale-[0.98] motion-reduce:transition-none sm:h-11"
                   >
                     Find a Center
                   </Link>
                   <Link
                     href="/register"
-                    className="group/cta inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-orange px-5 text-[15px] font-semibold text-white transition-colors hover:bg-orange-hover motion-reduce:transition-none sm:h-11 sm:text-sm"
+                    className="group/cta inline-flex h-12 items-center justify-center gap-2 rounded-md bg-orange px-5 text-body font-semibold text-white transition duration-micro ease-soft hover:bg-orange-hover active:scale-[0.98] motion-reduce:transition-none sm:h-11"
                   >
                     Apply Now
-                    <ArrowUpRight className="h-4 w-4 transition-transform duration-200 group-hover/cta:-translate-y-0.5 group-hover/cta:translate-x-0.5 motion-reduce:transition-none" aria-hidden />
+                    <ArrowUpRight className="size-4 transition-transform duration-micro group-hover/cta:-translate-y-0.5 group-hover/cta:translate-x-0.5 motion-reduce:transition-none" aria-hidden />
                   </Link>
                 </div>
               </div>
@@ -286,7 +284,7 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
         {/* Legal / bottom bar */}
         <div className="border-t border-white/10 bg-navy-dark/60">
           <div className="container-x flex flex-col gap-3 py-5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
-            <div className="text-[13px] leading-relaxed text-white/70">
+            <div className="text-body-sm text-white/70">
               <p>
                 © {year} {branding.siteName}. All Rights Reserved.
               </p>
@@ -295,7 +293,7 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
             <ul className="-mx-2.5 flex flex-wrap items-center lg:justify-end" aria-label="Legal">
               {LEGAL.map((l) => (
                 <li key={l.href}>
-                  <Link href={l.href} className="flex min-h-11 items-center rounded-lg px-2.5 text-[13px] text-white/70 transition-colors hover:text-white motion-reduce:transition-none lg:min-h-9">
+                  <Link href={l.href} className="ring-focus-inverse flex min-h-11 items-center rounded-md px-2.5 text-body-sm text-white/70 transition-colors duration-micro hover:text-white active:text-white motion-reduce:transition-none lg:min-h-9">
                     {l.label}
                   </Link>
                 </li>

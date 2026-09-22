@@ -23,6 +23,8 @@ import { orNotFound } from "@/components/admin/shared/server";
 import { CenterHeaderActions } from "@/components/admin/centers/center-actions";
 import { CenterCoursesEditor, CenterGalleryManager } from "@/components/admin/centers/center-panels";
 import { AssignTrainerDrawer, CreateBatchDrawer, EndAssignmentButton } from "@/components/admin/centers/center-drawers";
+import { IconTile, RecordIdentity } from "@/components/admin/locations/list-kit";
+import { withBasePath } from "@/lib/base-path";
 
 export const metadata: Metadata = { title: "Training Center · Foundation Admin" };
 
@@ -59,6 +61,22 @@ export default async function CenterDetailPage({ params, searchParams }: { param
 
   return (
     <div className="space-y-6">
+      {/* Identity and status first on phones, where the app bar only has room for a code. */}
+      <RecordIdentity
+        lead={<IconTile icon={<Building2 />} tone={center.status === "ACTIVE" ? "lavender" : "warning"} size="lg" />}
+        title={center.name}
+        meta={<span className="font-mono font-semibold text-navy">{center.code}</span>}
+        badges={
+          <>
+            <StatusBadge status={center.status} />
+            {center.isVerified && (
+              <Badge tone="success">
+                <BadgeCheck className="h-3.5 w-3.5" /> Verified
+              </Badge>
+            )}
+          </>
+        }
+      />
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-3">
@@ -89,16 +107,6 @@ export default async function CenterDetailPage({ params, searchParams }: { param
         actions={<CenterHeaderActions center={{ id: center.id, code: center.code, name: center.name, status: center.status, isVerified: center.isVerified, activeStudents: center.stats.studentCount }} perms={perms} />}
       />
 
-      {/* The app bar shows only the centre code on phones – keep the name and status visible in the page. */}
-      <div className="flex flex-wrap items-center gap-2 lg:hidden">
-        <h2 className="text-h3 min-w-0 text-navy">{center.name}</h2>
-        <StatusBadge status={center.status} />
-        {center.isVerified && (
-          <Badge tone="success">
-            <BadgeCheck className="h-3.5 w-3.5" /> Verified
-          </Badge>
-        )}
-      </div>
 
       <div className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -172,7 +180,7 @@ function OverviewTab({ center }: { center: CenterData }) {
       <div className="space-y-4">
         {center.coverImage ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={center.coverImage} alt={`${center.name} cover`} className="aspect-[4/3] w-full rounded-card border border-line object-cover" />
+          <img src={withBasePath(center.coverImage)} alt={`${center.name} cover`} className="aspect-[4/3] w-full rounded-card border border-line object-cover" />
         ) : (
           <div className="flex aspect-[4/3] items-center justify-center rounded-card border border-dashed border-line bg-surface text-body-sm text-muted">No cover image</div>
         )}

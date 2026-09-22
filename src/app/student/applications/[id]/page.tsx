@@ -134,7 +134,7 @@ export default async function StudentApplicationDetailPage({ params }: { params:
         <div className="space-y-6">
           {/* Fees */}
           <Card>
-            <CardHeader title="Fees" action={app.installmentsAllowed ? <span className="text-caption font-semibold text-green-700">Installments allowed</span> : undefined} />
+            <CardHeader title="Fees" action={app.installmentsAllowed ? <span className="text-caption font-semibold text-success-dark">Installments allowed</span> : undefined} />
             <CardBody className="space-y-2 text-body-sm">
               {app.fees.map((f) => (
                 <div key={f.id} className="flex justify-between text-muted">
@@ -219,7 +219,7 @@ export default async function StudentApplicationDetailPage({ params }: { params:
 
 function FeeRow({ label, value, strong, tone }: { label: string; value: number; strong?: boolean; tone?: "success" }) {
   return (
-    <div className={`flex justify-between ${strong ? "font-semibold text-ink" : tone === "success" ? "text-green-700" : "text-ink"}`}>
+    <div className={`flex justify-between ${strong ? "font-semibold text-ink" : tone === "success" ? "text-success-dark" : "text-ink"}`}>
       <span>{label}</span>
       <span className="tabular-nums">{value < 0 ? `− ${formatINR(-value)}` : formatINR(value)}</span>
     </div>

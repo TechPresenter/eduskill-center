@@ -48,10 +48,10 @@ function ChartCard({ title, description, data, series, labelKey, emptyText = "No
         </div>
         {!empty && (
           <div className="flex shrink-0 rounded-md bg-surface p-0.5" role="tablist" aria-label={`${title} view`}>
-            <button type="button" role="tab" aria-selected={view === "chart"} onClick={() => setView("chart")} className={cn("rounded-md p-1.5", view === "chart" ? "bg-white text-navy shadow-sm" : "text-muted hover:text-ink")} aria-label="Chart view">
+            <button type="button" role="tab" aria-selected={view === "chart"} onClick={() => setView("chart")} className={cn("inline-flex items-center justify-center rounded-md p-1.5 max-sm:h-11 max-sm:w-11 pointer-coarse:h-11 pointer-coarse:w-11", view === "chart" ? "bg-white text-navy shadow-e1" : "text-muted hover:text-ink")} aria-label="Chart view">
               <BarChart3 className="h-3.5 w-3.5" />
             </button>
-            <button type="button" role="tab" aria-selected={view === "table"} onClick={() => setView("table")} className={cn("rounded-md p-1.5", view === "table" ? "bg-white text-navy shadow-sm" : "text-muted hover:text-ink")} aria-label="Table view">
+            <button type="button" role="tab" aria-selected={view === "table"} onClick={() => setView("table")} className={cn("inline-flex items-center justify-center rounded-md p-1.5 max-sm:h-11 max-sm:w-11 pointer-coarse:h-11 pointer-coarse:w-11", view === "table" ? "bg-white text-navy shadow-e1" : "text-muted hover:text-ink")} aria-label="Table view">
               <Table2 className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -115,7 +115,7 @@ function ChartTooltip({ active, payload, label, series }: { active?: boolean; pa
   );
 }
 
-const tick = { fontSize: 11, fill: AXIS };
+const tick = { fontSize: 12, fill: AXIS };
 
 export function VerticalBarChart({ data, series, labelKey, ...props }: Omit<ChartCardProps, "children">) {
   return (
@@ -127,7 +127,7 @@ export function VerticalBarChart({ data, series, labelKey, ...props }: Omit<Char
             <XAxis dataKey={labelKey} tick={tick} tickLine={false} axisLine={{ stroke: GRID }} interval="preserveStartEnd" minTickGap={16} />
             <YAxis tick={tick} tickLine={false} axisLine={false} allowDecimals={false} width={48} tickFormatter={(v) => (series[0]?.format === "money" ? (v >= 1000 ? `${Math.round(v / 1000)}k` : String(v)) : String(v))} />
             <Tooltip cursor={{ fill: "#f8f8fc" }} content={<ChartTooltip series={series} />} />
-            {series.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />}
+            {series.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />}
             {series.map((s, i) => (
               <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color ?? CHART_COLORS[i % CHART_COLORS.length]} radius={[4, 4, 0, 0]} maxBarSize={36} />
             ))}
@@ -178,7 +178,7 @@ export function TrendChart({ data, series, labelKey, area, ...props }: Omit<Char
               <XAxis dataKey={labelKey} tick={tick} tickLine={false} axisLine={{ stroke: GRID }} minTickGap={16} />
               <YAxis tick={tick} tickLine={false} axisLine={false} allowDecimals={false} width={48} />
               <Tooltip content={<ChartTooltip series={series} />} />
-              {series.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />}
+              {series.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />}
               {series.map((s, i) => (
                 <Area key={s.key} type="monotone" dataKey={s.key} name={s.label} stroke={s.color ?? CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} fill={`url(#grad-${s.key})`} dot={{ r: 3, strokeWidth: 2, fill: "#fff" }} activeDot={{ r: 5 }} />
               ))}
@@ -189,7 +189,7 @@ export function TrendChart({ data, series, labelKey, area, ...props }: Omit<Char
               <XAxis dataKey={labelKey} tick={tick} tickLine={false} axisLine={{ stroke: GRID }} minTickGap={16} />
               <YAxis tick={tick} tickLine={false} axisLine={false} width={48} domain={series[0]?.format === "percent" ? [0, 100] : undefined} />
               <Tooltip content={<ChartTooltip series={series} />} />
-              {series.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />}
+              {series.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />}
               {series.map((s, i) => (
                 <Line key={s.key} type="monotone" dataKey={s.key} name={s.label} stroke={s.color ?? CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} dot={{ r: 3, strokeWidth: 2, fill: "#fff" }} activeDot={{ r: 5 }} />
               ))}

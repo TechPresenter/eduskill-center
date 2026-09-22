@@ -148,7 +148,8 @@ export interface PageHeaderProps {
  * breadcrumbs below `lg` where the app bar's back arrow does that job.
  */
 export function PageHeader({ title, description, actions, breadcrumbs, className, backHref, mobileTitle, mobileActions, hideMobileTitle = true }: PageHeaderProps) {
-  const emptyOnMobile = hideMobileTitle && !description && !actions;
+  // Nothing visible on a phone: the title lives in the app bar and the actions (if any) moved there too.
+  const emptyOnMobile = hideMobileTitle && !description && (!actions || !!mobileActions);
   return (
     <div className={cn("mb-4 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between lg:mb-6 lg:gap-4", emptyOnMobile ? "hidden lg:flex" : "flex", className)}>
       <SetMobileHeader title={mobileTitle ?? title} backHref={backHref} action={mobileActions} />

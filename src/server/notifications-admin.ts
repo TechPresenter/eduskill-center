@@ -18,6 +18,9 @@ export interface Ctx {
 export const NOTIFY_EVENTS = Object.keys(DEFAULT_TEMPLATES) as NotifyEvent[];
 export const TEMPLATE_CHANNELS: NotificationChannel[] = ["EMAIL", "SMS", "WHATSAPP", "IN_APP"];
 const RESENDABLE: NotificationChannel[] = ["EMAIL", "SMS", "WHATSAPP"];
+/** Login codes are stored redacted and expire in minutes: resending one from the log is never right. */
+const NOT_RESENDABLE_EVENTS = new Set(["LOGIN_OTP"]);
+const eventOf = (templateKey: string | null) => templateKey?.split(":")[0] ?? "";
 
 /** Which outbound channels are switched on in Settings → Communication. */
 export async function enabledChannels(): Promise<{ EMAIL: boolean; SMS: boolean; WHATSAPP: boolean }> {
@@ -52,7 +55,7 @@ export async function listSentLog(q: z.infer<typeof sentLogSchema>) {
     db.notification.count({ where }),
   ]);
   return paged(
-    items.map((n) => ({ ...n, data: undefined, event: n.templateKey?.split(":")[0] ?? null, canResend: n.status === "FAILED" && RESENDABLE.includes(n.channel) && !!n.recipient })),
+    items.map((n) => ({ ...n, data: undefined, event: n.templateKey?.split(":")[0] ?? null, canResend: n.status === "FAILED" && RESENDABLE.includes(n.channel) && !!n.recipient && !NOT_RESENDABLE_EVENTS.has(eventOf(n.templateKey)) })),
     total,
     q
   );
@@ -71,6 +74,7 @@ export async function resendNotification(id: string, ctx: Ctx) {
   if (n.status !== "FAILED") throw Errors.badRequest("Only failed notifications can be resent.");
   if (!RESENDABLE.includes(n.channel)) throw Errors.badRequest("In-app notifications cannot be resent.");
   if (!n.recipient) throw Errors.badRequest("This notification has no recipient address.");
+  if (NOT_RESENDABLE_EVENTS.has(eventOf(n.templateKey))) throw Errors.badRequest("Login codes cannot be resent from the log. The student can request a new code on the login page.");
   const before = await db.notification.count();
   await notify({
     userId: n.userId,

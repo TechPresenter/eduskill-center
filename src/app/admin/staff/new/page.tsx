@@ -14,7 +14,7 @@ export default async function NewStaffPage() {
   const roles = await listRoles();
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader title="Add a staff account" description="Creates a Foundation Staff login. The employee code is generated automatically." breadcrumbs={[{ label: "Staff", href: "/admin/staff" }, { label: "New" }]} />
+      <PageHeader title="Add a staff account" mobileTitle="New staff" backHref="/admin/staff" description="Creates a Foundation Staff login. The employee code is generated automatically." breadcrumbs={[{ label: "Staff", href: "/admin/staff" }, { label: "New" }]} />
       <Card>
         <CardBody>
           <StaffCreateForm roles={roles.map((r) => ({ id: r.id, name: r.name, description: r.description, permissions: r.permissions }))} />

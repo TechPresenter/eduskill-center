@@ -14,6 +14,7 @@ import { ProgressBar, RingProgress } from "@/components/ui/stats";
 import { AdmissionActions } from "@/components/admin/admissions/admission-actions";
 import { EligibilityChecklist } from "@/components/admin/progress/eligibility-checklist";
 import { withBasePath } from "@/lib/base-path";
+import { RecordIdentity } from "@/components/admin/locations/list-kit";
 
 export const metadata = { title: "Admission" };
 
@@ -33,6 +34,19 @@ export default async function AdmissionDetailPage({ params }: { params: Promise<
 
   return (
     <div>
+      {/* Identity and status first on phones, where the app bar only has room for a code. */}
+      <RecordIdentity
+        lead={<Avatar name={s.name} src={s.photoUrl} size={48} />}
+        title={s.name}
+        meta={<span className="font-mono font-semibold text-navy">{a.admissionNo}</span>}
+        badges={
+          <>
+            <StatusBadge status={a.status} />
+            {p?.certificateEligible && !a.certificate && <Badge tone="navy">Certificate eligible</Badge>}
+            {a.certificate && <Badge tone="success">Certified</Badge>}
+          </>
+        }
+      />
       <PageHeader
         backHref="/admin/admissions"
         mobileTitle={a.admissionNo}
@@ -60,12 +74,6 @@ export default async function AdmissionDetailPage({ params }: { params: Promise<
         }
       />
 
-      {/* The app bar shows only the admission number on phones – keep the status in the page. */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 lg:hidden">
-        <StatusBadge status={a.status} />
-        {p?.certificateEligible && !a.certificate && <Badge tone="navy">Certificate eligible</Badge>}
-        {a.certificate && <Badge tone="success">Certified</Badge>}
-      </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
@@ -141,7 +149,7 @@ export default async function AdmissionDetailPage({ params }: { params: Promise<
                     {a.trainer && a.trainer.id !== a.batch.trainerId && <Badge tone="info">Overrides batch trainer</Badge>}
                   </>
                 ) : (
-                  <p className="text-body-sm text-amber-700">No trainer assigned</p>
+                  <p className="text-body-sm text-warning-dark">No trainer assigned</p>
                 )}
               </div>
             </CardBody>
@@ -164,9 +172,9 @@ export default async function AdmissionDetailPage({ params }: { params: Promise<
                       {[
                         { label: "Held", value: a.attendance.held, cls: "text-ink" },
                         { label: "Present", value: a.attendance.present, cls: "text-success-dark" },
-                        { label: "Late", value: a.attendance.late, cls: "text-amber-700" },
+                        { label: "Late", value: a.attendance.late, cls: "text-warning-dark" },
                         { label: "Absent", value: a.attendance.absent, cls: "text-danger" },
-                        { label: "Leave", value: a.attendance.leave, cls: "text-blue-700" },
+                        { label: "Leave", value: a.attendance.leave, cls: "text-info-dark" },
                       ].map((x) => (
                         <div key={x.label} className="rounded-md bg-surface p-3 text-center">
                           <p className={`text-h3 tabular-nums ${x.cls}`}>{x.value}</p>

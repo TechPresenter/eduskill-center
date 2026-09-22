@@ -1,10 +1,11 @@
 "use client";
 
+import { HandCoins, Power } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/stats";
 import { formatDate, formatINR } from "@/lib/utils";
 import { EntityManager } from "@/components/admin/content/entity-manager";
-import { QuickToggle } from "@/components/admin/content/toggle-action";
+import { IconTile } from "@/components/admin/content/app-list";
 import { toDateInput, type FieldDef, type FormValues } from "@/components/admin/content/fields";
 
 export interface CampaignRow {
@@ -47,6 +48,29 @@ export function CampaignManager({ items, canEdit }: { items: CampaignRow[]; canE
       fields={FIELDS}
       toValues={toValues}
       emptyValues={{ title: "", slug: "", description: "", image: "", goalAmount: "", startDate: "", endDate: "", isActive: true }}
+      search={(c) => `${c.title} ${c.slug}`}
+      searchPlaceholder="Search campaigns"
+      segments={[
+        { value: "active", label: "Active", test: (c) => c.isActive },
+        { value: "inactive", label: "Inactive", test: (c) => !c.isActive },
+      ]}
+      emptyIcon={<HandCoins className="h-7 w-7" />}
+      row={(c) => ({
+        leading: (
+          <IconTile tone={c.isActive ? "orange" : "neutral"}>
+            <HandCoins />
+          </IconTile>
+        ),
+        title: c.title,
+        subtitle: (
+          <span className="block">
+            <span className="font-semibold text-navy tabular-nums">{formatINR(c.raisedAmount)}</span>
+            {c.goalAmount ? <span className="tabular-nums"> of {formatINR(c.goalAmount)}</span> : " raised"} · {c.completedCount} donation{c.completedCount === 1 ? "" : "s"}
+          </span>
+        ),
+        meta: c.goalAmount ? <ProgressBar value={c.raisedAmount} max={c.goalAmount} tone={c.raisedAmount >= c.goalAmount ? "success" : "orange"} className="w-full" /> : undefined,
+        trailing: c.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="neutral">Inactive</Badge>,
+      })}
       toolbar={`${items.length} campaign${items.length === 1 ? "" : "s"} · ${items.filter((c) => c.isActive).length} active`}
       columns={[
         {
@@ -54,7 +78,7 @@ export function CampaignManager({ items, canEdit }: { items: CampaignRow[]; canE
           render: (c) => (
             <span className="block">
               <span className="block font-semibold text-ink">{c.title}</span>
-              <span className="block font-mono text-xs text-muted">/{c.slug}</span>
+              <span className="block font-mono text-caption text-muted">/{c.slug}</span>
             </span>
           ),
         },
@@ -66,14 +90,14 @@ export function CampaignManager({ items, canEdit }: { items: CampaignRow[]; canE
                 {formatINR(c.raisedAmount)}
                 {c.goalAmount ? <span className="font-normal text-muted"> of {formatINR(c.goalAmount)}</span> : null}
               </span>
-              {c.goalAmount ? <ProgressBar value={c.raisedAmount} max={c.goalAmount} tone={c.raisedAmount >= c.goalAmount ? "success" : "orange"} className="mt-1" /> : <span className="text-xs text-muted">No goal set</span>}
+              {c.goalAmount ? <ProgressBar value={c.raisedAmount} max={c.goalAmount} tone={c.raisedAmount >= c.goalAmount ? "success" : "orange"} className="mt-1" /> : <span className="text-caption text-muted">No goal set</span>}
             </span>
           ),
         },
         {
           header: "Donations",
           render: (c) => (
-            <span className="block text-xs">
+            <span className="block text-body-sm">
               <span className="block text-ink tabular-nums">{c.completedCount} completed</span>
               <span className="text-muted tabular-nums">{c._count.donations} total</span>
             </span>
@@ -82,16 +106,16 @@ export function CampaignManager({ items, canEdit }: { items: CampaignRow[]; canE
         {
           header: "Period",
           render: (c) => (
-            <span className="block text-xs whitespace-nowrap text-muted">
+            <span className="block text-body-sm whitespace-nowrap text-muted">
               {c.startDate ? formatDate(c.startDate) : "—"} → {c.endDate ? formatDate(c.endDate) : "open"}
             </span>
           ),
         },
         { header: "Status", render: (c) => (c.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="neutral">Inactive</Badge>) },
       ]}
-      extraActions={(c) => (canEdit ? <QuickToggle endpoint={`/api/admin/donations/campaigns/${c.id}`} body={toValues(c)} field="isActive" onLabel="Activate" offLabel="Deactivate" /> : null)}
+      toggles={[{ field: "isActive", onLabel: "Activate", offLabel: "Deactivate", icon: <Power className="h-5 w-5" /> }]}
       deleteDescription={(c) => (c._count.donations > 0 ? `"${c.title}" has ${c._count.donations} donation${c._count.donations === 1 ? "" : "s"} recorded and cannot be deleted. Deactivate it instead.` : `"${c.title}" will be permanently removed. This cannot be undone.`)}
-      emptyText="No campaigns yet. Create a campaign to collect donations for a specific cause."
+      emptyText="Create a campaign to collect donations for a specific cause. Active campaigns appear on the donate page."
     />
   );
 }

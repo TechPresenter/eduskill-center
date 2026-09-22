@@ -11,7 +11,7 @@ export default function Loading() {
         <Skeleton className="h-7 w-40 max-w-full" />
         <Skeleton className="h-4 w-80 max-w-full" />
       </div>
-      <div className="flex gap-2 overflow-hidden border-b border-line pb-2">
+      <div className="flex gap-2 overflow-x-clip border-b border-line pb-2">
         {["sheet", "reports", "student"].map((t) => (
           <Skeleton key={t} className="h-8 w-32 shrink-0 rounded-md" />
         ))}

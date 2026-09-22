@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ITEM = "inline-flex h-10 min-w-10 items-center justify-center rounded-lg border px-2.5 text-sm font-medium transition-colors";
+const ITEM = "inline-flex h-11 min-w-11 sm:h-10 sm:min-w-10 items-center justify-center rounded-md border px-2.5 text-body-sm font-medium transition-colors duration-micro motion-reduce:transition-none";
 const ITEM_IDLE = cn(ITEM, "border-line bg-white text-ink hover:bg-surface");
 const ITEM_ACTIVE = cn(ITEM, "border-navy bg-navy text-white");
 const ITEM_DISABLED = cn(ITEM, "border-line bg-white text-ink opacity-40");
@@ -47,7 +47,7 @@ export function SitePagination({ page, totalPages, total, limit, hrefFor, classN
 
   return (
     <nav className={cn("flex flex-col items-center justify-between gap-3 sm:flex-row", className)} aria-label="Pagination">
-      <p className="text-xs text-muted">{from !== undefined && to !== undefined ? `Showing ${from}–${to} of ${total}` : `Page ${page} of ${totalPages}`}</p>
+      <p className="text-caption text-muted">{from !== undefined && to !== undefined ? `Showing ${from}–${to} of ${total}` : `Page ${page} of ${totalPages}`}</p>
       <ul className="flex flex-wrap items-center gap-1">
         <li>
           <ArrowLink href={hrefFor(page - 1)} disabled={page <= 1} label="Previous page">

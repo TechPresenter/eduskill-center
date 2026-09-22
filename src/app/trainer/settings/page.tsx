@@ -48,7 +48,7 @@ export default async function TrainerSettingsPage() {
                 const Icon = isPhone(s.userAgent) ? Smartphone : Laptop;
                 return (
                   <li key={s.id} className="flex items-start gap-3 px-4 py-3.5 sm:px-5">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lavender text-navy">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">
                       <Icon className="h-5 w-5" aria-hidden />
                     </span>
                     <div className="min-w-0 flex-1">

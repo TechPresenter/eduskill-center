@@ -1,21 +1,24 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, FileText, GraduationCap, Mail, MapPin, MapPinned, Phone } from "lucide-react";
+import { CalendarDays, ExternalLink, FileText, GraduationCap, Mail, MapPin, MapPinned, Phone } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/guards";
 import { hasPermission } from "@/lib/rbac/permissions";
-import { formatDate, formatDateTime, titleCase } from "@/lib/utils";
+import { cn, formatDate, formatDateTime, titleCase } from "@/lib/utils";
+import { withBasePath } from "@/lib/base-path";
 import { getTrainerDetail } from "@/server/trainers";
 import { PageHeader, Avatar, KeyValue } from "@/components/ui/misc";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { StatusBadge, Badge } from "@/components/ui/badge";
 import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
-import { EmptyState } from "@/components/ui/feedback";
+import { Alert, EmptyState } from "@/components/ui/feedback";
+import { buttonClasses } from "@/components/ui/button";
 import { StatsCard } from "@/components/ui/stats";
 import { TabbedPanels } from "@/components/admin/pickers/query-tabs";
 import { TrainerActions, EndAssignmentButton } from "@/components/admin/trainers/trainer-actions";
 import { AssignDrawer } from "@/components/admin/trainers/assign-drawer";
 import { DocumentActions } from "@/components/admin/trainers/document-actions";
+import { IconTile, RecordIdentity } from "@/components/admin/locations/list-kit";
 
 export const metadata = { title: "Trainer" };
 
@@ -27,7 +30,7 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
   const canUpdate = hasPermission(user, "trainers.update");
   const canAssign = hasPermission(user, "trainers.assign");
 
-  const [students, docTypes, preferredCourses] = await Promise.all([
+  const [students, docTypes, preferredCourses, docs] = await Promise.all([
     db.admission.findMany({
       where: { batch: { trainerId: t.id }, status: { in: ["ACTIVE", "ON_HOLD"] } },
       orderBy: { admittedAt: "desc" },
@@ -36,7 +39,18 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
     }),
     db.documentType.findMany({ where: { appliesTo: "TRAINER" }, select: { key: true, name: true } }),
     t.application?.preferredCourseIds.length ? db.course.findMany({ where: { id: { in: t.application.preferredCourseIds } }, select: { id: true, name: true, code: true } }) : Promise.resolve([]),
+    // Everything on file for this trainer: documents uploaded from the trainer portal (trainerId, no
+    // applicationId) and those carried over from the volunteer application — including any the
+    // applicant added after approval, which only carry the applicationId.
+    db.trainerDocument.findMany({ where: { OR: [{ trainerId: t.id }, ...(t.applicationId ? [{ applicationId: t.applicationId }] : [])] }, orderBy: { createdAt: "desc" } }),
   ]);
+  const portalDocs = docs.filter((d) => !d.applicationId);
+  const applicationDocs = docs.filter((d) => !!d.applicationId);
+  const pendingDocs = docs.filter((d) => d.status === "PENDING").length;
+  // Each portal upload is a new row; older rows of the same type stay as history. Documents are
+  // newest first, so the first row per type is the current one and the rest are marked superseded.
+  const latestByType = new Map<string, string>();
+  for (const d of docs) if (!latestByType.has(d.type)) latestByType.set(d.type, d.id);
   const docName = new Map(docTypes.map((d) => [d.key, d.name]));
   const location = [t.block?.name, t.district?.name, t.state.name].filter(Boolean).join(", ");
   const activeAssignments = t.assignments.filter((a) => a.isActive);
@@ -301,68 +315,84 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
     </TableWrap>
   );
 
-  const documents = (
+  const docRow = (d: (typeof docs)[number]) => {
+    const href = withBasePath(d.url);
+    const tone = d.status === "VERIFIED" ? "success" : d.status === "REJECTED" ? "danger" : "warning";
+    return (
+      <li key={d.id} className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:gap-4 lg:px-5">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <IconTile icon={<FileText />} tone={tone} />
+          <div className="min-w-0 flex-1">
+            <p className="text-body font-semibold break-words text-ink sm:text-body-sm">
+              {docName.get(d.type) ?? titleCase(d.type)}
+              {latestByType.get(d.type) !== d.id && (
+                <Badge tone="neutral" className="ml-2 align-middle">
+                  Superseded
+                </Badge>
+              )}
+            </p>
+            <p className="text-caption mt-0.5 break-all text-muted">
+              <a href={href} target="_blank" rel="noopener noreferrer" className="font-semibold text-orange hover:underline">
+                {d.name}
+              </a>
+              {d.size ? <span className="tabular-nums"> · {Math.max(1, Math.round(d.size / 1024)).toLocaleString("en-IN")} KB</span> : null}
+              <span> · {formatDate(d.createdAt)}</span>
+            </p>
+            {d.remarks && <p className={cn("text-caption mt-1", d.status === "REJECTED" ? "text-danger" : "text-muted")}>{d.remarks}</p>}
+            {d.verifiedAt && d.status !== "PENDING" && (
+              <p className="text-caption mt-0.5 text-muted">
+                {d.status === "VERIFIED" ? "Verified" : "Rejected"} {formatDate(d.verifiedAt)}
+              </p>
+            )}
+          </div>
+          <StatusBadge status={d.status} className="shrink-0" />
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 max-sm:border-t max-sm:border-line/70 max-sm:pt-3">
+          <a href={href} target="_blank" rel="noopener noreferrer" className={buttonClasses({ variant: "ghost", size: "sm" })}>
+            <ExternalLink className="h-4 w-4" aria-hidden /> View
+          </a>
+          <DocumentActions docId={d.id} status={d.status} canUpdate={canUpdate} subject={d.applicationId ? "applicant" : "trainer"} />
+        </div>
+      </li>
+    );
+  };
+
+  const docGroup = (title: string, description: string, rows: typeof docs, empty: string) => (
     <Card>
-      <CardHeader title="Documents" description="Carried over from the volunteer application." />
-      {t.documents.length === 0 ? (
-        <CardBody>
-          <EmptyState icon={<FileText className="h-7 w-7" />} title="No documents on file" className="py-8" />
-        </CardBody>
+      <CardHeader
+        title={title}
+        description={description}
+        action={rows.some((d) => d.status === "PENDING") ? <Badge tone="warning">{rows.filter((d) => d.status === "PENDING").length} to review</Badge> : undefined}
+      />
+      {rows.length === 0 ? (
+        <EmptyState icon={<FileText className="h-6 w-6" />} title={empty} size="sm" bare className="border-t border-line" />
       ) : (
-        <TableWrap className="max-md:px-4 max-md:pb-4 md:rounded-none md:border-0">
-          <THead>
-            <tr>
-              <TH>Document</TH>
-              <TH>File</TH>
-              <TH>Status</TH>
-              <TH>Remarks</TH>
-              <TH>Uploaded</TH>
-              <TH>Actions</TH>
-            </tr>
-          </THead>
-          <TBody>
-            {t.documents.map((d) => (
-              <TR key={d.id}>
-                <TD mobile="full" className="font-medium">
-                  {docName.get(d.type) ?? titleCase(d.type)}
-                </TD>
-                <TD label="File">
-                  <a href={d.url} target="_blank" rel="noopener noreferrer" className="block truncate text-caption font-semibold text-orange hover:underline md:max-w-[14rem]">
-                    {d.name}
-                  </a>
-                  <span className="text-caption text-muted">
-                    {d.mimeType ?? ""}
-                    {d.size ? ` · ${(d.size / 1024).toFixed(0)} KB` : ""}
-                  </span>
-                </TD>
-                <TD label="Status">
-                  <StatusBadge status={d.status} />
-                  {d.verifiedAt && <span className="block text-caption text-muted">{formatDate(d.verifiedAt)}</span>}
-                </TD>
-                <TD label="Remarks" className="text-caption text-muted md:max-w-[16rem]">
-                  {d.remarks ?? "—"}
-                </TD>
-                <TD label="Uploaded" className="text-muted md:whitespace-nowrap">
-                  {formatDate(d.createdAt)}
-                </TD>
-                <TD mobile="actions">
-                  <div className="flex items-center gap-2 max-md:w-full max-md:justify-end">
-                    <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-md px-2 text-caption font-semibold text-navy hover:underline md:min-h-0 md:px-0">
-                      View
-                    </a>
-                    <DocumentActions docId={d.id} status={d.status} canUpdate={canUpdate} />
-                  </div>
-                </TD>
-              </TR>
-            ))}
-          </TBody>
-        </TableWrap>
+        <ul className="divide-y divide-line border-t border-line">{rows.map(docRow)}</ul>
       )}
     </Card>
   );
 
+  const documents = (
+    <div className="space-y-6">
+      {docGroup("Uploaded by the trainer", "Résumé and documents added from the trainer portal. Verify or reject each one; a rejection remark is shown to the trainer.", portalDocs, "Nothing uploaded from the portal yet")}
+      {docGroup("From the volunteer application", t.application ? `Submitted with application ${t.application.applicationNo}.` : "This trainer was not created from a volunteer application.", applicationDocs, "No application documents on file")}
+    </div>
+  );
+
   return (
     <div>
+      {/* Identity and status first on phones, where the app bar only has room for the Trainer ID. */}
+      <RecordIdentity
+        lead={<Avatar name={t.user.name} src={t.user.avatarUrl} size={48} />}
+        title={t.user.name}
+        meta={<span className="font-mono font-semibold text-navy">{t.trainerId}</span>}
+        badges={
+          <>
+            <StatusBadge status={t.status} />
+            <Badge tone="navy">{titleCase(t.level)} level</Badge>
+          </>
+        }
+      />
       <PageHeader
         breadcrumbs={[{ label: "Trainers", href: "/admin/trainers" }, { label: t.user.name }]}
         mobileTitle={t.trainerId}
@@ -405,17 +435,20 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
         }
       />
 
-      {/* The app bar shows only the Trainer ID on phones – keep the face, name and status in the page. */}
-      <div className="mb-4 flex items-center gap-3 lg:hidden">
-        <Avatar name={t.user.name} src={t.user.avatarUrl} size={44} />
-        <div className="min-w-0">
-          <h2 className="text-h4 truncate text-navy">{t.user.name}</h2>
-          <span className="mt-1 flex flex-wrap items-center gap-2">
-            <StatusBadge status={t.status} />
-            <Badge tone="navy">{titleCase(t.level)} level</Badge>
-          </span>
-        </div>
-      </div>
+      {pendingDocs > 0 && canUpdate && (
+        <Alert
+          tone="warning"
+          className="mb-4"
+          title={`${pendingDocs} document${pendingDocs === 1 ? "" : "s"} waiting for verification`}
+          action={
+            <Link href={`/admin/trainers/${t.id}?tab=documents`} scroll={false} className={buttonClasses({ variant: "outline", size: "sm" })}>
+              Review
+            </Link>
+          }
+        >
+          {portalDocs.some((d) => d.status === "PENDING") ? "The trainer has uploaded new documents from their portal." : "Application documents have not been checked yet."}
+        </Alert>
+      )}
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         <StatsCard label="Active assignments" value={activeAssignments.length} icon={<MapPinned className="h-5 w-5" />} tone="navy" />
@@ -429,7 +462,7 @@ export default async function TrainerDetailPage({ params }: { params: Promise<{ 
           { value: "assignments", label: "Assignments", count: activeAssignments.length },
           { value: "batches", label: "Batches", count: t.batches.length },
           { value: "students", label: "Students", count: students.length },
-          { value: "documents", label: "Documents", count: t.documents.length },
+          { value: "documents", label: "Documents", count: docs.length },
         ]}
         panels={{ profile, assignments, batches, students: studentsTab, documents }}
       />

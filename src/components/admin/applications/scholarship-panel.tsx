@@ -203,7 +203,7 @@ export function ScholarshipPanel({ applicationId, originalFee, discountAmount, p
         <dl className="grid grid-cols-2 gap-3 rounded-md border border-line p-3 text-body-sm">
           <div>
             <dt className="text-caption font-medium text-muted uppercase">Decision</dt>
-            <dd className={`font-semibold ${award.status === "APPROVED" ? "text-success-dark" : award.status === "REJECTED" ? "text-danger" : "text-amber-700"}`}>{titleCase(award.status)}</dd>
+            <dd className={`font-semibold ${award.status === "APPROVED" ? "text-success-dark" : award.status === "REJECTED" ? "text-danger" : "text-warning-dark"}`}>{titleCase(award.status)}</dd>
           </div>
           <div>
             <dt className="text-caption font-medium text-muted uppercase">Amount</dt>

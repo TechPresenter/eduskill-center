@@ -29,7 +29,7 @@ export function attendanceTone(p: number): "success" | "warning" | "danger" {
 
 /** Attendance against the 75% rule is the one number a trainer must read without opening anything. */
 export function attendanceTextClass(p: number) {
-  return p >= 75 ? "text-success-dark" : p >= 60 ? "text-amber-700" : "text-danger";
+  return p >= 75 ? "text-success-dark" : p >= 60 ? "text-warning-dark" : "text-danger";
 }
 
 /**

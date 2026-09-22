@@ -40,7 +40,7 @@ function AuthAside({ branding }: { branding: Branding }) {
     <aside className="relative isolate hidden overflow-hidden bg-linear-to-br from-navy to-navy-dark text-white lg:flex lg:flex-col">
       <SectionBg variant="mesh" tone="navy" className="opacity-80" />
       <div className="relative z-10 flex flex-1 flex-col justify-between gap-12 px-10 py-12 xl:px-14">
-        <Link href="/" aria-label={`${branding.siteName} home`} className="ring-focus-inverse inline-flex w-fit rounded-md">
+        <Link href="/" aria-label={`${branding.siteName} home`} className="ring-focus-inverse inline-flex min-h-11 w-fit items-center rounded-md">
           <BrandMark branding={branding} light />
         </Link>
 
@@ -82,7 +82,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       <div className="flex flex-1 flex-col bg-surface">
         <header className="container-x flex h-16 shrink-0 items-center justify-between gap-3 lg:h-20 lg:justify-end">
           {/* The brand is already in the navy panel from `lg` up, so it is dropped rather than doubled. */}
-          <Link href="/" aria-label={`${branding.siteName} home`} className="ring-focus inline-flex min-w-0 shrink overflow-x-clip rounded-md lg:hidden">
+          <Link href="/" aria-label={`${branding.siteName} home`} className="ring-focus inline-flex min-h-11 min-w-0 shrink items-center overflow-x-clip rounded-md lg:hidden">
             <BrandMark branding={branding} />
           </Link>
           {/*

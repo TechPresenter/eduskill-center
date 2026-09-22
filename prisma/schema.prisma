@@ -300,6 +300,7 @@ model User {
   sessions       Session[]
   loginHistory   LoginHistory[]
   passwordResets PasswordReset[]
+  loginOtps      LoginOtp[]
   staff          Staff?
   student        Student?
   trainer        Trainer?
@@ -358,6 +359,26 @@ model PasswordReset {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_resets")
+}
+
+/// One-time sign-in code for admission-number login. Only a keyed hash of the code is stored;
+/// a code expires after 5 minutes, locks after 5 wrong tries and can be consumed once.
+model LoginOtp {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  codeHash   String    @map("code_hash")
+  expiresAt  DateTime  @map("expires_at")
+  attempts   Int       @default(0)
+  consumedAt DateTime? @map("consumed_at")
+  ip         String?
+  userAgent  String?   @map("user_agent")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("login_otps")
 }
 
 // ───────────────────────────── STAFF / RBAC ─────────────────────────────

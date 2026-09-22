@@ -11,8 +11,9 @@ export default async function NewCmsPage() {
   const canPublish = hasPermission(user, "cms.publish");
   return (
     <div>
-      <PageHeader breadcrumbs={[{ label: "Pages", href: "/admin/cms/pages" }, { label: "New page" }]} title="New page" description="Write the content in Markdown. The slug becomes the page address." />
+      <PageHeader breadcrumbs={[{ label: "Pages", href: "/admin/cms/pages" }, { label: "New page" }]} title="New page" mobileTitle="New page" backHref="/admin/cms/pages" description="Write the content in Markdown. The slug becomes the page address." />
       <ContentEditor
+        publicPrefix=""
         endpoint="/api/admin/cms/pages"
         itemLabel="page"
         backHref="/admin/cms/pages"

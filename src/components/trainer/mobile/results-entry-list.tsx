@@ -85,16 +85,16 @@ export function ResultsEntryList({ rows, entries, errors, maxMarks, passingMarks
         const locked = !canEdit || r.admissionStatus === "COMPLETED";
         const showRemark = remarkOpen[sid] || e.remarks.trim() !== "";
         return (
-          <li key={r.admissionId} className="rounded-2xl border border-line bg-white p-4">
+          <li key={r.admissionId} className="card p-4">
             <div className="flex items-start gap-3">
               <Avatar name={r.student.name} src={r.student.photoUrl} size={40} />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-semibold text-ink">{r.student.name}</p>
-                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-muted">
+                <p className="truncate text-body font-semibold text-ink">{r.student.name}</p>
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-caption text-muted">
                   {r.student.studentId ?? "ID pending"}
                   {r.admissionStatus !== "ACTIVE" && <StatusBadge status={r.admissionStatus} />}
                 </p>
-                {r.evaluatedAt && <p className="mt-0.5 text-xs text-muted">Saved {formatDateTime(r.evaluatedAt)}</p>}
+                {r.evaluatedAt && <p className="mt-0.5 text-caption text-muted">Saved {formatDateTime(r.evaluatedAt)}</p>}
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <Field label={<span className="sr-only">Marks for {r.student.name} (out of {maxMarks})</span>} htmlFor={marksInputId(sid)} autoWire={false}>
@@ -120,14 +120,14 @@ export function ResultsEntryList({ rows, entries, errors, maxMarks, passingMarks
                       aria-describedby={err ? `${marksInputId(sid)}-error` : undefined}
                       className="h-12 w-24 min-w-24 px-2 text-center text-lg font-bold tabular-nums sm:text-lg"
                     />
-                    <span className="text-sm font-semibold text-muted tabular-nums">/ {maxMarks}</span>
+                    <span className="text-body-sm font-semibold text-muted tabular-nums">/ {maxMarks}</span>
                   </div>
                 </Field>
-                {grade ? <Badge tone={gradeTone(grade)}>{grade}</Badge> : <span className="text-xs text-muted">No grade yet</span>}
+                {grade ? <Badge tone={gradeTone(grade)}>{grade}</Badge> : <span className="text-caption text-muted">No grade yet</span>}
               </div>
             </div>
             {err && (
-              <p id={`${marksInputId(sid)}-error`} className="mt-2 text-[13px] font-medium text-danger" role="alert">
+              <p id={`${marksInputId(sid)}-error`} className="mt-2 text-body-sm font-medium text-danger" role="alert">
                 {err}
               </p>
             )}

@@ -192,7 +192,7 @@ export function StatusActions(p: StatusActionsProps) {
       >
         {p.missingDocuments.length > 0 && (
           <p className="text-caption text-muted">
-            Currently missing: <span className="font-semibold text-amber-700">{p.missingDocuments.join(", ")}</span>
+            Currently missing: <span className="font-semibold text-warning-dark">{p.missingDocuments.join(", ")}</span>
           </p>
         )}
       </ReasonDialog>

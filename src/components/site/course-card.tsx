@@ -83,3 +83,47 @@ export function CourseCard({ course, applyHref }: { course: PublicCourseCard; ap
     </article>
   );
 }
+
+/**
+ * Thumb-sized course card for the phone home screen's swipe rail: cover, category, name and the two
+ * facts people decide on (duration, fee). The whole card is one link; details and Apply live on the
+ * course page, one tap away.
+ */
+export function CourseCardCompact({ course }: { course: PublicCourseCard }) {
+  const href = `/courses/${course.slug}`;
+  return (
+    <article className="card relative flex h-full flex-col overflow-hidden">
+      <div className="rounded-t-card">
+        <Media src={course.image} alt="" seed={course.slug} ratio="16x9" sizes="(max-width: 640px) 75vw, 40vw">
+          {!course.image && (
+            <span className="absolute inset-0 flex items-center justify-center">
+              <span className="flex size-12 items-center justify-center rounded-lg bg-white/90 text-orange shadow-e1">
+                <DynamicIcon name={course.icon ?? course.category?.icon ?? undefined} className="size-6" aria-hidden />
+              </span>
+            </span>
+          )}
+          {course.scholarshipAvailable && (
+            <span className="absolute top-2.5 left-2.5">
+              <Badge tone="orange">Scholarship</Badge>
+            </span>
+          )}
+        </Media>
+      </div>
+      <div className="flex flex-1 flex-col p-3.5">
+        {course.category && <p className="truncate text-caption font-semibold text-orange">{course.category.name}</p>}
+        <h3 className="mt-0.5 line-clamp-2 text-h4 text-navy">
+          <Link href={href} className="ring-focus after:absolute after:inset-0 after:rounded-card">
+            {course.name}
+          </Link>
+        </h3>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-3 text-body-sm text-muted">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <Clock className="size-4 shrink-0 text-orange" aria-hidden />
+            <span className="truncate">{course.durationText}</span>
+          </span>
+          <span className="shrink-0 font-heading font-bold text-navy tabular-nums">{course.courseFee > 0 ? formatINR(course.courseFee) : "Free"}</span>
+        </div>
+      </div>
+    </article>
+  );
+}

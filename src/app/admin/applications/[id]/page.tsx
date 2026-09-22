@@ -21,6 +21,7 @@ import { ChangeBatchButton, ChangeCourseCenterButton } from "@/components/admin/
 import { DiscountButton, InstallmentPlanButton, InstallmentsToggle } from "@/components/admin/applications/fee-actions";
 import { ScholarshipPanel } from "@/components/admin/applications/scholarship-panel";
 import { withBasePath } from "@/lib/base-path";
+import { RecordIdentity } from "@/components/admin/locations/list-kit";
 
 export const metadata = { title: "Application" };
 
@@ -117,6 +118,18 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
 
   return (
     <div>
+      {/* Identity and status first on phones, where the app bar only has room for a code. */}
+      <RecordIdentity
+        lead={<Avatar name={s.name} src={s.photoUrl} size={48} />}
+        title={s.name}
+        meta={<span className="font-mono font-semibold text-navy">{app.applicationNo}</span>}
+        badges={
+          <>
+            <StatusBadge status={app.status} />
+            {app.waitlistPosition && app.status === "WAITLISTED" && <Badge tone="warning">Waitlist #{app.waitlistPosition}</Badge>}
+          </>
+        }
+      />
       <PageHeader
         backHref="/admin/applications"
         mobileTitle={app.applicationNo}
@@ -143,11 +156,6 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         }
       />
 
-      {/* The app bar shows only the application number on phones – keep the status visible in the page. */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 lg:hidden">
-        <StatusBadge status={app.status} />
-        {app.waitlistPosition && app.status === "WAITLISTED" && <Badge tone="warning">Waitlist #{app.waitlistPosition}</Badge>}
-      </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
@@ -231,7 +239,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                     <p className="text-caption text-muted">{formatSchedule(app.batch)}</p>
                   </>
                 ) : (
-                  <p className="text-body-sm text-amber-700">Not allocated yet – required before admission is confirmed.</p>
+                  <p className="text-body-sm text-warning-dark">Not allocated yet – required before admission is confirmed.</p>
                 )}
               </div>
             </CardBody>
@@ -302,7 +310,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                   { label: "Discount", value: -app.discountAmount, cls: "text-success-dark" },
                   { label: "Payable", value: app.payableAmount, cls: "text-navy" },
                   { label: "Paid", value: app.paidAmount, cls: "text-success-dark" },
-                  { label: "Due", value: due, cls: due > 0 ? "text-amber-700" : "text-success-dark" },
+                  { label: "Due", value: due, cls: due > 0 ? "text-warning-dark" : "text-success-dark" },
                 ].map((x) => (
                   <div key={x.label} className="rounded-md bg-surface p-3">
                     <p className="text-caption font-medium tracking-wide text-muted uppercase">{x.label}</p>

@@ -195,8 +195,8 @@ export function BatchReport({ centers, batches, courses, can, centerId, batchId,
                       <span className="block font-mono text-caption font-normal text-muted">{r.studentCode ?? "—"}</span>
                       {/* The five count columns are dropped on phones – one compact line replaces them. */}
                       <span className="mt-1 block text-caption font-normal text-muted md:hidden">
-                        {r.held} held · <span className="font-semibold text-success-dark">{r.present} present</span> · <span className="font-semibold text-amber-700">{r.late} late</span> ·{" "}
-                        <span className="font-semibold text-danger">{r.absent} absent</span> · <span className="font-semibold text-blue-700">{r.leave} leave</span>
+                        {r.held} held · <span className="font-semibold text-success-dark">{r.present} present</span> · <span className="font-semibold text-warning-dark">{r.late} late</span> ·{" "}
+                        <span className="font-semibold text-danger">{r.absent} absent</span> · <span className="font-semibold text-info-dark">{r.leave} leave</span>
                       </span>
                     </TD>
                     <TD mobile="hidden" className="text-center tabular-nums">
@@ -205,13 +205,13 @@ export function BatchReport({ centers, batches, courses, can, centerId, batchId,
                     <TD mobile="hidden" className="text-center text-success-dark tabular-nums">
                       {r.present}
                     </TD>
-                    <TD mobile="hidden" className="text-center text-amber-700 tabular-nums">
+                    <TD mobile="hidden" className="text-center text-warning-dark tabular-nums">
                       {r.late}
                     </TD>
                     <TD mobile="hidden" className="text-center text-danger tabular-nums">
                       {r.absent}
                     </TD>
-                    <TD mobile="hidden" className="text-center text-blue-700 tabular-nums">
+                    <TD mobile="hidden" className="text-center text-info-dark tabular-nums">
                       {r.leave}
                     </TD>
                     <TD label="" className="md:min-w-40">
@@ -245,26 +245,26 @@ export function BatchReport({ centers, batches, courses, can, centerId, batchId,
                       <TD primary>
                         <span className="flex items-center justify-between gap-2">
                           <span className="whitespace-nowrap">{formatDate(d.date, "EEE, dd MMM")}</span>
-                          <span className={cn("font-semibold tabular-nums md:hidden", pct >= min ? "text-success-dark" : "text-amber-700")}>{pct}%</span>
+                          <span className={cn("font-semibold tabular-nums md:hidden", pct >= min ? "text-success-dark" : "text-warning-dark")}>{pct}%</span>
                         </span>
                         <span className="mt-1 block text-caption font-normal text-muted md:hidden">
-                          <span className="font-semibold text-success-dark">{d.present} present</span> · <span className="font-semibold text-amber-700">{d.late} late</span> ·{" "}
-                          <span className="font-semibold text-danger">{d.absent} absent</span> · <span className="font-semibold text-blue-700">{d.leave} leave</span>
+                          <span className="font-semibold text-success-dark">{d.present} present</span> · <span className="font-semibold text-warning-dark">{d.late} late</span> ·{" "}
+                          <span className="font-semibold text-danger">{d.absent} absent</span> · <span className="font-semibold text-info-dark">{d.leave} leave</span>
                         </span>
                       </TD>
                       <TD mobile="hidden" className="text-center text-success-dark tabular-nums">
                         {d.present}
                       </TD>
-                      <TD mobile="hidden" className="text-center text-amber-700 tabular-nums">
+                      <TD mobile="hidden" className="text-center text-warning-dark tabular-nums">
                         {d.late}
                       </TD>
                       <TD mobile="hidden" className="text-center text-danger tabular-nums">
                         {d.absent}
                       </TD>
-                      <TD mobile="hidden" className="text-center text-blue-700 tabular-nums">
+                      <TD mobile="hidden" className="text-center text-info-dark tabular-nums">
                         {d.leave}
                       </TD>
-                      <TD mobile="hidden" className={cn("text-center font-semibold tabular-nums", pct >= min ? "text-success-dark" : "text-amber-700")}>
+                      <TD mobile="hidden" className={cn("text-center font-semibold tabular-nums", pct >= min ? "text-success-dark" : "text-warning-dark")}>
                         {pct}%
                       </TD>
                     </TR>

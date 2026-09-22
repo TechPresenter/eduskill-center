@@ -13,7 +13,7 @@ export default async function SendMessagePage() {
 
   return (
     <div>
-      <PageHeader title="Send a message" description="Send a one-off message to a single student, trainer or staff member. It always lands in their in-app inbox; add email, SMS or WhatsApp when enabled." />
+      <PageHeader title="Send a message" mobileTitle="Send message" description="Send a one-off message to a single student, trainer or staff member. It always lands in their in-app inbox; add email, SMS or WhatsApp when enabled." />
       {off.length > 0 && (
         <Alert tone="info" className="mb-4">
           {off.map((c) => (c === "EMAIL" ? "Email" : c === "SMS" ? "SMS" : "WhatsApp")).join(", ")} {off.length === 1 ? "is" : "are"} switched off in Settings → Communication, so only the remaining channels can be used.

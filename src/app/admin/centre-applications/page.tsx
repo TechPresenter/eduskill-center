@@ -9,11 +9,12 @@ import { PageHeader, Avatar } from "@/components/ui/misc";
 import { ButtonLink } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/feedback";
-import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow, Pagination } from "@/components/ui/table";
+import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
+import { Pager } from "@/components/admin/pickers/pager";
 import { FilterBar, LocationFilter, SearchInput } from "@/components/admin/shared/filter-bar";
 import { TabLinks } from "@/components/admin/shared/tab-links";
 import { ExportButton } from "@/components/admin/shared/export-button";
-import { filtersOnly, flattenParams, hrefWith, pageHref, parseListQuery, type SearchParamsRecord } from "@/components/admin/shared/url";
+import { filtersOnly, flattenParams, hrefWith, parseListQuery, type SearchParamsRecord } from "@/components/admin/shared/url";
 import { CentreStatusBadge, centreStatusLabel } from "@/components/admin/centre-applications/status";
 import { SubmittedRangeFilter } from "@/components/admin/centre-applications/submitted-filter";
 
@@ -106,7 +107,7 @@ export default async function CentreApplicationsPage({ searchParams }: { searchP
                       <Link href={`${BASE}/${a.id}`} className="font-mono text-xs font-semibold text-navy hover:underline">
                         {a.applicationNo}
                       </Link>
-                      {a.center && <span className="mt-0.5 block font-mono text-[11px] text-success">{a.center.code}</span>}
+                      {a.center && <span className="mt-0.5 block font-mono text-caption text-success-dark">{a.center.code}</span>}
                     </TD>
                     <TD mobile="full">
                       <Link href={`${BASE}/${a.id}`} className="flex items-start gap-3 tap-highlight-none md:hover:text-navy">
@@ -170,7 +171,7 @@ export default async function CentreApplicationsPage({ searchParams }: { searchP
               })}
             </TBody>
           </TableWrap>
-          <Pagination className="mt-4" page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} hrefFor={pageHref(BASE, sp)} />
+          <Pager className="mt-4" page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} base={BASE} params={sp} />
         </>
       )}
     </div>

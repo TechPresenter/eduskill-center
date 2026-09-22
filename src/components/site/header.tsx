@@ -1,5 +1,6 @@
 import { BrandMark } from "@/components/brand";
 import { HeaderClient, type NavItem } from "@/components/site/header-client";
+import { getCoursesMenu } from "@/server/nav-menu";
 import type { Branding } from "@/lib/settings";
 
 export const SITE_NAV: NavItem[] = [
@@ -15,7 +16,9 @@ export const SITE_NAV: NavItem[] = [
   { label: "Contact", href: "/contact" },
 ];
 
-export function SiteHeader({ branding, dashboardHref, registrationOpen }: { branding: Branding; dashboardHref: string | null; registrationOpen: boolean }) {
+export async function SiteHeader({ branding, dashboardHref, registrationOpen }: { branding: Branding; dashboardHref: string | null; registrationOpen: boolean }) {
+  // Never throws (cached 60s, per-request memoised); the header falls back to plain links without it.
+  const coursesMenu = await getCoursesMenu();
   return (
     <HeaderClient
       nav={SITE_NAV}
@@ -24,6 +27,7 @@ export function SiteHeader({ branding, dashboardHref, registrationOpen }: { bran
       logoMobile={<BrandMark branding={branding} variant="mobile" />}
       dashboardHref={dashboardHref}
       registrationOpen={registrationOpen}
+      coursesMenu={coursesMenu}
     />
   );
 }

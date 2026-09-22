@@ -7,7 +7,6 @@ import { formatDate, formatDateTime, formatNumber, titleCase } from "@/lib/utils
 import { listTrainerApplications, trainerApplicationListSchema } from "@/server/trainers";
 import { getAdminLookups } from "@/server/admissions";
 import { Avatar } from "@/components/ui/misc";
-import { ButtonLink } from "@/components/ui/button";
 import { StatusBadge, Badge } from "@/components/ui/badge";
 import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/feedback";
@@ -16,6 +15,7 @@ import { FilterBar } from "@/components/admin/pickers/filter-bar";
 import { QueryTabs } from "@/components/admin/pickers/query-tabs";
 import { ExportButton } from "@/components/admin/pickers/export-button";
 import { Pager } from "@/components/admin/pickers/pager";
+import { RowLead } from "@/components/admin/locations/list-kit";
 import { flattenSearchParams, parseListQuery, withParams, type RawSearchParams } from "@/components/admin/pickers/search-params";
 
 export const metadata = { title: "Trainer Applications" };
@@ -91,17 +91,21 @@ export default async function TrainerApplicationsPage({ searchParams }: { search
                   </Link>
                   {a.interviewAt && <span className="mt-0.5 block text-caption text-muted">Interview {formatDateTime(a.interviewAt)}</span>}
                 </TD>
-                <TD mobile="full">
-                  <Link href={`${base}/${a.id}`} className="flex items-center gap-3 tap-highlight-none md:hover:text-navy">
-                    <Avatar name={a.name} src={a.photoUrl} size={40} />
-                    <span className="min-w-0">
-                      <span className="block font-mono text-caption font-semibold text-orange md:hidden">{a.applicationNo}</span>
-                      <span className="block truncate font-semibold">{a.name}</span>
-                      <span className="block truncate text-caption font-normal text-muted">{a.email}</span>
-                      <span className="block text-caption font-normal text-muted tabular-nums">{a.mobile}</span>
-                    </span>
-                  </Link>
-                  {a.interviewAt && <span className="mt-1 block text-caption font-normal text-orange md:hidden">Interview {formatDateTime(a.interviewAt)}</span>}
+                <TD primary>
+                  <RowLead
+                    href={`${base}/${a.id}`}
+                    lead={<Avatar name={a.name} src={a.photoUrl} size={40} />}
+                    title={a.name}
+                    meta={
+                      <>
+                        <span className="font-mono font-semibold text-navy md:hidden">{a.applicationNo} · </span>
+                        {a.email}
+                        <span className="block tabular-nums">{a.mobile}</span>
+                      </>
+                    }
+                    note={a.interviewAt ? <span className="font-semibold text-orange md:hidden">Interview {formatDateTime(a.interviewAt)}</span> : undefined}
+                    trailing={<StatusBadge status={a.status} />}
+                  />
                 </TD>
                 <TD label="Level & location" className="max-md:text-right">
                   <Badge tone="navy">{titleCase(a.level)}</Badge>
@@ -122,16 +126,11 @@ export default async function TrainerApplicationsPage({ searchParams }: { search
                 <TD label="Documents" className="tabular-nums md:text-center">
                   {a._count.documents}
                 </TD>
-                <TD label="Status">
+                <TD label="Status" mobile="hidden">
                   <StatusBadge status={a.status} />
                 </TD>
                 <TD label="Submitted" className="text-muted md:whitespace-nowrap">
                   {formatDate(a.submittedAt)}
-                </TD>
-                <TD mobile="actions" className="md:hidden">
-                  <ButtonLink href={`${base}/${a.id}`} variant="navy" size="sm" className="w-full">
-                    Review application
-                  </ButtonLink>
                 </TD>
               </TR>
             ))}

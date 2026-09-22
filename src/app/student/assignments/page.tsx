@@ -67,11 +67,11 @@ export default async function StudentAssignmentsPage() {
                       )}
                       {a.submission.status === "GRADED" && (
                         <div className="mt-3 rounded-md bg-success-light p-3">
-                          <p className="font-bold text-green-800">
+                          <p className="font-bold text-success-dark">
                             Marks: {a.submission.marks ?? "—"} / {a.maxMarks}
                           </p>
                           {a.submission.feedback && <p className="mt-0.5 text-green-900">Feedback: {a.submission.feedback}</p>}
-                          {a.submission.gradedAt && <p className="mt-0.5 text-caption text-green-800/80">Graded {formatDateTime(a.submission.gradedAt)}</p>}
+                          {a.submission.gradedAt && <p className="mt-0.5 text-caption text-success-dark/80">Graded {formatDateTime(a.submission.gradedAt)}</p>}
                         </div>
                       )}
                     </div>

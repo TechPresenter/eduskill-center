@@ -5,6 +5,7 @@ import { ExternalLink, FileText, Image as ImageIcon, Plus, RefreshCw, Trash2 } f
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn, formatBytes, formatDate } from "@/lib/utils";
+import { withBasePath } from "@/lib/base-path";
 
 export interface DocumentCardFile {
   id: string;
@@ -55,7 +56,7 @@ export function DocumentCard({ title, description, required, doc, onReplace, onR
         <div className="mt-3 flex items-center gap-3">
           {isImage ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={doc.url} alt={doc.name} width={56} height={56} loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded-md border border-line object-cover" />
+            <img src={withBasePath(doc.url)} alt={doc.name} width={56} height={56} loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded-md border border-line object-cover" />
           ) : (
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">{doc.mimeType?.includes("pdf") ? <FileText className="h-6 w-6" /> : <ImageIcon className="h-6 w-6" />}</div>
           )}

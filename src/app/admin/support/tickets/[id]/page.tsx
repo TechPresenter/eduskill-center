@@ -9,6 +9,8 @@ import { PageHeader, KeyValue } from "@/components/ui/misc";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { StatusBadge, Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/feedback";
+import { LifeBuoy } from "lucide-react";
+import { IconTile } from "@/components/admin/content/app-list";
 import { TicketMessages, TicketReplyForm, TicketStatusForm } from "@/components/admin/support/ticket-thread";
 
 export const metadata = { title: "Support Ticket" };
@@ -41,6 +43,8 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
   return (
     <div>
       <PageHeader
+        mobileTitle={ticket.ticketNo}
+        backHref="/admin/support/tickets"
         breadcrumbs={[{ label: "Support tickets", href: "/admin/support/tickets" }, { label: ticket.ticketNo }]}
         title={
           <span className="flex flex-wrap items-center gap-2">
@@ -50,15 +54,33 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           </span>
         }
         description={
-          <span>
+          <span className="hidden lg:inline">
             <span className="font-mono text-navy">{ticket.ticketNo}</span> · raised by {ticket.user.name} ({titleCase(ticket.user.role)}) on {formatDateTime(ticket.createdAt)}
             {ticket.category ? ` · ${ticket.category}` : ""}
           </span>
         }
       />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="space-y-5 lg:col-span-2">
+      {/* Phones: the subject and state (the app bar shows only the ticket number). */}
+      <Card className="mb-4 flex items-start gap-3 p-4 lg:hidden">
+        <IconTile tone={ticket.status === "OPEN" ? "orange" : ticket.status === "RESOLVED" ? "success" : "lavender"}>
+          <LifeBuoy />
+        </IconTile>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-h4 break-words text-navy">{ticket.subject}</h2>
+          <p className="mt-0.5 text-body-sm text-muted">
+            {ticket.user.name} · {titleCase(ticket.user.role)} · {formatDateTime(ticket.createdAt)}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <StatusBadge status={ticket.status} />
+            <Badge tone={PRIORITY_TONE[ticket.priority] ?? "neutral"}>{titleCase(ticket.priority)} priority</Badge>
+            {ticket.category && <Badge tone="navy">{ticket.category}</Badge>}
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-5">
+        <div className="space-y-4 lg:col-span-2 lg:space-y-5">
           <Card>
             <CardHeader title="Conversation" description={`${ticket.messages.length} message${ticket.messages.length === 1 ? "" : "s"}${first ? ` · opened ${formatDateTime(first.createdAt)}` : ""}`} />
             <CardBody>
@@ -71,7 +93,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           </Card>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-4 lg:space-y-5">
           <Card>
             <CardHeader title="Details" />
             <CardBody className="space-y-4">
@@ -80,7 +102,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                 value={
                   <span>
                     {ticket.user.name}
-                    <span className="block text-xs font-normal text-muted">{[ticket.user.email, ticket.user.mobile].filter(Boolean).join(" · ") || "—"}</span>
+                    <span className="block text-caption font-normal break-all text-muted">{[ticket.user.email, ticket.user.mobile].filter(Boolean).join(" · ") || "—"}</span>
                   </span>
                 }
               />

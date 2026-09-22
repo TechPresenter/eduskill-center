@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { GraduationCap } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/guards";
 import { hasPermission } from "@/lib/rbac/permissions";
@@ -12,18 +11,23 @@ import { Pager } from "@/components/admin/pickers/pager";
 import { EmptyState } from "@/components/ui/feedback";
 import { AdminListPage } from "@/components/admin/shared/list-page";
 import { FilterBar } from "@/components/admin/pickers/filter-bar";
+import { QueryTabs } from "@/components/admin/pickers/query-tabs";
+import { RowLead } from "@/components/admin/locations/list-kit";
 import { ExportButton } from "@/components/admin/pickers/export-button";
 import { flattenSearchParams, parseListQuery, withParams, type RawSearchParams } from "@/components/admin/pickers/search-params";
 
 export const metadata = { title: "Students" };
 
 const STATUS_OPTIONS = [
-  { value: "registered", label: "Registered (no application)" },
+  { value: "registered", label: "Registered only" },
   { value: "applied", label: "Applied" },
   { value: "admitted", label: "Admitted" },
   { value: "completed", label: "Completed a course" },
   { value: "incomplete_profile", label: "Incomplete profile" },
 ];
+
+/** Filters a status chip keeps when switching, so the chips narrow the current view rather than reset it. */
+const FILTER_KEYS = ["q", "stateId", "districtId", "blockId", "centerId", "courseId", "batchId", "from", "to"];
 
 export default async function StudentsPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
   const user = await requireAdmin("students.view");
@@ -42,12 +46,13 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         description: `${formatNumber(data.meta.total)} registered student${data.meta.total === 1 ? "" : "s"} match the current filters.`,
         actions: <ExportButton href={withParams("/api/admin/students/export", sp, { page: undefined, limit: undefined })} disabled={!canExport} />,
       }}
+      tabs={isEmpty ? undefined : <QueryTabs param="status" keep={FILTER_KEYS} items={[{ value: "", label: "All" }, ...STATUS_OPTIONS]} />}
       filters={
         <FilterBar
           lookups={lookups}
+          preserve={["status"]}
           fields={[
             { type: "search", placeholder: "Name, Student ID, mobile or email" },
-            { type: "select", name: "status", label: "Status", options: STATUS_OPTIONS },
             { type: "location" },
             { type: "center" },
             { type: "course" },
@@ -80,13 +85,14 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
             {data.items.map((s) => (
               <TR key={s.id}>
                 <TD primary>
-                  <Link href={`${base}/${s.id}`} className="flex items-center gap-3 hover:text-navy">
-                    <Avatar name={s.name} src={s.photoUrl} size={36} />
-                    <span className="min-w-0">
-                      <span className="block truncate font-semibold">{s.name}</span>
-                      <span className="block truncate text-caption font-normal text-muted">{s.email ?? "—"}</span>
-                    </span>
-                  </Link>
+                  <RowLead
+                    href={`${base}/${s.id}`}
+                    lead={<Avatar name={s.name} src={s.photoUrl} size={40} />}
+                    title={s.name}
+                    meta={s.email ?? "—"}
+                    note={!s.profileCompleted ? <span className="font-semibold text-warning-dark md:hidden">Profile incomplete</span> : undefined}
+                    trailing={<StatusBadge status={s.user.status} />}
+                  />
                   {/* Counts move into the card title on phones (the numeric columns are dropped there). */}
                   <span className="mt-2 flex flex-wrap gap-1.5 md:hidden">
                     <Badge tone="neutral">{s._count.applications} applications</Badge>
@@ -113,7 +119,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
                 <TD mobile="hidden" className="text-center tabular-nums">
                   {s._count.certificates}
                 </TD>
-                <TD label="Account">
+                <TD label="Account" mobile="hidden">
                   <span className="flex flex-wrap items-center justify-end gap-1 md:justify-start">
                     <StatusBadge status={s.user.status} />
                     {!s.profileCompleted && <Badge tone="warning">Profile incomplete</Badge>}

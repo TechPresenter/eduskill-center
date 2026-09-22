@@ -2,6 +2,7 @@ import * as React from "react";
 import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { cn, formatNumber } from "@/lib/utils";
+import { IconTile } from "./list";
 
 export interface StatsCardProps {
   label: string;
@@ -15,18 +16,11 @@ export interface StatsCardProps {
   className?: string;
 }
 
-const TONES = {
-  orange: "bg-orange-light text-orange",
-  navy: "bg-navy-soft text-navy",
-  success: "bg-success-light text-success-dark",
-  info: "bg-info-light text-blue-700",
-  warning: "bg-warning-light text-amber-700",
-};
 
 export function StatsCard({ label, value, icon, hint, delta, deltaLabel, href, tone = "orange", className }: StatsCardProps) {
   const body = (
     <div className={cn("card card-p flex items-start gap-4", href && "card-hover", className)}>
-      {icon && <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-md", TONES[tone])}>{icon}</div>}
+      {icon && <IconTile tone={tone} size="lg">{icon}</IconTile>}
       <div className="min-w-0 flex-1">
         <p className="text-caption truncate font-semibold tracking-wide text-muted uppercase">{label}</p>
         {/* The number is the point of this card: one step up from a card title, tabular so columns of stats align. */}

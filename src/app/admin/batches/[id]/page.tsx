@@ -13,6 +13,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
 import { orNotFound } from "@/components/admin/shared/server";
 import { BatchHeaderActions } from "@/components/admin/batches/batch-actions";
+import { IconTile, RecordIdentity } from "@/components/admin/locations/list-kit";
 
 export const metadata: Metadata = { title: "Batch · Foundation Admin" };
 
@@ -30,6 +31,13 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="space-y-6">
+      {/* Identity and status first on phones, where the app bar only has room for a code. */}
+      <RecordIdentity
+        lead={<IconTile icon={<CalendarDays />} tone={batch.status === "ONGOING" ? "orange" : "lavender"} size="lg" />}
+        title={batch.name}
+        meta={<span className="font-mono font-semibold text-navy">{batch.code}</span>}
+        badges={<StatusBadge status={batch.status} />}
+      />
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-3">
@@ -55,11 +63,6 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
         actions={<BatchHeaderActions batch={{ id: batch.id, code: batch.code, name: batch.name, status: batch.status, occupied: seats.occupied, activeStudents, trainerId: batch.trainerId }} perms={perms} trainers={options.trainers} centerId={batch.centerId} />}
       />
 
-      {/* The app bar shows only the batch code on phones – keep the name and status in the page. */}
-      <div className="flex flex-wrap items-center gap-2 lg:hidden">
-        <h2 className="text-h4 min-w-0 text-navy">{batch.name}</h2>
-        <StatusBadge status={batch.status} />
-      </div>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         <StatsCard label="Capacity" value={seats.capacity} icon={<Users className="h-5 w-5" />} tone="navy" />
@@ -198,14 +201,14 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
                       <TD primary>
                         {formatDate(d.date)}
                         <span className="mt-1 block text-caption font-normal text-muted md:hidden">
-                          <span className="font-semibold text-success-dark">{d.present} present</span> · <span className="font-semibold text-amber-700">{d.late} late</span> ·{" "}
+                          <span className="font-semibold text-success-dark">{d.present} present</span> · <span className="font-semibold text-warning-dark">{d.late} late</span> ·{" "}
                           <span className="font-semibold text-danger">{d.absent} absent</span> · {d.leave} leave
                         </span>
                       </TD>
                       <TD mobile="hidden" className="text-right tabular-nums text-success-dark">
                         {d.present}
                       </TD>
-                      <TD mobile="hidden" className="text-right tabular-nums text-amber-700">
+                      <TD mobile="hidden" className="text-right tabular-nums text-warning-dark">
                         {d.late}
                       </TD>
                       <TD mobile="hidden" className="text-right tabular-nums text-danger">

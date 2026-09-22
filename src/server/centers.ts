@@ -268,6 +268,20 @@ export async function mapCenters(filter: { stateId?: string; districtId?: string
   return rows.map((r) => ({ id: r.id, code: r.code, name: r.name, lat: r.latitude!, lng: r.longitude!, verified: r.isVerified, location: [r.villageTown, r.block.name, r.district.name, r.state.name].filter(Boolean).join(", "), courses: r.courses.map((c) => c.course.name), url: `/training-centers/${r.state.slug}/${r.district.slug}/${r.slug}` }));
 }
 
+/**
+ * The phone homepage's "Training centres" rail: a bounded read (verified first, newest next), unlike
+ * mapCenters() it includes centres without coordinates and never loads every active centre.
+ */
+export async function listHomeCenters(limit = 8) {
+  const rows = await db.center.findMany({
+    where: { deletedAt: null, status: "ACTIVE" },
+    orderBy: [{ isVerified: "desc" }, { createdAt: "desc" }],
+    take: limit,
+    select: { id: true, code: true, name: true, slug: true, isVerified: true, villageTown: true, state: { select: { name: true, slug: true } }, district: { select: { name: true, slug: true } }, block: { select: { name: true } }, courses: { where: { isActive: true }, select: { course: { select: { name: true } } } } },
+  });
+  return rows.map((r) => ({ id: r.id, code: r.code, name: r.name, verified: r.isVerified, location: [r.villageTown, r.block.name, r.district.name, r.state.name].filter(Boolean).join(", "), courses: r.courses.map((c) => c.course.name), url: `/training-centers/${r.state.slug}/${r.district.slug}/${r.slug}` }));
+}
+
 /** Coverage: states/districts/blocks that actually have active centers (never claims coverage without a center). */
 export async function coverageStats() {
   const [states, districts, blocks, centers, students, trainers] = await Promise.all([

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/hooks";
@@ -44,11 +45,49 @@ export function Dropdown({ trigger, children, align = "right", className, menuCl
   const isSm = useMediaQuery(SHEET_BREAKPOINT_QUERY, true);
   const asSheet = mobile === "sheet" && !isSm;
   const close = React.useCallback(() => setOpen(false), []);
+  // Desktop menu position, measured from the trigger. The menu is portalled to <body> and `fixed`, so a
+  // scrolling ancestor (TableWrap is overflow-x:auto, which forces overflow-y:auto) can never clip it.
+  const [pos, setPos] = React.useState<{ top: number; left?: number; right?: number } | null>(null);
+
+  // Forget the last position when the menu closes (render-phase reset, not an effect), so the next
+  // open is measured afresh instead of flashing at the old spot.
+  const [lastOpen, setLastOpen] = React.useState(open);
+  if (lastOpen !== open) {
+    setLastOpen(open);
+    if (!open) setPos(null);
+  }
+
+  React.useLayoutEffect(() => {
+    if (!open || asSheet) return;
+    const place = () => {
+      const el = ref.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const menuH = menuRef.current?.offsetHeight ?? 0;
+      const gap = 8;
+      const below = r.bottom + gap;
+      // Flip above the trigger when the menu would run off the bottom of the viewport.
+      const top = menuH && below + menuH > window.innerHeight - gap && r.top - gap - menuH > gap ? r.top - gap - menuH : below;
+      setPos(align === "right" ? { top, right: Math.max(gap, document.documentElement.clientWidth - r.right) } : { top, left: Math.max(gap, r.left) });
+    };
+    place();
+    // A second pass once the menu has rendered and has a height to flip with.
+    const raf = requestAnimationFrame(place);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open, asSheet, align]);
 
   React.useEffect(() => {
     if (!open || asSheet) return;
     const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (ref.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -84,15 +123,19 @@ export function Dropdown({ trigger, children, align = "right", className, menuCl
           </div>
         </BottomSheet>
       ) : (
-        open && (
+        open &&
+        typeof document !== "undefined" &&
+        createPortal(
           <div
             ref={menuRef}
             role="menu"
-            className={cn("absolute z-overlay mt-2 min-w-[12rem] overflow-hidden rounded-lg border border-line bg-white p-1 shadow-e3 animate-pop motion-reduce:animate-none", align === "right" ? "right-0" : "left-0", menuClassName)}
+            style={pos ? { top: pos.top, left: pos.left, right: pos.right } : { top: 0, left: 0, visibility: "hidden" }}
+            className={cn("fixed z-overlay min-w-[12rem] overflow-hidden rounded-lg border border-line bg-white p-1 shadow-e3 animate-pop motion-reduce:animate-none", menuClassName)}
             onClick={close}
           >
             {children}
-          </div>
+          </div>,
+          document.body
         )
       )}
     </div>
@@ -120,7 +163,7 @@ export type DropdownItemLinkProps = DropdownItemBase &
 
 export type DropdownItemProps = DropdownItemButtonProps | DropdownItemLinkProps;
 
-const ITEM_CLASSES = "flex w-full min-h-11 items-center gap-2 rounded-md px-3 py-2 text-left text-ink transition-colors duration-micro hover:bg-surface focus-visible:bg-surface disabled:opacity-50 lg:min-h-0";
+const ITEM_CLASSES = "flex w-full min-h-11 items-center gap-2 rounded-md px-3 py-2 text-left text-ink tap-highlight-none transition-colors duration-micro hover:bg-surface focus-visible:bg-surface active:bg-lavender disabled:opacity-50 lg:min-h-0";
 
 /** Splits the presentational props from the ones forwarded to the underlying button / link. */
 function splitItemProps<T extends DropdownItemBase>(props: T) {

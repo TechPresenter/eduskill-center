@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { MapPinned } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/guards";
 import { hasPermission } from "@/lib/rbac/permissions";
@@ -8,11 +7,15 @@ import { allStates, listDistricts, locationListSchema } from "@/server/locations
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
-import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow, Pagination } from "@/components/ui/table";
+import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
 import { AdminListPage } from "@/components/admin/shared/list-page";
 import { FilterBar, SearchInput, SelectFilter } from "@/components/admin/shared/filter-bar";
-import { flattenParams, pageHref, parseListQuery, type SearchParamsRecord } from "@/components/admin/shared/url";
+import { ExportButton } from "@/components/admin/shared/export-button";
+import { flattenParams, parseListQuery, type SearchParamsRecord } from "@/components/admin/shared/url";
+import { Pager } from "@/components/admin/pickers/pager";
+import { QueryTabs } from "@/components/admin/pickers/query-tabs";
 import { DistrictRowActions, NewDistrictButton } from "@/components/admin/locations/district-actions";
+import { IconTile, RowLead } from "@/components/admin/locations/list-kit";
 
 export const metadata: Metadata = { title: "Districts · Foundation Admin" };
 
@@ -20,7 +23,12 @@ export default async function DistrictsPage({ searchParams }: { searchParams: Pr
   const user = await requireAdmin("locations.view");
   const sp = flattenParams(await searchParams);
   const q = parseListQuery(locationListSchema, { limit: "50", ...sp });
-  const [data, states] = await Promise.all([listDistricts(q), allStates()]);
+  const [data, states, activeCount, inactiveCount] = await Promise.all([
+    listDistricts(q),
+    allStates(),
+    listDistricts({ ...q, active: true, page: 1, limit: 1 }).then((r) => r.meta.total),
+    listDistricts({ ...q, active: false, page: 1, limit: 1 }).then((r) => r.meta.total),
+  ]);
   const stateOptions = states.map((s) => ({ value: s.id, label: `${s.name} (${s.code})${s.isActive ? "" : " · inactive"}` }));
   const canCreate = hasPermission(user, "locations.create");
   const canUpdate = hasPermission(user, "locations.update");
@@ -33,27 +41,39 @@ export default async function DistrictsPage({ searchParams }: { searchParams: Pr
     <AdminListPage
       header={{
         title: currentState ? `Districts of ${currentState.name}` : "Districts",
-        mobileTitle: "Districts",
-        backHref: "/admin/locations",
+        mobileTitle: currentState ? currentState.name : "Districts",
+        backHref: currentState ? "/admin/states" : "/admin/locations",
         description: `${formatNumber(data.meta.total)} district${data.meta.total === 1 ? "" : "s"} · the 3-character district code is embedded in center codes and is locked once a center uses it.`,
-        breadcrumbs: [{ label: "Locations", href: "/admin/locations" }, { label: "Districts" }],
-        actions: <NewDistrictButton states={stateOptions} defaultStateId={q.stateId} disabled={!canCreate} />,
+        breadcrumbs: [{ label: "Locations", href: "/admin/locations" }, ...(currentState ? [{ label: "States", href: "/admin/states" }, { label: currentState.name }] : [{ label: "Districts" }])],
+        actions: (
+          <>
+            <ExportButton href="/api/admin/reports/districts" params={{ stateId: q.stateId }} disabled={!hasPermission(user, "reports.export")} />
+            <NewDistrictButton states={stateOptions} defaultStateId={q.stateId} disabled={!canCreate} />
+          </>
+        ),
       }}
-      filters={
-        <FilterBar>
-          <SearchInput placeholder="Search by name or code" />
-          <SelectFilter name="stateId" label="State" options={stateOptions} placeholder="All states" className="min-w-[14rem]" />
-          <SelectFilter
-            name="active"
-            label="Status"
-            options={[
-              { value: "true", label: "Active" },
-              { value: "false", label: "Inactive" },
+      tabs={
+        isEmpty ? undefined : (
+          <QueryTabs
+            param="active"
+            keep={["q", "stateId"]}
+            items={[
+              { value: "", label: "All", count: activeCount + inactiveCount },
+              { value: "true", label: "Active", count: activeCount },
+              { value: "false", label: "Inactive", count: inactiveCount },
             ]}
           />
-        </FilterBar>
+        )
       }
-      pagination={isEmpty ? undefined : <Pagination page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} hrefFor={pageHref("/admin/districts", sp)} />}
+      filters={
+        isEmpty ? undefined : (
+          <FilterBar preserve={["active"]}>
+            <SearchInput placeholder="Search by name or code" />
+            <SelectFilter name="stateId" label="State" options={stateOptions} placeholder="All states" className="min-w-[14rem]" />
+          </FilterBar>
+        )
+      }
+      pagination={isEmpty ? undefined : <Pager page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} base="/admin/districts" params={sp} />}
     >
       {isEmpty ? (
         <EmptyState
@@ -82,13 +102,21 @@ export default async function DistrictsPage({ searchParams }: { searchParams: Pr
             {data.items.length === 0 && <EmptyRow colSpan={8}>No districts match these filters.</EmptyRow>}
             {data.items.map((d) => (
               <TR key={d.id}>
-                <TD mobile="full">
-                  <Link href={`/admin/blocks?stateId=${d.stateId}&districtId=${d.id}`} className="block tap-highlight-none md:inline">
-                    <span className="font-semibold text-navy md:font-medium md:hover:underline">{d.name}</span>
-                    <span className="block font-mono text-caption font-normal text-muted md:hidden">
-                      {d.state.code}-{d.code} · {d.state.name}
-                    </span>
-                  </Link>
+                <TD primary>
+                  <RowLead
+                    href={`/admin/blocks?stateId=${d.stateId}&districtId=${d.id}`}
+                    lead={<IconTile icon={<MapPinned />} tone={d.isActive ? "lavender" : "neutral"} />}
+                    title={d.name}
+                    meta={
+                      <>
+                        <span className="font-mono font-semibold">
+                          {d.state.code}-{d.code}
+                        </span>
+                        <span className="md:hidden"> · {d.state.name}</span>
+                      </>
+                    }
+                    trailing={!d.isActive ? <Badge tone="neutral">Inactive</Badge> : undefined}
+                  />
                 </TD>
                 <TD label="Code" mobile="hidden" className="font-mono text-caption font-semibold">
                   {d.state.code}-{d.code}
@@ -105,7 +133,7 @@ export default async function DistrictsPage({ searchParams }: { searchParams: Pr
                 <TD label="Students" className="text-right tabular-nums">
                   {formatNumber(d._count.students)}
                 </TD>
-                <TD label="Status">
+                <TD label="Status" mobile="hidden">
                   <Badge tone={d.isActive ? "success" : "neutral"} dot>
                     {d.isActive ? "Active" : "Inactive"}
                   </Badge>

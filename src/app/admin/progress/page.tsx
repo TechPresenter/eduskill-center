@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { TrendingUp } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/guards";
@@ -12,6 +11,7 @@ import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/t
 import { Pager } from "@/components/admin/pickers/pager";
 import { EmptyState } from "@/components/ui/feedback";
 import { ProgressBar, StatsCard } from "@/components/ui/stats";
+import { RowLead } from "@/components/admin/locations/list-kit";
 import { AdminListPage } from "@/components/admin/shared/list-page";
 import { FilterBar } from "@/components/admin/pickers/filter-bar";
 import { BatchProgressActions, ProgressRowActions } from "@/components/admin/progress/progress-actions";
@@ -120,20 +120,19 @@ export default async function ProgressPage({ searchParams }: { searchParams: Pro
               return (
                 <TR key={a.id}>
                   <TD primary>
-                    <span className="flex items-start justify-between gap-2">
-                      <Link href={`${base}/${a.id}`} className="flex min-w-0 items-center gap-3 hover:text-navy">
-                        <Avatar name={a.student.name} src={a.student.photoUrl} size={34} />
-                        <span className="min-w-0">
-                          <span className="block truncate font-semibold">{a.student.name}</span>
-                          <span className="block font-mono text-caption font-normal text-muted">{a.student.studentId ?? a.admissionNo}</span>
+                    {/* The status column is dropped on phones – badges trail the title instead. */}
+                    <RowLead
+                      href={`${base}/${a.id}`}
+                      lead={<Avatar name={a.student.name} src={a.student.photoUrl} size={40} />}
+                      title={a.student.name}
+                      meta={<span className="font-mono">{a.student.studentId ?? a.admissionNo}</span>}
+                      trailing={
+                        <span className="flex flex-col items-end gap-1">
+                          <StatusBadge status={a.status} />
+                          {a.certificate ? <Badge tone="success">Certified</Badge> : p?.certificateEligible ? <Badge tone="navy">Eligible</Badge> : null}
                         </span>
-                      </Link>
-                      {/* The status column is dropped on phones – badges lead the card instead. */}
-                      <span className="flex shrink-0 flex-wrap justify-end gap-1 md:hidden">
-                        <StatusBadge status={a.status} />
-                        {a.certificate ? <Badge tone="success">Certified</Badge> : p?.certificateEligible ? <Badge tone="navy">Eligible</Badge> : null}
-                      </span>
-                    </span>
+                      }
+                    />
                   </TD>
                   <TD label="Course & batch">
                     <span className="block">{a.course.name}</span>

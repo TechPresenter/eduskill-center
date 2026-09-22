@@ -11,7 +11,7 @@ export default function Loading() {
         <Skeleton className="h-7 w-48 max-w-full" />
         <Skeleton className="h-4 w-80 max-w-full" />
       </div>
-      <div className="flex gap-2 overflow-hidden border-b border-line pb-2">
+      <div className="flex gap-2 overflow-x-clip border-b border-line pb-2">
         {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className="h-8 w-24 shrink-0 rounded-md" />
         ))}

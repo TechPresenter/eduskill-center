@@ -14,6 +14,7 @@ import { api } from "@/lib/api-client";
 import { titleCase } from "@/lib/utils";
 import { useApiForm } from "@/components/admin/shared/use-api-form";
 import { ConfirmAction } from "@/components/admin/shared/confirm-action";
+import { withBasePath } from "@/lib/base-path";
 
 export interface CourseChoice {
   id: string;
@@ -108,7 +109,7 @@ export function CenterGalleryManager({ centerId, images, canEdit }: { centerId: 
           {images.map((img) => (
             <li key={img.id} className="card overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img.url} alt={img.caption ?? "Center photo"} className="aspect-[4/3] w-full object-cover" />
+              <img src={withBasePath(img.url)} alt={img.caption ?? "Center photo"} className="aspect-[4/3] w-full object-cover" />
               <div className="flex items-center justify-between gap-2 px-3 py-2">
                 <p className="truncate text-caption text-muted">{img.caption || "No caption"}</p>
                 {canEdit && (

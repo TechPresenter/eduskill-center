@@ -16,7 +16,7 @@ export default function Loading() {
           <Skeleton key={i} className="h-[5.5rem] rounded-card" />
         ))}
       </div>
-      <div className="flex gap-2 overflow-hidden border-b border-line pb-2">
+      <div className="flex gap-2 overflow-x-clip border-b border-line pb-2">
         {Array.from({ length: 3 }).map((_, i) => (
           <Skeleton key={i} className="h-8 w-24 shrink-0 rounded-md" />
         ))}

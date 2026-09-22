@@ -14,6 +14,7 @@ import { Alert, EmptyState } from "@/components/ui/feedback";
 import { ApplicationActions } from "@/components/admin/trainers/application-actions";
 import { DocumentActions } from "@/components/admin/trainers/document-actions";
 import { NoteForm } from "@/components/admin/trainers/note-form";
+import { RecordIdentity } from "@/components/admin/locations/list-kit";
 
 export const metadata = { title: "Trainer Application" };
 
@@ -37,6 +38,18 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
 
   return (
     <div>
+      {/* Identity and status first on phones, where the app bar only has room for a code. */}
+      <RecordIdentity
+        lead={<Avatar name={app.name} src={app.photoUrl} size={48} />}
+        title={app.name}
+        meta={<span className="font-mono font-semibold text-navy">{app.applicationNo}</span>}
+        badges={
+          <>
+            <StatusBadge status={app.status} />
+            <Badge tone="navy">{titleCase(app.level)} level</Badge>
+          </>
+        }
+      />
       <PageHeader
         breadcrumbs={[{ label: "Trainer Applications", href: "/admin/trainer-applications" }, { label: app.applicationNo }]}
         mobileTitle={app.applicationNo}
@@ -70,17 +83,6 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
         }
       />
 
-      {/* The app bar shows only the application number on phones – keep the applicant and status in the page. */}
-      <div className="mb-4 flex items-center gap-3 lg:hidden">
-        <Avatar name={app.name} src={app.photoUrl} size={44} />
-        <div className="min-w-0">
-          <h2 className="text-h4 truncate text-navy">{app.name}</h2>
-          <span className="mt-1 flex flex-wrap items-center gap-2">
-            <StatusBadge status={app.status} />
-            <Badge tone="navy">{titleCase(app.level)} level</Badge>
-          </span>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 max-lg:order-2 lg:col-span-2">

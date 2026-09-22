@@ -16,7 +16,7 @@ export default async function CmsSectionEditPage({ params }: { params: Promise<{
 
   return (
     <div>
-      <PageHeader breadcrumbs={[{ label: "Website sections", href: "/admin/cms/sections" }, { label: def.page }, { label: def.name }]} title={def.name} description={def.description} />
+      <PageHeader breadcrumbs={[{ label: "Website sections", href: "/admin/cms/sections" }, { label: def.page }, { label: def.name }]} title={def.name} mobileTitle={def.name} backHref="/admin/cms/sections" description={def.description} />
       <SectionEditor section={{ key: def.key, name: def.name, page: def.page, description: def.description, fields: def.fields, defaults: def.defaults, data, customised, updatedAt }} canEdit={hasPermission(user, "cms.update")} />
     </div>
   );

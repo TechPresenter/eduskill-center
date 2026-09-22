@@ -51,7 +51,7 @@ interface Report {
 type Marks = Record<string, AttendanceMark>;
 
 function pctClass(p: number) {
-  return p >= 75 ? "text-success-dark" : p >= 60 ? "text-amber-700" : "text-danger";
+  return p >= 75 ? "text-success-dark" : p >= 60 ? "text-warning-dark" : "text-danger";
 }
 
 function csvCell(v: unknown) {

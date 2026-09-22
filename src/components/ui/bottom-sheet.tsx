@@ -7,6 +7,7 @@ import { ArrowLeft, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFocusTrap, useMediaQuery, usePrefersReducedMotion, useScrollLock } from "@/lib/hooks";
 import { IconButton } from "@/components/ui/button";
+import { IconTile } from "@/components/ui/list";
 import { StickyActionBar, type StickyActionBarProps } from "@/components/ui/sticky-action-bar";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -379,15 +380,15 @@ export function SheetActions({ items, className }: { items: SheetActionItem[]; c
       {items.map((it) => {
         const cls = cn(
           "flex min-h-14 w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-body font-medium tap-highlight-none transition-colors duration-micro sm:min-h-12",
-          it.danger ? "active:bg-danger-light sm:hover:bg-danger-light" : "active:bg-surface sm:hover:bg-surface",
+          it.danger ? "active:bg-danger-light sm:hover:bg-danger-light" : "active:bg-lavender sm:hover:bg-surface",
           it.disabled && "pointer-events-none opacity-50"
         );
         const inner = (
           <>
-            {it.icon && <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-md", it.danger ? "bg-danger-light text-danger" : "bg-lavender text-navy")}>{it.icon}</span>}
+            {it.icon && <IconTile tone={it.danger ? "danger" : "navy"}>{it.icon}</IconTile>}
             <span className="min-w-0 flex-1">
               <span className="block">{it.label}</span>
-              {it.description && <span className="mt-0.5 block font-normal text-muted text-caption">{it.description}</span>}
+              {it.description && <span className="mt-0.5 block font-normal text-muted text-body-sm">{it.description}</span>}
             </span>
           </>
         );

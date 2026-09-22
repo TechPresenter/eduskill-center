@@ -1,6 +1,7 @@
 import { Suspense, cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SectionHeading } from "@/components/site/section-heading";
 import { Compass, List, Map as MapIcon, RotateCcw, SearchX, UserPlus } from "lucide-react";
 import { getSection } from "@/lib/cms";
 import { getSessionUser } from "@/lib/auth/session";
@@ -278,14 +279,11 @@ export default async function TrainingCentersPage({ searchParams }: Props) {
       </section>
 
       {states.length > 0 && (
-        <section className="relative overflow-hidden bg-white py-14 sm:py-16" aria-labelledby="browse-states-title">
+        <section className="section-y relative overflow-x-clip bg-white" aria-labelledby="browse-states-title">
           <SectionBg variant="grid" tone="light" className="opacity-70" />
           <div className="container-x relative z-10">
             <Reveal>
-              <p className="eyebrow mb-3">Browse by state</p>
-              <h2 id="browse-states-title" className="font-heading text-2xl font-extrabold text-navy sm:text-3xl">
-                States with active training centers
-              </h2>
+              <SectionHeading id="browse-states-title" label="Browse by state" title="States with active training centers" />
               <ul className="mt-6 flex flex-wrap gap-2.5">
                 {states.map((s) => (
                   <li key={s.id}>

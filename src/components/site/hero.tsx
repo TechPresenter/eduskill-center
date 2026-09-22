@@ -1,10 +1,9 @@
 import { ArrowRight, TrendingUp } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
-import { Highlight } from "@/components/ui/highlight";
 import { HeroPattern } from "@/components/site/page-hero";
 import { HeroIllustration } from "@/components/site/hero-illustration";
 import { HeroFinderCard } from "@/components/site/hero-finder-card";
-import { HeroSlider, type HeroSlideData } from "@/components/site/hero-slider";
+import { HeroSlider, HeroTitle, type HeroSlideData } from "@/components/site/hero-slider";
 import { SafeImage } from "@/components/site/safe-image";
 import { CountUp } from "@/components/site/count-up";
 import type { ImpactStatValue } from "@/server/public";
@@ -12,6 +11,8 @@ import type { ImpactStatValue } from "@/server/public";
 export interface HeroSection {
   eyebrow?: string;
   title: string;
+  /** Optional short title for phones (≤ 2 lines). Falls back to the first line of `title`. */
+  mobileTitle?: string;
   subtitle?: string;
   primaryLabel?: string;
   primaryHref?: string;
@@ -28,12 +29,23 @@ export interface HeroSection {
   slides?: HeroSlideData[];
 }
 
+/**
+ * The homepage hero.
+ *
+ * Below lg it is an app's compact header: eyebrow, a two-line title at the h1 step, one line of support
+ * and nothing else — the search bar and quick actions the page renders right under it overlap its
+ * bottom edge, so the first phone screen is actionable. The artwork, badge, finder card and CTA
+ * buttons are desktop-only (their jobs are the quick-action tiles on phones).
+ *
+ * From lg it is the website hero: copy on seven columns, artwork and the finder card on five, the
+ * title at a size that keeps the seeded three CMS lines to three lines.
+ */
 export function Hero({ section, impact }: { section: HeroSection; impact: ImpactStatValue[] }) {
   const badgeStat = section.badgeValueKey ? impact.find((s) => s.key === section.badgeValueKey) : undefined;
 
   const badge =
     badgeStat && section.badgeLabel ? (
-      <div className="animate-fade-up absolute top-6 left-0 flex items-center gap-3 rounded-2xl bg-white p-3 pr-5 text-navy shadow-float sm:-left-4" style={{ animationDelay: "250ms" }}>
+      <div className="animate-fade-up absolute top-6 -left-4 flex items-center gap-3 rounded-2xl bg-white p-3 pr-5 text-navy shadow-float motion-reduce:animate-none" style={{ animationDelay: "250ms" }}>
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-light text-orange">
           <TrendingUp className="h-5 w-5" aria-hidden />
         </span>
@@ -46,6 +58,8 @@ export function Hero({ section, impact }: { section: HeroSection; impact: Impact
       </div>
     ) : null;
 
+  const finderCard = <HeroFinderCard title={section.cardTitle || "Find a Training Center"} />;
+
   // The first slide is the section's own fields, so existing CMS content keeps rendering exactly as
   // before and the slider only appears once the Foundation adds a second slide in Admin → CMS.
   const extra = (section.slides ?? []).filter((s) => s && s.title?.trim());
@@ -54,6 +68,7 @@ export function Hero({ section, impact }: { section: HeroSection; impact: Impact
       {
         eyebrow: section.eyebrow,
         title: section.title,
+        mobileTitle: section.mobileTitle,
         subtitle: section.subtitle,
         primaryLabel: section.primaryLabel,
         primaryHref: section.primaryHref,
@@ -69,8 +84,8 @@ export function Hero({ section, impact }: { section: HeroSection; impact: Impact
     return (
       <section className="relative overflow-hidden bg-linear-to-br from-navy via-navy to-navy-dark text-white">
         <HeroPattern />
-        <HeroSlider slides={slides} badge={badge} finderCard={<HeroFinderCard title={section.cardTitle || "Find a Training Center"} />} />
-        <div className="h-8 lg:h-16" aria-hidden />
+        <HeroSlider slides={slides} badge={badge} finderCard={finderCard} />
+        <div className="hidden h-16 lg:block" aria-hidden />
       </section>
     );
   }
@@ -78,14 +93,12 @@ export function Hero({ section, impact }: { section: HeroSection; impact: Impact
   return (
     <section className="relative overflow-hidden bg-linear-to-br from-navy via-navy to-navy-dark text-white">
       <HeroPattern />
-      <div className="container-x relative grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-12 lg:gap-8 lg:py-24">
-        <div className="lg:col-span-6 animate-fade-up">
-          {section.eyebrow && <p className="eyebrow mb-4 text-orange">{section.eyebrow}</p>}
-          <h1 className="font-heading text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-[3.5rem]">
-            <Highlight text={section.title} />
-          </h1>
-          {section.subtitle && <p className="mt-6 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg">{section.subtitle}</p>}
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="container-x relative grid items-center gap-8 pt-6 pb-14 sm:pt-10 sm:pb-16 lg:grid-cols-12 lg:py-24">
+        <div className="animate-fade-up motion-reduce:animate-none lg:col-span-7">
+          {section.eyebrow && <p className="eyebrow mb-2 text-orange lg:mb-4">{section.eyebrow}</p>}
+          <HeroTitle title={section.title} mobileTitle={section.mobileTitle} />
+          {section.subtitle && <p className="mt-2 line-clamp-3 max-w-xl text-body-sm text-white/80 sm:text-body lg:mt-6 lg:line-clamp-none lg:text-body-lg">{section.subtitle}</p>}
+          <div className="mt-8 hidden gap-3 lg:flex lg:items-center">
             {section.primaryLabel && section.primaryHref && (
               <ButtonLink href={section.primaryHref} size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
                 {section.primaryLabel}
@@ -98,43 +111,31 @@ export function Hero({ section, impact }: { section: HeroSection; impact: Impact
             )}
           </div>
           {section.tertiaryLabel && section.tertiaryHref && (
-            <ButtonLink href={section.tertiaryHref} variant="link" className="mt-5 text-white hover:text-orange" rightIcon={<ArrowRight className="h-4 w-4" />}>
+            <ButtonLink href={section.tertiaryHref} variant="link" className="mt-5 hidden text-white hover:text-orange lg:inline-flex" rightIcon={<ArrowRight className="h-4 w-4" />}>
               {section.tertiaryLabel}
             </ButtonLink>
           )}
         </div>
 
-        <div className="relative lg:col-span-6">
-          <div className="relative mx-auto max-w-lg lg:max-w-none">
-            <div className="relative aspect-square overflow-hidden rounded-[2rem]">
+        <div className="relative hidden lg:col-span-5 lg:block">
+          <div className="relative">
+            <div className="relative aspect-square overflow-hidden rounded-2xl">
               {section.imageUrl ? (
-                <SafeImage src={section.imageUrl} alt={section.imageAlt || "EduSkill student"} priority sizes="(max-width: 1024px) 90vw, 600px" className="rounded-[2rem]" />
+                <SafeImage src={section.imageUrl} alt={section.imageAlt || "EduSkill student"} priority sizes="(max-width: 1024px) 1px, 520px" className="rounded-2xl" />
               ) : (
                 <HeroIllustration className="h-full w-full" />
               )}
             </div>
 
-            {badgeStat && section.badgeLabel && (
-              <div className="absolute top-6 left-0 flex items-center gap-3 rounded-2xl bg-white p-3 pr-5 text-navy shadow-float animate-fade-up sm:-left-4" style={{ animationDelay: "250ms" }}>
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-light text-orange">
-                  <TrendingUp className="h-5 w-5" aria-hidden />
-                </span>
-                <span className="leading-tight">
-                  <span className="block font-heading text-xl font-extrabold text-navy">
-                    <CountUp value={badgeStat.value} suffix={badgeStat.suffix} />
-                  </span>
-                  <span className="block text-xs font-semibold text-muted">{section.badgeLabel}</span>
-                </span>
-              </div>
-            )}
+            {badge}
 
-            <div className="relative mt-6 flex justify-center lg:absolute lg:right-0 lg:-bottom-6 lg:mt-0 lg:justify-end animate-fade-up" style={{ animationDelay: "150ms" }}>
-              <HeroFinderCard title={section.cardTitle || "Find a Training Center"} />
+            <div className="animate-fade-up absolute right-0 -bottom-6 flex justify-end motion-reduce:animate-none" style={{ animationDelay: "150ms" }}>
+              {finderCard}
             </div>
           </div>
         </div>
       </div>
-      <div className="h-8 lg:h-16" aria-hidden />
+      <div className="hidden h-16 lg:block" aria-hidden />
     </section>
   );
 }

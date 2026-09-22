@@ -20,9 +20,11 @@ export interface ChatLauncherProps {
 /**
  * The floating entry point, bottom-right on every public page.
  *
- * It sits above a page's sticky CTA bar rather than on top of it: the bottom offset is the same
- * `--bottom-nav-h + --sticky-bar-h + safe-area` stack that `Fab` and the toaster use, so a course or
- * centre detail page pushes it up automatically. `z-sticky` (20) is the FAB step: over page content,
+ * It sits above the public tab bar and a page's sticky CTA bar rather than on top of them: the bottom
+ * offset is the same `--bottom-nav-h + --sticky-bar-h + safe-area` stack that `Fab` and the toaster use.
+ * PublicBottomNav publishes `--bottom-nav-h` (4rem) only while it is visible below lg, so on phones the
+ * button floats 1rem above the tabs, a course or centre detail page (sticky bar instead of tabs) pushes
+ * it above that bar, and on desktop both are 0 and it keeps its 1rem corner. `z-sticky` (20) is the FAB step: over page content,
  * under the header, the drawer, dialogs (z-overlay) and toasts (z-toast). Its labels stay English because it exists before the conversation has a
  * language; `aria-expanded` and `aria-controls` carry the state.
  */

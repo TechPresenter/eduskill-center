@@ -145,14 +145,15 @@ export function CenterMap({
       const icon = L.divIcon({
         className: "esk-pin-wrap",
         html: '<span class="esk-pin" aria-hidden="true"></span>',
-        iconSize: [28, 36],
-        iconAnchor: [14, 36],
-        popupAnchor: [0, -32],
+        // 44px tap box around the 28x36 pin (the pin sits bottom-centre, its point on the anchor).
+        iconSize: [44, 44],
+        iconAnchor: [22, 42],
+        popupAnchor: [0, -38],
       });
       const cluster = L.markerClusterGroup({
         showCoverageOnHover: false,
         maxClusterRadius: 48,
-        iconCreateFunction: (c) => L.divIcon({ html: `<span class="esk-cluster">${c.getChildCount()}</span>`, className: "esk-cluster-wrap", iconSize: [40, 40] }),
+        iconCreateFunction: (c) => L.divIcon({ html: `<span class="esk-cluster">${c.getChildCount()}</span>`, className: "esk-cluster-wrap", iconSize: [44, 44] }),
       });
       for (const c of centers) {
         const m = L.marker([c.lat, c.lng], { icon, title: c.name, alt: c.name });
@@ -239,7 +240,7 @@ export function CenterMap({
                   {c.code} · {c.location}
                 </span>
               </span>
-              <Link href={c.url} className="text-xs font-semibold text-orange">
+              <Link href={c.url} className="inline-flex min-h-11 items-center text-xs font-semibold text-orange">
                 View Center →
               </Link>
             </li>
@@ -249,21 +250,22 @@ export function CenterMap({
       </details>
 
       <style>{`
-        .esk-pin-wrap { background: transparent; border: 0; }
-        .esk-pin { display:block; width:28px; height:28px; background:#e8520a; border:3px solid #fff; border-radius:50% 50% 50% 0; transform:rotate(-45deg); box-shadow:0 4px 10px rgba(16,24,40,.35); }
+        .esk-pin-wrap { background: transparent; border: 0; display:flex; align-items:flex-end; justify-content:center; padding-bottom:8px; }
+        .esk-pin { display:block; position:relative; width:28px; height:28px; background:#e8520a; border:3px solid #fff; border-radius:50% 50% 50% 0; transform:rotate(-45deg); box-shadow:0 4px 10px rgba(16,24,40,.35); }
         .esk-pin::after { content:""; position:absolute; left:8px; top:8px; width:6px; height:6px; background:#fff; border-radius:50%; }
         .esk-cluster-wrap { background: transparent; border: 0; }
-        .esk-cluster { display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:9999px; background:#12357a; color:#fff; font-weight:800; font-size:13px; border:3px solid #fff; box-shadow:0 4px 12px rgba(16,24,40,.3); }
+        .esk-cluster { display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:9999px; background:#12357a; color:#fff; font-weight:800; font-size:13px; border:3px solid #fff; box-shadow:0 4px 12px rgba(16,24,40,.3); }
         .leaflet-popup-content-wrapper { border-radius:14px; box-shadow:0 12px 30px -10px rgba(16,24,40,.4); }
         .leaflet-popup-content { margin:12px 14px; font-family:inherit; }
         .esk-popup-title { font-weight:800; color:#12357a; font-size:14px; margin:0 0 2px; }
         .esk-verified { color:#12b76a; font-weight:800; }
-        .esk-popup-code { font-size:11px; color:#667085; margin:0; font-weight:600; letter-spacing:.02em; }
+        .esk-popup-code { font-size:12px; color:#667085; margin:0; font-weight:600; letter-spacing:.02em; }
         .esk-popup-loc { font-size:12px; color:#667085; margin:4px 0 0; }
         .esk-popup-courses { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
-        .esk-chip { background:#e8eaf6; color:#12357a; border-radius:9999px; padding:2px 8px; font-size:11px; font-weight:600; }
-        .esk-popup-link { display:inline-block; margin-top:10px; color:#e8520a; font-weight:700; font-size:13px; text-decoration:none; }
+        .esk-chip { background:#e8eaf6; color:#12357a; border-radius:9999px; padding:2px 8px; font-size:12px; font-weight:600; }
+        .esk-popup-link { display:inline-flex; align-items:center; min-height:44px; margin-top:2px; color:#e8520a; font-weight:700; font-size:13px; text-decoration:none; }
         .esk-popup-link:hover { text-decoration:underline; }
+        .leaflet-touch .leaflet-bar a { width:44px; height:44px; line-height:44px; }
       `}</style>
     </div>
   );

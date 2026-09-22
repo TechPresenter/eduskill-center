@@ -22,7 +22,7 @@
  * `SectionDivider`: that one is rendered LAST, so without it the shape would paint over the text.
  */
 import type { LucideProps } from "lucide-react";
-import { DynamicIcon } from "@/components/ui/icon";
+import { IconTile as UiIconTile, type IconTileSize as UiIconTileSize, type IconTileTone as UiIconTileTone } from "@/components/ui/list";
 import { cn } from "@/lib/utils";
 import { BLOB_PATHS, DIVIDER_PATHS, DotPattern, GridPattern, RingArt, WaveBands, type DecorTone, type DividerVariant } from "@/components/site/decor-art";
 
@@ -240,30 +240,27 @@ export function Blob({
 
 /* ────────────────────────────── IconTile ────────────────────────────── */
 
-const TILE_TONE = {
-  navy: "bg-navy text-white",
-  orange: "bg-orange-light text-orange ring-1 ring-inset ring-orange/15",
-  lavender: "bg-lavender text-navy ring-1 ring-inset ring-navy/10",
+/*
+ * The site's IconTile IS the app's IconTile (src/components/ui/list.tsx) — one icon container for the
+ * whole product. This wrapper only keeps the public site's historical API: its size steps sit one
+ * step larger than the portal's (sm 40 · md 48 · lg 56) and its "navy" tone is the solid brand tile.
+ */
+const SITE_TILE_TONE = {
+  navy: "navy-solid",
+  orange: "orange",
+  lavender: "lavender",
   /** On navy sections. */
-  white: "bg-white/15 text-white ring-1 ring-inset ring-white/25",
-  /** Quietest option: outline only, inherits the surrounding text colour. */
-  outline: "bg-transparent text-navy ring-1 ring-inset ring-line",
-} as const;
+  white: "white",
+  /** Quietest option: outline only. */
+  outline: "outline",
+} as const satisfies Record<string, UiIconTileTone>;
 
-const TILE_SIZE = {
-  sm: { box: "h-10 w-10 rounded-xl", icon: "h-5 w-5", glyph: "text-lg" },
-  md: { box: "h-12 w-12 rounded-xl", icon: "h-6 w-6", glyph: "text-xl" },
-  lg: { box: "h-14 w-14 rounded-2xl", icon: "h-7 w-7", glyph: "text-2xl" },
-} as const;
+const SITE_TILE_SIZE = { sm: "md", md: "lg", lg: "xl" } as const satisfies Record<string, UiIconTileSize>;
 
 /**
  * Rounded-square tinted tile holding an icon — the standard mark for feature rows, step lists and
- * "why us" cards.
- *
- * `icon` takes either a lucide component (`icon={ShieldCheck}`), a lucide name from the CMS catalog
- * (`icon="ShieldCheck"`, resolved by `DynamicIcon`) or an emoji (`icon="🎓"` — any string that does
- * not start with an ASCII letter is drawn as a glyph). Decorative by default; pass `label` when the
- * tile is the only thing conveying the meaning and it becomes `role="img"` with that name.
+ * "why us" cards. `icon` takes a lucide component, a lucide name from the CMS catalog or a short
+ * emoji. Decorative by default; pass `label` when the tile alone conveys the meaning.
  */
 export function IconTile({
   icon,
@@ -273,22 +270,10 @@ export function IconTile({
   className,
 }: {
   icon: React.ComponentType<LucideProps> | string;
-  tone?: keyof typeof TILE_TONE;
-  size?: keyof typeof TILE_SIZE;
+  tone?: keyof typeof SITE_TILE_TONE;
+  size?: keyof typeof SITE_TILE_SIZE;
   label?: string;
   className?: string;
 }) {
-  const s = TILE_SIZE[size];
-  // A lucide name always starts with an ASCII letter. A SHORT string that does not is treated as an
-  // emoji/symbol glyph. Anything longer is bad data — a CMS `icon` field holding "3D Printing", or an
-  // emoji with a label glued on — and falls through to DynamicIcon's Sparkles fallback instead of
-  // spilling raw text out of the tile and over its neighbours.
-  const Icon = typeof icon === "string" ? null : icon;
-  const glyph = typeof icon === "string" && icon !== "" && !/^[A-Za-z]/.test(icon) && [...icon].length <= 4 ? icon : null;
-  const iconName = typeof icon === "string" && glyph === null ? icon : undefined;
-  return (
-    <span {...(label ? { role: "img", "aria-label": label } : { "aria-hidden": true })} className={cn("inline-flex shrink-0 items-center justify-center overflow-hidden", s.box, TILE_TONE[tone], className)}>
-      {glyph !== null ? <span className={cn("leading-none", s.glyph)}>{glyph}</span> : Icon ? <Icon className={s.icon} aria-hidden="true" /> : <DynamicIcon name={iconName} className={s.icon} aria-hidden="true" />}
-    </span>
-  );
+  return <UiIconTile icon={icon} tone={SITE_TILE_TONE[tone]} size={SITE_TILE_SIZE[size]} label={label} className={className} />;
 }

@@ -81,12 +81,12 @@ export function SettingsForm({ group, groupLabel, fields, values, canUpdate, def
             <span className="inline-flex flex-wrap items-center gap-1.5">
               {f.label}
               {f.isPublic && (
-                <Badge tone="info" className="text-[10px]">
+                <Badge tone="info" className="text-caption">
                   Public
                 </Badge>
               )}
               {f.secret && (
-                <Badge tone="warning" className="text-[10px]">
+                <Badge tone="warning" className="text-caption">
                   Secret
                 </Badge>
               )}

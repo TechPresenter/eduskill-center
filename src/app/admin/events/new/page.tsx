@@ -11,8 +11,9 @@ export default async function NewEventPage() {
   const canPublish = hasPermission(user, "cms.publish");
   return (
     <div>
-      <PageHeader breadcrumbs={[{ label: "Events", href: "/admin/events" }, { label: "New event" }]} title="New event" description="Save as a draft first, then publish when the details are final." />
+      <PageHeader breadcrumbs={[{ label: "Events", href: "/admin/events" }, { label: "New event" }]} title="New event" mobileTitle="New event" backHref="/admin/events" description="Save as a draft first, then publish when the details are final." />
       <ContentEditor
+        publicPrefix="/events"
         endpoint="/api/admin/events"
         itemLabel="event"
         backHref="/admin/events"

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getSections } from "@/lib/cms";
-import { coverageStats } from "@/server/centers";
+import { coverageStats, listHomeCenters } from "@/server/centers";
 import { toNumber } from "@/lib/utils";
 
 // ───────────────────────────── Impact statistics ─────────────────────────────
@@ -257,7 +257,7 @@ export interface FeePresentation {
 }
 
 export async function getHomepageData() {
-  const [sections, programs, featuredCourses, stories, partners, coverage, impact, scholarships] = await Promise.all([
+  const [sections, programs, featuredCourses, stories, partners, coverage, impact, scholarships, homeCenters] = await Promise.all([
     getSections(HOME_SECTION_KEYS),
     listPrograms(),
     listPublicCourses({ featured: true, limit: 6 }),
@@ -266,6 +266,8 @@ export async function getHomepageData() {
     coverageStats(),
     getImpactStats(),
     listScholarshipPrograms(),
+    // A failure only hides the phone "Training centres" rail.
+    listHomeCenters(8).catch(() => []),
   ]);
 
   let feeCourse = featuredCourses.find((c) => c.scholarshipAvailable && c.courseFee > 0) ?? null;
@@ -284,7 +286,7 @@ export async function getHomepageData() {
     };
   }
 
-  return { sections, programs, featuredCourses, stories, partners, coverage, impact, fees };
+  return { sections, programs, featuredCourses, stories, partners, coverage, impact, fees, homeCenters };
 }
 
 // ───────────────────────────── Locations ─────────────────────────────

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { db } from "@/lib/db";
 import { BookOpen, Plus, Star } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/guards";
 import { hasPermission } from "@/lib/rbac/permissions";
@@ -9,10 +9,14 @@ import { ButtonLink } from "@/components/ui/button";
 import { StatusBadge, Badge } from "@/components/ui/badge";
 import { DynamicIcon } from "@/components/ui/icon";
 import { EmptyState } from "@/components/ui/feedback";
-import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow, Pagination } from "@/components/ui/table";
+import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
 import { AdminListPage } from "@/components/admin/shared/list-page";
 import { FilterBar, SearchInput, SelectFilter } from "@/components/admin/shared/filter-bar";
-import { flattenParams, pageHref, parseListQuery, type SearchParamsRecord } from "@/components/admin/shared/url";
+import { ExportButton } from "@/components/admin/shared/export-button";
+import { flattenParams, parseListQuery, type SearchParamsRecord } from "@/components/admin/shared/url";
+import { Pager } from "@/components/admin/pickers/pager";
+import { QueryTabs } from "@/components/admin/pickers/query-tabs";
+import { IconTile, RowLead } from "@/components/admin/locations/list-kit";
 import { CourseRowActions } from "@/components/admin/courses/course-actions";
 
 export const metadata: Metadata = { title: "Courses · Foundation Admin" };
@@ -21,7 +25,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const user = await requireAdmin("courses.view");
   const sp = flattenParams(await searchParams);
   const q = parseListQuery(courseListSchema, sp);
-  const [data, categories] = await Promise.all([listCoursesAdmin(q), listCategories()]);
+  const [data, categories, statusRows] = await Promise.all([listCoursesAdmin(q), listCategories(), db.course.groupBy({ by: ["status"], where: { deletedAt: null }, _count: { _all: true } })]);
+  const countOf = (st: string) => statusRows.find((r) => r.status === st)?._count._all ?? 0;
   const perms = { update: hasPermission(user, "courses.update"), delete: hasPermission(user, "courses.delete") };
   const canCreate = hasPermission(user, "courses.create");
   const filtered = Object.keys(sp).some((k) => k !== "page");
@@ -35,6 +40,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         description: `${formatNumber(data.meta.total)} course${data.meta.total === 1 ? "" : "s"} in the current view.`,
         actions: (
           <>
+            <ExportButton href="/api/admin/reports/courses" params={{ status: q.status }} disabled={!hasPermission(user, "reports.export")} />
             <ButtonLink href="/admin/courses/categories" variant="outline" size="sm">
               Categories
             </ButtonLink>
@@ -48,20 +54,25 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       }}
       /* Phones and tablets get the create action as a FAB; the header button takes over from lg up. */
       fab={canCreate && !isEmpty ? { href: "/admin/courses/new", label: "Add course" } : undefined}
-      filters={
-        <FilterBar>
-          <SearchInput placeholder="Name, code or description" />
-          <SelectFilter name="categoryId" label="Category" options={categories.map((c) => ({ value: c.id, label: c.name }))} placeholder="All categories" className="min-w-[12rem]" />
-          <SelectFilter
-            name="status"
-            label="Status"
-            options={[
-              { value: "ACTIVE", label: "Active" },
-              { value: "DRAFT", label: "Draft" },
-              { value: "INACTIVE", label: "Inactive" },
-              { value: "ARCHIVED", label: "Archived" },
+      tabs={
+        isEmpty ? undefined : (
+          <QueryTabs
+            param="status"
+            keep={["q", "categoryId", "level", "mode", "featured"]}
+            items={[
+              { value: "", label: "All", count: statusRows.reduce((n, r) => n + r._count._all, 0) },
+              { value: "ACTIVE", label: "Active", count: countOf("ACTIVE") },
+              { value: "DRAFT", label: "Draft", count: countOf("DRAFT") },
+              { value: "INACTIVE", label: "Inactive", count: countOf("INACTIVE") },
+              { value: "ARCHIVED", label: "Archived", count: countOf("ARCHIVED") },
             ]}
           />
+        )
+      }
+      filters={
+        <FilterBar preserve={["status"]}>
+          <SearchInput placeholder="Name, code or description" />
+          <SelectFilter name="categoryId" label="Category" options={categories.map((c) => ({ value: c.id, label: c.name }))} placeholder="All categories" className="min-w-[12rem]" />
           <SelectFilter
             name="level"
             label="Level"
@@ -83,7 +94,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
           <SelectFilter name="featured" label="Featured" options={[{ value: "true", label: "Featured only" }]} placeholder="All" />
         </FilterBar>
       }
-      pagination={isEmpty ? undefined : <Pagination page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} hrefFor={pageHref("/admin/courses", sp)} />}
+      pagination={isEmpty ? undefined : <Pager page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} base="/admin/courses" params={sp} />}
     >
       {isEmpty ? (
         <EmptyState icon={<BookOpen className="h-7 w-7" />} title="No courses yet" description="Create the first course to offer it at training centers." action={canCreate ? <ButtonLink href="/admin/courses/new">Add course</ButtonLink> : undefined} />
@@ -110,24 +121,19 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
             {data.items.map((c) => (
               <TR key={c.id}>
                 <TD primary>
-                  <span className="flex items-start justify-between gap-2">
-                    <Link href={`/admin/courses/${c.id}`} className="flex min-w-0 items-center gap-3 hover:text-navy">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">
-                        <DynamicIcon name={c.icon ?? undefined} className="h-4 w-4" />
+                  {/* The status column is dropped on phones – the badge trails the title instead. */}
+                  <RowLead
+                    href={`/admin/courses/${c.id}`}
+                    lead={<IconTile icon={<DynamicIcon name={c.icon ?? undefined} />} />}
+                    title={
+                      <span className="inline-flex items-center gap-1.5">
+                        {c.name}
+                        {c.isFeatured && <Star className="h-3.5 w-3.5 shrink-0 fill-orange text-orange" aria-label="Featured" />}
                       </span>
-                      <span className="min-w-0">
-                        <span className="flex items-center gap-1.5 font-semibold">
-                          {c.name}
-                          {c.isFeatured && <Star className="h-3.5 w-3.5 fill-orange text-orange" aria-label="Featured" />}
-                        </span>
-                        <span className="block font-mono text-caption font-normal text-muted">{c.code}</span>
-                      </span>
-                    </Link>
-                    {/* The status column is dropped on phones – the badge leads the card instead. */}
-                    <span className="shrink-0 md:hidden">
-                      <StatusBadge status={c.status} />
-                    </span>
-                  </span>
+                    }
+                    meta={<span className="font-mono">{c.code}</span>}
+                    trailing={<StatusBadge status={c.status} />}
+                  />
                 </TD>
                 <TD label="Category">{c.category?.name ?? <span className="text-muted">—</span>}</TD>
                 <TD label="Duration">{c.durationText}</TD>

@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site/header";
 import { SiteFooter } from "@/components/site/footer";
 import { PageViewTracker } from "@/components/site/page-view-tracker";
 import { ChatWidget } from "@/components/site/chatbot";
+import { PublicBottomNav, PublicBottomNavSpacer } from "@/components/site/public-bottom-nav";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const [branding, user, footer, trackVisitors, registrationOpen] = await Promise.all([
@@ -14,6 +15,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
     getSetting<boolean>("analytics.trackVisitors").catch(() => false),
     getSetting<boolean>("admissions.registrationOpen").catch(() => true),
   ]);
+  const dashboardHref = user ? portalHome(user.role) : null;
 
   return (
     <>
@@ -29,11 +31,19 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <noscript>
         <style>{`[data-reveal]{opacity:1!important}`}</style>
       </noscript>
-      <SiteHeader branding={branding} dashboardHref={user ? portalHome(user.role) : null} registrationOpen={registrationOpen !== false} />
+      <SiteHeader branding={branding} dashboardHref={dashboardHref} registrationOpen={registrationOpen !== false} />
       <main id="main-content" className="flex-1">
         {children}
       </main>
       <SiteFooter branding={branding} footer={footer} />
+      {/*
+        Phones and tablets (below lg) get the app tab bar. The footer, not <main>, is the last thing on
+        the page, so the clearance is a spacer after it: it follows --bottom-nav-h (published by the
+        tab bar while it is visible) and collapses on desktop, with the keyboard up, and on pages whose
+        StickyActionBar replaces the tab bar (course and centre detail) — one bottom bar at a time.
+      */}
+      <PublicBottomNavSpacer />
+      <PublicBottomNav dashboardHref={dashboardHref} />
       <PageViewTracker enabled={trackVisitors === true} />
       {/*
         Public-site assistant only: the portals mount their own shells, so it never appears inside

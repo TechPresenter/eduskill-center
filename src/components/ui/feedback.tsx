@@ -2,6 +2,7 @@ import * as React from "react";
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { IconTile } from "@/components/ui/list";
 
 export type AlertTone = "info" | "success" | "warning" | "danger";
 
@@ -80,7 +81,9 @@ export function EmptyState({ icon, title = EMPTY_MESSAGE, description, action, c
       )}
     >
       {icon ? (
-        <span className={cn("mb-4 flex items-center justify-center rounded-md bg-lavender text-navy", sm ? "h-12 w-12" : "h-14 w-14")}>{icon}</span>
+        <IconTile tone="lavender" size={sm ? "lg" : "xl"} className="mb-4">
+          {icon}
+        </IconTile>
       ) : (
         <EmptyMark className={cn("mb-4", sm ? "h-12 w-12" : "h-16 w-16")} />
       )}

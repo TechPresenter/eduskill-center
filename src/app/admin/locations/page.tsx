@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Download, Map, MapPinned, Building2 } from "lucide-react";
+import { ArrowRight, Map, MapPinned, Building2 } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/guards";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { formatNumber } from "@/lib/utils";
@@ -8,10 +8,10 @@ import { locationOverview } from "@/server/locations";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/ui/misc";
 import { Card, CardHeader } from "@/components/ui/card";
-import { buttonClasses } from "@/components/ui/button";
 import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
 import { LocationImportDialog } from "@/components/admin/locations/import-dialog";
-import { withBasePath } from "@/lib/base-path";
+import { ExportButton } from "@/components/admin/shared/export-button";
+import { IconTile, RowLead } from "@/components/admin/locations/list-kit";
 
 export const metadata: Metadata = { title: "Locations · Foundation Admin" };
 
@@ -30,9 +30,9 @@ export default async function LocationsPage() {
   const canExport = hasPermission(user, "locations.export");
 
   const levels = [
-    { label: "States / UTs", href: "/admin/states", icon: <Map className="h-5 w-5" />, total: overview.states, active: overview.activeStates, withCenters: overview.statesWithCenters, blurb: "Add or deactivate states and set the 2–3 letter code used in center codes." },
-    { label: "Districts", href: "/admin/districts", icon: <MapPinned className="h-5 w-5" />, total: overview.districts, active: overview.activeDistricts, withCenters: overview.districtsWithCenters, blurb: "Districts belong to a state. The 3-character district code becomes part of every center code." },
-    { label: "Blocks", href: "/admin/blocks", icon: <Building2 className="h-5 w-5" />, total: overview.blocks, active: overview.activeBlocks, withCenters: overview.blocksWithCenters, blurb: "Blocks belong to a district. Training centers are always registered at block level." },
+    { label: "States / UTs", href: "/admin/states", icon: <Map />, total: overview.states, active: overview.activeStates, withCenters: overview.statesWithCenters, blurb: "Add or deactivate states and set the 2–3 letter code used in center codes." },
+    { label: "Districts", href: "/admin/districts", icon: <MapPinned />, total: overview.districts, active: overview.activeDistricts, withCenters: overview.districtsWithCenters, blurb: "Districts belong to a state. The 3-character district code becomes part of every center code." },
+    { label: "Blocks", href: "/admin/blocks", icon: <Building2 />, total: overview.blocks, active: overview.activeBlocks, withCenters: overview.blocksWithCenters, blurb: "Blocks belong to a district. Training centers are always registered at block level." },
   ];
 
   return (
@@ -44,15 +44,7 @@ export default async function LocationsPage() {
         actions={
           <>
             <LocationImportDialog disabled={!canImport} />
-            {canExport ? (
-              <a href={withBasePath("/api/admin/locations/export")} className={buttonClasses({ variant: "outline", size: "sm" })} title="Download the full hierarchy as CSV" download>
-                <Download className="h-4 w-4" /> Export CSV
-              </a>
-            ) : (
-              <span className={buttonClasses({ variant: "outline", size: "sm", className: "pointer-events-none opacity-50" })} aria-disabled="true" title="You do not have permission to export">
-                <Download className="h-4 w-4" /> Export CSV
-              </span>
-            )}
+            <ExportButton href="/api/admin/locations/export" disabled={!canExport} />
           </>
         }
       />
@@ -65,7 +57,7 @@ export default async function LocationsPage() {
         {levels.map((l) => (
           <Link key={l.href} href={l.href} className="card card-hover card-p ring-focus group flex flex-col">
             <span className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-navy-soft text-navy">{l.icon}</span>
+              <IconTile icon={l.icon} size="lg" />
               <span className="min-w-0">
                 <span className="text-overline block text-muted">{l.label}</span>
                 <span className="text-h2 block text-navy tabular-nums">{formatNumber(l.total)}</span>
@@ -94,7 +86,7 @@ export default async function LocationsPage() {
       </div>
 
       <Card>
-        <CardHeader title="Coverage by state" description="The ten states with the most training centres." action={<Link href="/admin/reports/states" className="text-body-sm font-semibold text-orange hover:underline">Full state report</Link>} />
+        <CardHeader title="Coverage by state" description="The ten states with the most training centres." action={<Link href="/admin/reports/states" className="text-body-sm inline-flex min-h-11 items-center font-semibold text-orange hover:underline lg:min-h-0">Full state report</Link>} />
         <TableWrap className="max-md:px-4 max-md:pb-4 md:rounded-none md:border-0">
           <THead>
             <tr>
@@ -110,11 +102,8 @@ export default async function LocationsPage() {
             {topStates.length === 0 && <EmptyRow colSpan={6}>No states yet — import the hierarchy as CSV, or add states one at a time.</EmptyRow>}
             {topStates.map((s) => (
               <TR key={s.id}>
-                <TD mobile="full">
-                  <Link href={`/admin/districts?stateId=${s.id}`} className="block tap-highlight-none md:inline">
-                    <span className="mr-2 font-mono text-caption font-bold text-orange md:hidden">{s.code}</span>
-                    <span className="font-semibold text-navy md:font-medium md:hover:underline">{s.name}</span>
-                  </Link>
+                <TD primary>
+                  <RowLead href={`/admin/districts?stateId=${s.id}`} lead={<IconTile icon={<Map />} size="sm" />} title={s.name} meta={<span className="font-mono font-semibold md:hidden">{s.code}</span>} />
                 </TD>
                 <TD label="Code" mobile="hidden" className="font-mono text-caption">
                   {s.code}

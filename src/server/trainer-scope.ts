@@ -5,7 +5,8 @@ import { audit } from "@/lib/audit";
 import type { AuthUser } from "@/lib/auth/session";
 import { toNumber } from "@/lib/utils";
 import { batchAttendanceReport } from "@/server/attendance";
-import { isFileUrlUnder } from "@/lib/storage";
+import { isFileUrlUnder, saveUpload } from "@/lib/storage";
+import { notifyStaff } from "@/lib/notifications";
 
 /**
  * Trainer-portal scope helpers. Every query here is scoped to ONE trainer:
@@ -236,14 +237,15 @@ export async function classesOn(trainerId: string, day: Date) {
 export async function trainerDashboard(user: AuthUser) {
   const t = trainerOf(user);
   const today = utcToday();
-  const [profile, batches, activeAssignments, centers, announcements, notifications, todayClasses] = await Promise.all([
+  const [profile, batches, activeAssignments, centers, announcements, notifications, todayClasses, documents] = await Promise.all([
     trainerProfile(t.id),
     myBatches(t.id),
     db.trainerAssignment.findMany({ where: { trainerId: t.id, isActive: true }, select: { id: true, course: { select: { id: true, name: true, code: true } } } }),
     myCenters(t.id),
     visibleAnnouncements(t.id, 5),
-    db.notification.findMany({ where: { userId: user.id, channel: "IN_APP" }, orderBy: { createdAt: "desc" }, take: 5, select: { id: true, title: true, body: true, readAt: true, createdAt: true } }),
+    db.notification.findMany({ where: { userId: user.id, channel: "IN_APP" }, orderBy: { createdAt: "desc" }, take: 5, select: { id: true, title: true, body: true, templateKey: true, data: true, readAt: true, createdAt: true } }),
     classesOn(t.id, today),
+    trainerDocumentAttention(t.id),
   ]);
   const batchIds = batches.map((b) => b.id);
   const students = batchIds.length ? await db.admission.count({ where: { batchId: { in: batchIds }, status: { in: ["ACTIVE", "ON_HOLD"] } } }) : 0;
@@ -269,6 +271,8 @@ export async function trainerDashboard(user: AuthUser) {
     batches: batches.slice(0, 5),
     announcements,
     notifications,
+    /** Required documents missing + latest uploads rejected; drives the "My documents" nudge. */
+    documents,
   };
 }
 
@@ -358,4 +362,98 @@ export async function batchDetailForTrainer(trainerId: string, batchId: string) 
     materials,
     announcements,
   };
+}
+
+// ───────────────────────────── My documents (/trainer/profile/documents) ─────────────────────────────
+
+/**
+ * Formats a trainer may upload from the portal. The application flow takes the resume as PDF or Word
+ * and every other document as PDF or an image, each up to 5 MB (UPLOAD_PRESETS.resume / .document);
+ * the portal keeps those limits and also takes a photographed resume, because a trainer on a phone
+ * often has a printed CV rather than the file.
+ */
+export const TRAINER_DOCUMENT_MAX_MB = 5;
+export const TRAINER_RESUME_EXTS = ["pdf", "doc", "docx", "jpg", "jpeg", "png", "webp"] as const;
+export const TRAINER_DOCUMENT_EXTS = ["pdf", "jpg", "jpeg", "png", "webp"] as const;
+
+export function trainerDocumentExts(type: string): readonly string[] {
+  return type === "resume" ? TRAINER_RESUME_EXTS : TRAINER_DOCUMENT_EXTS;
+}
+
+/** Trainer document types configured by the Foundation (Admin → Settings → Document types). */
+export async function trainerDocumentTypes() {
+  return db.documentType.findMany({
+    where: { appliesTo: "TRAINER", isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { key: true, name: true, description: true, isRequired: true },
+  });
+}
+
+/**
+ * Every document on file for this trainer, newest first: what they uploaded while applying (moved onto
+ * the trainer record on approval, see `approveTrainerApplication`) and anything uploaded since. The
+ * application id is matched too, so a document that somehow missed that hand-over still shows.
+ */
+export async function myTrainerDocuments(trainerId: string) {
+  const t = await db.trainer.findFirst({ where: { id: trainerId, deletedAt: null }, select: { applicationId: true } });
+  if (!t) throw Errors.notFound("Trainer");
+  return db.trainerDocument.findMany({
+    where: { OR: [{ trainerId }, ...(t.applicationId ? [{ applicationId: t.applicationId }] : [])] },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, type: true, name: true, url: true, mimeType: true, size: true, status: true, remarks: true, verifiedAt: true, createdAt: true, applicationId: true },
+  });
+}
+
+/** Required types with nothing on file, and types whose latest upload was rejected — drives the home nudge. */
+export async function trainerDocumentAttention(trainerId: string) {
+  const [types, docs] = await Promise.all([trainerDocumentTypes(), myTrainerDocuments(trainerId)]);
+  const latest = new Map<string, (typeof docs)[number]>();
+  for (const d of docs) if (!latest.has(d.type)) latest.set(d.type, d);
+  const missing = types.filter((t) => t.isRequired && !latest.has(t.key)).length;
+  const rejected = [...latest.values()].filter((d) => d.status === "REJECTED").length;
+  return { missing, rejected, total: missing + rejected };
+}
+
+/**
+ * Stores a trainer's own document (private, never public) and files it as a TrainerDocument on their
+ * trainer record, where Admin → Trainers → Documents already lists and verifies them.
+ *
+ * Every upload is a NEW row in PENDING: a replacement never inherits the verification of the file it
+ * replaces, so a verified certificate cannot be swapped for an unverified one. The earlier rows are
+ * kept as history (the trainer sees them under "Earlier uploads"; the audit entry names the one that
+ * was current).
+ */
+export async function uploadMyTrainerDocument(user: AuthUser, type: string, file: File, meta: { ip?: string | null; userAgent?: string | null } = {}) {
+  const t = trainerOf(user);
+  if (!type || !/^[a-z0-9_]+$/.test(type)) throw Errors.badRequest("Select a document type");
+  const docType = await db.documentType.findFirst({ where: { key: type, appliesTo: "TRAINER", isActive: true }, select: { key: true, name: true } });
+  if (!docType) throw Errors.badRequest("This document type is not accepted. Refresh the page and try again.");
+
+  const previous = await db.trainerDocument.findFirst({ where: { trainerId: t.id, type }, orderBy: { createdAt: "desc" }, select: { id: true, name: true, status: true } });
+  const stored = await saveUpload(file, { folder: `trainers/${t.id}/documents`, visibility: "private", allowedExts: trainerDocumentExts(type), maxMb: TRAINER_DOCUMENT_MAX_MB });
+  const doc = await db.trainerDocument.create({
+    data: { trainerId: t.id, type, name: stored.name, url: stored.url, mimeType: stored.mimeType, size: stored.size, status: "PENDING" },
+  });
+
+  const verb = previous ? "replaced" : "uploaded";
+  await audit({
+    user: { id: user.id, name: user.name, role: user.role },
+    action: previous ? "replace_document" : "upload_document",
+    module: "trainers",
+    recordType: "TrainerDocument",
+    recordId: doc.id,
+    description: `${user.name} (${t.trainerId}) ${verb} their ${docType.name.toLowerCase()} from the trainer portal`,
+    oldValue: previous ? { documentId: previous.id, name: previous.name, status: previous.status } : undefined,
+    newValue: { type, name: doc.name, size: doc.size, mimeType: doc.mimeType, status: doc.status },
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+  });
+  await notifyStaff({
+    permission: "trainers.update",
+    title: `Trainer document to verify: ${docType.name}`,
+    body: `${user.name} (${t.trainerId}) ${verb} their ${docType.name.toLowerCase()} from the trainer portal.${previous?.status === "VERIFIED" ? "\nThe previous file was verified; this one needs a fresh check." : ""}`,
+    path: `/admin/trainers/${t.id}?tab=documents`,
+  });
+
+  return { key: stored.key, url: stored.url, name: stored.name, mimeType: stored.mimeType, size: stored.size, documentId: doc.id, type: doc.type, status: doc.status, createdAt: doc.createdAt };
 }

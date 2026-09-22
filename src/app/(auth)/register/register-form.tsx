@@ -7,7 +7,8 @@ import { CalendarClock } from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Checkbox, Input } from "@/components/ui/input";
 import { Field, FormGrid } from "@/components/ui/form";
-import { Alert, EmptyState } from "@/components/ui/feedback";
+import { EmptyState } from "@/components/ui/feedback";
+import { ErrorSummary } from "@/components/ui/error-summary";
 import { PasswordInput, PasswordRules } from "@/components/shared/password-input";
 import { api, ApiClientError } from "@/lib/api-client";
 import { AuthCard } from "../auth-card";
@@ -19,7 +20,24 @@ export function RegisterForm({ open }: { open: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const set = (k: keyof typeof form, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
+  const [failedSubmits, setFailedSubmits] = useState(0);
+
+  const set = (k: keyof typeof form, v: string | boolean) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    // Typing into a field that carries an error clears it; blur re-checks it.
+    if (errors[k]) setErrors((prev) => omit(prev, k));
+  };
+
+  /** Blur validation: checked when the student leaves a field, never on every keystroke. */
+  const checkField = (k: "name" | "mobile" | "email") => {
+    const message = validateField(k, form[k]);
+    setErrors((prev) => {
+      if (!message) {
+        return prev[k] ? omit(prev, k) : prev;
+      }
+      return { ...prev, [k]: message };
+    });
+  };
 
   // Live confirmation, so the mismatch is caught while the second field is being typed rather than
   // after a round trip. The submit-time guard below still stands.
@@ -29,9 +47,17 @@ export function RegisterForm({ open }: { open: boolean }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setErrors({});
-    if (form.password !== form.confirmPassword) {
-      setErrors({ confirmPassword: "Passwords do not match" });
+    const local: Record<string, string> = {};
+    for (const k of ["name", "mobile", "email"] as const) {
+      const message = validateField(k, form[k]);
+      if (message) local[k] = message;
+    }
+    if (!form.password) local.password = "Choose a password";
+    if (form.password !== form.confirmPassword) local.confirmPassword = "Passwords do not match";
+    if (!form.acceptTerms) local.acceptTerms = "Please accept the Terms & Conditions to continue";
+    setErrors(local);
+    if (Object.keys(local).length > 0) {
+      setFailedSubmits((n) => n + 1);
       return;
     }
     setLoading(true);
@@ -44,6 +70,7 @@ export function RegisterForm({ open }: { open: boolean }) {
         setErrors(err.fieldErrors);
         setError(err.message);
       } else setError("Registration failed. Please try again.");
+      setFailedSubmits((n) => n + 1);
       setLoading(false);
     }
   };
@@ -83,15 +110,16 @@ export function RegisterForm({ open }: { open: boolean }) {
         />
       ) : (
         <>
-          {error && (
-            <Alert tone="danger" className="mb-4">
-              {error}
-            </Alert>
-          )}
+          <ErrorSummary
+            className="mb-4"
+            focusSignal={failedSubmits}
+            message={error}
+            errors={SUMMARY_ORDER.filter((k) => errors[k]).map((k) => ({ id: k, message: errors[k] }))}
+          />
 
           <form onSubmit={submit} className="space-y-4" noValidate>
             <Field label="Full name" htmlFor="name" required error={errors.name}>
-              <Input id="name" autoComplete="name" value={form.name} onChange={(e) => set("name", e.target.value)} invalid={!!errors.name} required />
+              <Input id="name" autoComplete="name" value={form.name} onChange={(e) => set("name", e.target.value)} onBlur={() => checkField("name")} invalid={!!errors.name} required />
             </Field>
 
             <FormGrid>
@@ -103,12 +131,13 @@ export function RegisterForm({ open }: { open: boolean }) {
                   placeholder="98XXXXXXXX"
                   value={form.mobile}
                   onChange={(e) => set("mobile", e.target.value)}
+                  onBlur={() => checkField("mobile")}
                   invalid={!!errors.mobile}
                   required
                 />
               </Field>
               <Field label="Email (optional)" htmlFor="email" error={errors.email}>
-                <Input id="email" type="email" autoComplete="email" value={form.email} onChange={(e) => set("email", e.target.value)} invalid={!!errors.email} />
+                <Input id="email" type="email" autoComplete="email" value={form.email} onChange={(e) => set("email", e.target.value)} onBlur={() => checkField("email")} invalid={!!errors.email} />
               </Field>
             </FormGrid>
 
@@ -149,6 +178,8 @@ export function RegisterForm({ open }: { open: boolean }) {
 
             <Field error={errors.acceptTerms}>
               <Checkbox
+                id="acceptTerms"
+                aria-invalid={errors.acceptTerms ? true : undefined}
                 checked={form.acceptTerms}
                 onChange={(e) => set("acceptTerms", e.target.checked)}
                 label={
@@ -174,4 +205,21 @@ export function RegisterForm({ open }: { open: boolean }) {
       )}
     </AuthCard>
   );
+}
+
+/** Error-summary order follows the form, so the list reads top to bottom like the fields. */
+const SUMMARY_ORDER = ["name", "mobile", "email", "password", "confirmPassword", "acceptTerms"] as const;
+
+/** Client mirror of the register API's rules for the fields that can be checked on blur. */
+function validateField(k: "name" | "mobile" | "email", raw: string): string | null {
+  const v = raw.trim();
+  if (k === "name") return v.length >= 2 ? null : "Enter your full name";
+  if (k === "mobile") return /^(\+?91[\s-]?)?[6-9]\d{9}$/.test(v) ? null : "Enter a 10-digit mobile number starting with 6, 7, 8 or 9";
+  return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : "Enter a valid email address, or leave it empty";
+}
+
+function omit(errors: Record<string, string>, key: string): Record<string, string> {
+  const next = { ...errors };
+  delete next[key];
+  return next;
 }

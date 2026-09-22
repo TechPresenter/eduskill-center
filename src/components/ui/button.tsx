@@ -30,7 +30,8 @@ const VARIANTS: Record<ButtonVariant, string> = {
  * Radius is the token scale's `md` (12px) at every size — a button reads as one shape across the product.
  */
 const SIZES: Record<ButtonSize, string> = {
-  xs: "h-9 sm:h-8 px-3 text-xs gap-1.5 rounded-md",
+  // xs was 36px on phones — under the 44px floor. It now keeps 44px wherever the pointer is a finger.
+  xs: "h-11 sm:h-8 pointer-coarse:h-11 px-3 text-xs gap-1.5 rounded-md",
   sm: "h-11 sm:h-9 px-4 sm:px-3.5 text-sm gap-2 rounded-md",
   md: "h-12 sm:h-11 px-5 text-base sm:text-sm gap-2 rounded-md",
   lg: "h-13 sm:h-12 px-6 text-base gap-2.5 rounded-md",

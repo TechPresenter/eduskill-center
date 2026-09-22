@@ -5,6 +5,9 @@ import { Award, Bell, BookOpen, Building2, Check, ClipboardCheck, ClipboardList,
 import { cn, formatDateTime } from "@/lib/utils";
 import { IconButton } from "@/components/ui/button";
 import { categoryOf, type NotificationCategory } from "@/lib/notifications/categories";
+import { trainerLinkFor } from "@/components/trainer/notification-links";
+
+export { trainerLinkFor };
 
 /** One row of GET /api/trainer/notifications. */
 export interface TrainerNotification {
@@ -34,43 +37,6 @@ const EVENT_ICONS: Record<string, LucideIcon> = {
   ANNOUNCEMENT: Bell,
 };
 
-/**
- * Where a notification takes the trainer. Trainer payloads carry names rather than ids (see
- * `assignTrainer` / `announceToBatch` in src/server), so the event in `templateKey` is the reliable
- * signal and any id in `data` is used when it happens to be there. A row with no sensible destination
- * stays a button that only marks itself read — it never pretends to navigate.
- */
-export function trainerLinkFor(n: TrainerNotification): string | null {
-  const d = n.data ?? {};
-  const str = (k: string) => (typeof d[k] === "string" ? (d[k] as string) : null);
-  const batchId = str("batchId");
-  if (batchId) return `/trainer/batches/${batchId}`;
-
-  const event = n.templateKey?.split(":")[0] ?? "";
-  switch (event) {
-    case "TRAINER_ASSIGNED":
-      return "/trainer/assignments";
-    case "TRAINER_APPROVED":
-    case "TRAINER_APPLICATION_STATUS":
-    case "TRAINER_APPLICATION_SUBMITTED":
-      return "/trainer/profile";
-    case "ANNOUNCEMENT":
-      return "/trainer/announcements";
-    case "ATTENDANCE_ALERT":
-      return "/trainer/attendance";
-    case "BATCH_ALLOCATED":
-    case "BATCH_CHANGED":
-    case "TRAINING_STARTED":
-    case "ADMISSION_CONFIRMED":
-    case "ADMISSION_CANCELLED":
-      return "/trainer/batches";
-    case "PASSWORD_RESET":
-      return "/trainer/settings";
-    default:
-      return null;
-  }
-}
-
 export interface NotificationRowProps {
   notification: TrainerNotification;
   /** Optimistically read in this session, before the server round-trip lands. */
@@ -92,7 +58,7 @@ export function NotificationRow({ notification: n, read, onMarkRead }: Notificat
 
   const body = (
     <>
-      <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", unread ? "bg-orange-light text-orange" : "bg-lavender text-navy")}>
+      <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-md", unread ? "bg-orange-light text-orange" : "bg-lavender text-navy")}>
         <Icon className="h-5 w-5" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">

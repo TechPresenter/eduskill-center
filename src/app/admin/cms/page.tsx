@@ -1,13 +1,15 @@
 import Link from "next/link";
-import { ArrowRight, BookMarked, CalendarDays, FileText, Handshake, HelpCircle, Image as ImageIcon, LayoutTemplate, Newspaper, Star } from "lucide-react";
+import { BookMarked, CalendarDays, ChevronRight, FileText, Handshake, HelpCircle, History, Image as ImageIcon, LayoutTemplate, Newspaper, Star } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/guards";
 import { formatDateTime } from "@/lib/utils";
 import { CMS_SECTIONS } from "@/lib/cms/sections";
 import { listSectionsWithState } from "@/server/cms-admin";
 import { PageHeader } from "@/components/ui/misc";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/feedback";
+import { AppListRow, IconTile } from "@/components/admin/content/app-list";
 
 export const metadata = { title: "Website Content" };
 
@@ -44,45 +46,50 @@ export default async function CmsOverviewPage() {
   return (
     <div>
       <PageHeader title="Website Content" mobileTitle="Website" description="Everything visitors see on the public website is managed here. Changes go live immediately." />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Tiles: two across on phones (an app home screen), three on desktop. */}
+      <ul className="grid animate-fade-in grid-cols-2 gap-3 motion-reduce:animate-none sm:gap-4 lg:grid-cols-3" aria-label="Website content areas">
         {areas.map((a) => (
-          <Link key={a.href} href={a.href} className="card card-hover flex items-start gap-4 p-5">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lavender text-navy">
-              <a.icon className="h-5 w-5" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center justify-between gap-2">
-                <span className="text-base font-bold text-navy">{a.title}</span>
-                <ArrowRight className="h-4 w-4 text-muted" />
+          <li key={a.href} className="min-w-0">
+            <Link href={a.href} className="card card-hover ring-focus flex h-full flex-col gap-3 p-4 tap-highlight-none sm:flex-row sm:items-start sm:gap-4 sm:p-5">
+              <IconTile>
+                <a.icon />
+              </IconTile>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-body font-bold text-navy">{a.title}</span>
+                  <ChevronRight className="hidden h-5 w-5 shrink-0 text-muted/70 sm:block" aria-hidden />
+                </span>
+                <span className="mt-1 block text-body-sm text-ink tabular-nums">{a.total}</span>
+                <span className="block text-caption text-muted tabular-nums">{a.detail}</span>
               </span>
-              <span className="mt-1 block text-sm text-ink">{a.total}</span>
-              <span className="block text-xs text-muted">{a.detail}</span>
-            </span>
-          </Link>
+            </Link>
+          </li>
         ))}
-      </div>
+      </ul>
 
-      <Card className="mt-6">
+      <Card className="mt-4 lg:mt-6">
         <CardHeader title="Recently edited sections" description="Website sections that have been customised from the built-in defaults." />
-        <CardBody>
-          {recent.length === 0 ? (
-            <p className="text-sm text-muted">No sections customised yet – the website is showing the built-in defaults.</p>
-          ) : (
-            <ul className="divide-y divide-line">
-              {recent.map((s) => (
-                <li key={s.key} className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between">
-                  <Link href={`/admin/cms/sections/${encodeURIComponent(s.key)}`} className="flex min-h-11 items-center font-medium text-ink tap-highlight-none md:min-h-0 md:hover:text-navy">
-                    {s.name} <Badge tone="neutral" className="ml-1">{s.page}</Badge>
-                  </Link>
-                  <span className="text-xs text-muted">
-                    {s.updatedBy ? `${s.updatedBy} · ` : ""}
-                    {formatDateTime(s.updatedAt)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardBody>
+        {recent.length === 0 ? (
+          <EmptyState bare size="sm" icon={<History className="h-6 w-6" />} title="Nothing customised yet" description="The website is showing the built-in defaults. Edit a section to make it your own." />
+        ) : (
+          <ul className="divide-y divide-line">
+            {recent.map((s) => (
+              <AppListRow
+                key={s.key}
+                href={`/admin/cms/sections/${encodeURIComponent(s.key)}`}
+                leading={
+                  <IconTile tone="orange" size="sm">
+                    <LayoutTemplate />
+                  </IconTile>
+                }
+                title={s.name}
+                subtitle={`${s.updatedBy ? `${s.updatedBy} · ` : ""}${formatDateTime(s.updatedAt)}`}
+                clamp={1}
+                trailing={<Badge tone="neutral">{s.page}</Badge>}
+              />
+            ))}
+          </ul>
+        )}
       </Card>
     </div>
   );

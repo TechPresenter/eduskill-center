@@ -21,7 +21,7 @@ function AssignmentCard({ a }: { a: Assignment }) {
       <CardBody>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-navy-soft text-navy">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-navy-soft text-navy">
               <Building2 className="h-5 w-5" aria-hidden />
             </span>
             <div className="min-w-0">

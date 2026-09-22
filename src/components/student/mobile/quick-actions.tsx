@@ -25,7 +25,7 @@ export function QuickActions({ items, label = "Quick actions", className }: { it
           href={item.href}
           className="card card-hover relative flex min-h-[72px] items-center gap-3 p-3 tap-highlight-none transition-transform active:scale-[0.98] motion-reduce:transition-none"
         >
-          <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-md", item.attention ? "bg-warning-light text-amber-700" : "bg-lavender text-navy")}>
+          <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-md", item.attention ? "bg-warning-light text-warning-dark" : "bg-lavender text-navy")}>
             <item.icon className="h-5 w-5" aria-hidden />
           </span>
           <span className="min-w-0 flex-1">

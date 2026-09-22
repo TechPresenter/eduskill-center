@@ -11,7 +11,7 @@ export default async function FaqsPage() {
   const { items, categories } = await listFaqs();
   return (
     <div>
-      <PageHeader title="FAQs" mobileTitle="FAQs" description="Frequently asked questions shown on the website. Use the arrows to change the order." />
+      <PageHeader title="FAQs" mobileTitle="FAQs" description="Questions and answers shown on the website's FAQ page. Search, filter by category and change the order here." />
       <FaqManager items={items} categories={categories} canEdit={hasPermission(user, "cms.update")} canPublish={hasPermission(user, "cms.publish")} />
     </div>
   );

@@ -291,7 +291,7 @@ export function Carousel({
                       onClick={() => goTo(i, true)}
                       aria-label={`Go to slide ${i + 1}`}
                       aria-current={active ? "true" : undefined}
-                      className="group flex h-11 w-7 items-center justify-center tap-highlight-none"
+                      className="group flex h-11 w-11 items-center justify-center tap-highlight-none"
                     >
                       <span
                         className={cn(

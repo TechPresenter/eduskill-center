@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { LocationCascade, type LocationValue } from "@/components/shared/location-cascade";
 import { CourseSelect, useCourseOptions } from "@/components/site/course-select";
 import { buildQuery, cn } from "@/lib/utils";
@@ -34,14 +35,14 @@ type FilterKey = "stateId" | "districtId" | "blockId" | "courseId" | "q";
  *
  * Two shapes, same query parameters:
  *   `compact`  – the five inline controls used inside the home page card.
- *   default    – the full panel on /training-centers: the four dropdowns collapse behind a
- *                "Filters" toggle on phones (always open from `md` up, via CSS so no layout
- *                flashes), the keyword field and the submit button stay visible, and the filters
- *                that are actually applied are listed underneath as dismissible chips.
+ *   default    – the full panel on /training-centers. Phones get an app-style search row: the
+ *                keyword field inline, one "Filters" button (with a count badge) that opens a
+ *                bottom sheet holding the four dropdowns, and an icon submit. From `md` up the
+ *                dropdowns sit inline above the keyword row. The filters that are actually applied
+ *                are listed underneath as dismissible chips at every width.
  */
 export function CenterSearchForm({ initial = {}, compact, className, submitLabel = "Search Centers" }: { initial?: CenterSearchValues; compact?: boolean; className?: string; submitLabel?: string }) {
   const router = useRouter();
-  const panelId = React.useId();
   const [loc, setLoc] = React.useState<LocationValue>({ stateId: initial.stateId, districtId: initial.districtId, blockId: initial.blockId });
   const [courseId, setCourseId] = React.useState(initial.courseId ?? "");
   const [q, setQ] = React.useState(initial.q ?? "");
@@ -49,9 +50,9 @@ export function CenterSearchForm({ initial = {}, compact, className, submitLabel
   const [busy, startTransition] = React.useTransition();
 
   const appliedCount = (initial.stateId ? 1 : 0) + (initial.districtId ? 1 : 0) + (initial.blockId ? 1 : 0) + (initial.courseId ? 1 : 0) + (initial.q ? 1 : 0);
-  // Open on phones when the visitor arrived with dropdown filters already applied, so what is
-  // filtering their results is never hidden from them.
-  const [open, setOpen] = React.useState(() => !!(initial.stateId || initial.districtId || initial.blockId || initial.courseId));
+  // Phones: the dropdowns live in a bottom sheet. What is filtering the results is never hidden —
+  // the applied filters are listed as chips under the search row.
+  const [sheetOpen, setSheetOpen] = React.useState(false);
 
   /** Names for ids we have seen, so a chip can say "Karnataka" and not a uuid. */
   const [nameById, setNameById] = React.useState<Record<string, string>>({});
@@ -149,55 +150,83 @@ export function CenterSearchForm({ initial = {}, compact, className, submitLabel
     );
   }
 
+  /** Apply from the sheet: same as a submit, then close it. */
+  const applyFromSheet = () => {
+    setSheetOpen(false);
+    push({ stateId: loc.stateId, districtId: loc.districtId, blockId: loc.blockId, courseId, q });
+  };
+
+  const resetSheet = () => {
+    setLoc({});
+    setCourseId("");
+  };
+
   return (
     <form action={withBasePath("/training-centers")} method="get" onSubmit={submit} role="search" aria-label="Search training centers" aria-busy={busy} className={cn("grid gap-3", CONTROLS, className)}>
       {initial.view && <input type="hidden" name="view" value={initial.view} />}
 
-      {/* Phones: one tap opens the dropdowns. From md up the panel is open through CSS alone. */}
-      <div className="flex items-center justify-between gap-3 md:hidden">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-controls={panelId}
-          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-white px-3.5 text-sm font-semibold text-navy transition-colors duration-200 hover:border-navy/35 hover:bg-surface focus-visible:ring-2 focus-visible:ring-navy/25 focus-visible:outline-none motion-reduce:transition-none"
-        >
-          <SlidersHorizontal className="h-4 w-4 text-orange" aria-hidden />
-          Filters
-          {pendingCount > 0 && <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-orange px-1.5 text-xs font-bold text-white tabular-nums">{pendingCount}</span>}
-          <ChevronDown className={cn("h-4 w-4 text-muted transition-transform duration-200 motion-reduce:transition-none", open && "rotate-180")} aria-hidden />
-        </button>
-        <p className="text-xs text-muted">State · District · Block · Course</p>
-      </div>
+      {/*
+        From md up the four dropdowns sit inline. Below md this block is CSS-hidden (no flash, no
+        media-query JS) and the sheet renders its own copy. It stays mounted on phones on purpose: it
+        reports the names the "Applied" chips need, and LocationCascade caches its option lists per
+        module, so the second copy in the sheet costs no extra request. Both are controlled by the
+        same state.
+      */}
+      <div className="hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-4">{dropdowns}</div>
 
-      <div
-        id={panelId}
-        className={cn(
-          "grid transition-[grid-template-rows,opacity,visibility] duration-300 ease-out motion-reduce:transition-none md:visible md:grid-rows-[1fr] md:opacity-100",
-          open ? "visible grid-rows-[1fr] opacity-100" : "invisible grid-rows-[0fr] opacity-0"
-        )}
-      >
-        {/* The negative inset keeps focus rings from being sliced by the collapse clip. */}
-        <div className="-mx-1 overflow-hidden px-1">
-          <div className="grid gap-3 pt-0.5 pb-1 sm:grid-cols-2 lg:grid-cols-4">{dropdowns}</div>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="sm:flex-1">
+      <div className="flex gap-2 sm:gap-3">
+        <div className="min-w-0 flex-1">
           <Input
             name="q"
+            type="search"
+            enterKeyHint="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Center name, code or PIN code"
+            placeholder="Name, code or PIN"
             aria-label="Center name, code or PIN code"
             leftIcon={<Search className="h-4 w-4" />}
           />
         </div>
-        <Button type="submit" size="md" loading={busy} fullWidth leftIcon={<Search className="h-4 w-4" />} className="sm:w-auto sm:min-w-44 hover:shadow-md">
+
+        {/* Phones: the one Filters button that opens the sheet. */}
+        <button
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          aria-haspopup="dialog"
+          aria-label={pendingCount > 0 ? `Filters, ${pendingCount} selected` : "Filters"}
+          className="relative inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-navy tap-highlight-none transition-colors duration-micro active:bg-surface ring-focus motion-reduce:transition-none md:hidden"
+        >
+          <SlidersHorizontal className="h-4 w-4 text-orange" aria-hidden />
+          <span className="max-[359px]:sr-only">Filters</span>
+          {pendingCount > 0 && <span aria-hidden className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-orange px-1.5 text-caption font-bold text-white tabular-nums">{pendingCount}</span>}
+        </button>
+
+        {/* From sm up. On a phone the row is field + Filters, like any app search bar: the keyboard's
+            search key (enterKeyHint) submits the field and the sheet has its own "Show centres". */}
+        <Button type="submit" size="md" loading={busy} leftIcon={<Search className="h-4 w-4" />} className="hidden shrink-0 sm:inline-flex sm:min-w-44 hover:shadow-md">
           {submitLabel}
         </Button>
       </div>
+
+      <BottomSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title="Filter centres"
+        description="Narrow the list by location and course."
+        bodyClassName={cn("grid gap-3 px-5 py-4", CONTROLS)}
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={resetSheet} disabled={pendingCount === 0}>
+              Reset
+            </Button>
+            <Button type="button" onClick={applyFromSheet} loading={busy} leftIcon={<Search className="h-4 w-4" />}>
+              Show centres
+            </Button>
+          </>
+        }
+      >
+        {dropdowns}
+      </BottomSheet>
 
       {appliedCount > 0 && (
         <div className="flex flex-wrap items-center gap-2 border-t border-line/70 pt-3">
@@ -208,16 +237,16 @@ export function CenterSearchForm({ initial = {}, compact, className, submitLabel
               type="button"
               onClick={() => removeFilter(c.key)}
               aria-label={`Remove filter ${c.label}`}
-              className="group inline-flex min-h-11 animate-pop items-center gap-1.5 rounded-full bg-lavender py-1 pr-2 pl-3 text-[13px] font-semibold text-navy transition-colors duration-200 hover:bg-navy hover:text-white focus-visible:ring-2 focus-visible:ring-navy/30 focus-visible:outline-none motion-reduce:animate-none motion-reduce:transition-none sm:min-h-8"
+              className="group inline-flex min-h-11 animate-pop items-center gap-1.5 rounded-full bg-lavender py-1 pr-2 pl-3 text-[13px] font-semibold text-navy transition-colors duration-micro hover:bg-navy hover:text-white focus-visible:ring-2 focus-visible:ring-navy/30 focus-visible:outline-none motion-reduce:animate-none motion-reduce:transition-none sm:min-h-8"
             >
               <span className="max-w-[11rem] truncate">{c.label}</span>
-              <X className="h-3.5 w-3.5 shrink-0 opacity-60 transition-opacity duration-200 group-hover:opacity-100 motion-reduce:transition-none" aria-hidden />
+              <X className="h-3.5 w-3.5 shrink-0 opacity-60 transition-opacity duration-micro group-hover:opacity-100 motion-reduce:transition-none" aria-hidden />
             </button>
           ))}
           <button
             type="button"
             onClick={clearAll}
-            className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-[13px] font-semibold text-orange underline-offset-4 transition-colors duration-200 hover:text-orange-hover hover:underline focus-visible:ring-2 focus-visible:ring-orange/30 focus-visible:outline-none motion-reduce:transition-none sm:min-h-8"
+            className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-[13px] font-semibold text-orange underline-offset-4 transition-colors duration-micro hover:text-orange-hover hover:underline focus-visible:ring-2 focus-visible:ring-orange/30 focus-visible:outline-none motion-reduce:transition-none sm:min-h-8"
           >
             <X className="h-3.5 w-3.5" aria-hidden />
             Clear all

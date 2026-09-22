@@ -11,8 +11,9 @@ export default async function NewBlogPage() {
   const canPublish = hasPermission(user, "cms.publish");
   return (
     <div>
-      <PageHeader breadcrumbs={[{ label: "Blog", href: "/admin/blog" }, { label: "New post" }]} title="New blog post" description="Write in Markdown. Save as a draft first, then publish when ready." />
+      <PageHeader breadcrumbs={[{ label: "Blog", href: "/admin/blog" }, { label: "New post" }]} title="New blog post" mobileTitle="New post" backHref="/admin/blog" description="Write in Markdown. Save as a draft first, then publish when ready." />
       <ContentEditor
+        publicPrefix="/blog"
         endpoint="/api/admin/blog"
         itemLabel="blog post"
         backHref="/admin/blog"

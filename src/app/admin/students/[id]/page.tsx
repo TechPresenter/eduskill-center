@@ -17,6 +17,7 @@ import { TabbedPanels } from "@/components/admin/pickers/query-tabs";
 import { StudentHeaderActions } from "@/components/admin/students/student-header-actions";
 import { DocumentActions } from "@/components/admin/students/document-actions";
 import { withBasePath } from "@/lib/base-path";
+import { RecordIdentity } from "@/components/admin/locations/list-kit";
 
 export const metadata = { title: "Student" };
 
@@ -290,7 +291,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                     <p className="text-muted">Present</p>
                   </div>
                   <div>
-                    <p className="font-bold text-amber-700 tabular-nums">{b.late}</p>
+                    <p className="font-bold text-warning-dark tabular-nums">{b.late}</p>
                     <p className="text-muted">Late</p>
                   </div>
                   <div>
@@ -298,7 +299,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                     <p className="text-muted">Absent</p>
                   </div>
                   <div>
-                    <p className="font-bold text-blue-700 tabular-nums">{b.leave}</p>
+                    <p className="font-bold text-info-dark tabular-nums">{b.leave}</p>
                     <p className="text-muted">Leave</p>
                   </div>
                 </div>
@@ -473,6 +474,18 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div>
+      {/* Identity and status first on phones, where the app bar only has room for a code. */}
+      <RecordIdentity
+        lead={<Avatar name={s.name} src={s.photoUrl} size={48} />}
+        title={s.name}
+        meta={s.studentId ? <span className="font-mono font-semibold text-navy">{s.studentId}</span> : undefined}
+        badges={
+          <>
+            {!s.studentId && <Badge tone="warning">No Student ID</Badge>}
+            <StatusBadge status={s.user.status} />
+          </>
+        }
+      />
       <PageHeader
         backHref="/admin/students"
         mobileTitle={s.name}
@@ -504,17 +517,6 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         actions={<StudentHeaderActions studentId={s.id} name={s.name} hasStudentId={!!s.studentId} canUpdate={canUpdate} initial={initial} />}
       />
 
-      {/* The app bar shows only the name on phones – keep the avatar, ID and status in the page. */}
-      <div className="mb-4 flex items-center gap-3 lg:hidden">
-        <Avatar name={s.name} src={s.photoUrl} size={44} />
-        <span className="min-w-0">
-          <span className="flex flex-wrap items-center gap-2">
-            {s.studentId ? <span className="font-mono text-body-sm font-semibold text-navy">{s.studentId}</span> : <Badge tone="warning">No Student ID</Badge>}
-            <StatusBadge status={s.user.status} />
-          </span>
-          <span className="mt-0.5 block truncate text-caption text-muted">{s.mobile}</span>
-        </span>
-      </div>
 
       <TabbedPanels
         items={[

@@ -23,6 +23,8 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
     <div>
       <PageHeader
         breadcrumbs={[{ label: "Events", href: "/admin/events" }, { label: event.title }]}
+        mobileTitle={event.title}
+        backHref="/admin/events"
         title={
           <span className="flex flex-wrap items-center gap-2">
             {event.title}
@@ -36,6 +38,7 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
         }
       />
       <ContentEditor
+        publicPrefix="/events"
         endpoint="/api/admin/events"
         id={event.id}
         itemLabel="event"

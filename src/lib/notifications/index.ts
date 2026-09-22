@@ -6,6 +6,7 @@ import type { NotificationChannel } from "@/generated/prisma/enums";
 export type NotifyEvent =
   | "REGISTRATION"
   | "PASSWORD_RESET"
+  | "LOGIN_OTP"
   | "APPLICATION_SUBMITTED"
   | "APPLICATION_STATUS"
   | "DOCUMENTS_REQUIRED"
@@ -57,6 +58,13 @@ export const DEFAULT_TEMPLATES: Record<NotifyEvent, EventTemplate> = {
     body: "Dear {{name}},\n\nUse the link below to reset your password. It expires in 30 minutes.\n\n{{link}}\n\nIf you did not request this, you can ignore this message.",
     sms: "{{siteName}}: reset your password using {{link}} (valid 30 min).",
     variables: ["name", "link", "siteName"],
+  },
+  LOGIN_OTP: {
+    name: "Login code (admission number sign-in)",
+    subject: "Your {{siteName}} login code",
+    body: "Dear {{name}},\n\nYour one-time login code is {{code}}. It is valid for {{minutes}} minutes.\n\nFoundation staff will never ask you for this code. Do not share it with anyone.\n\n{{siteName}}",
+    sms: "{{code}} is your {{siteName}} login code. Valid {{minutes}} min. Our staff will never ask for it - do not share it.",
+    variables: ["name", "code", "minutes", "siteName"],
   },
   APPLICATION_SUBMITTED: {
     name: "Application submitted",
@@ -264,7 +272,16 @@ export interface NotifyInput {
   data: Record<string, unknown>;
   /** Restrict channels. Defaults to IN_APP (+ EMAIL/SMS/WHATSAPP when enabled in settings). */
   channels?: NotificationChannel[];
+  /**
+   * Keys of `data` that are secrets (a one-time code). They are rendered into the message that is
+   * actually dispatched, but the copy stored in the notifications table — title, body and data —
+   * carries `REDACTED` instead, so the log never holds a usable secret.
+   */
+  redact?: string[];
 }
+
+/** What a redacted secret reads as in the stored notification log. */
+export const REDACTED = "[hidden]";
 
 interface CommsConfig {
   emailEnabled: boolean;
@@ -310,6 +327,36 @@ async function getCommsConfig(): Promise<CommsConfig> {
     whatsappPhoneNumberId: str("whatsappPhoneNumberId"),
     whatsappWebhookUrl: str("whatsappWebhookUrl"),
   };
+}
+
+/** A provider is usable only when it is enabled AND its credentials/endpoint are filled in. */
+function smsReady(cfg: CommsConfig) {
+  if (!cfg.smsEnabled) return false;
+  if (cfg.smsProvider === "msg91") return !!cfg.smsApiKey;
+  if (cfg.smsProvider === "webhook") return !!cfg.smsWebhookUrl;
+  return false;
+}
+
+function whatsappReady(cfg: CommsConfig) {
+  if (!cfg.whatsappEnabled) return false;
+  if (cfg.whatsappProvider === "meta") return !!cfg.whatsappApiKey && !!cfg.whatsappPhoneNumberId;
+  if (cfg.whatsappProvider === "webhook") return !!cfg.whatsappWebhookUrl;
+  return false;
+}
+
+/**
+ * The channels that can actually reach a phone right now (SMS and/or WhatsApp), in that order.
+ * Empty when neither provider is configured — callers that NEED a phone (login codes) use this to
+ * fail honestly instead of pretending a message went out.
+ */
+export async function getPhoneChannels(): Promise<NotificationChannel[]> {
+  try {
+    const cfg = await getCommsConfig();
+    return [...(smsReady(cfg) ? (["SMS"] as NotificationChannel[]) : []), ...(whatsappReady(cfg) ? (["WHATSAPP"] as NotificationChannel[]) : [])];
+  } catch (err) {
+    console.error("[notify] could not read comms settings:", err);
+    return [];
+  }
 }
 
 async function resolveTemplate(event: NotifyEvent, channel: NotificationChannel) {
@@ -412,6 +459,10 @@ export async function notify(input: NotifyInput): Promise<void> {
     const cfg = await getCommsConfig();
     const siteName = String((await getSettingsGroup("branding"))["branding.siteName"] ?? "EduSkill India Foundation");
     const data = { siteName, ...input.data };
+    const secretKeys = new Set(input.redact ?? []);
+    const storedData = secretKeys.size
+      ? Object.fromEntries(Object.entries(data).map(([k, v]) => [k, secretKeys.has(k) ? REDACTED : v]))
+      : data;
 
     const channels: NotificationChannel[] = input.channels ?? [
       ...(input.userId ? (["IN_APP"] as NotificationChannel[]) : []),
@@ -425,6 +476,8 @@ export async function notify(input: NotifyInput): Promise<void> {
       const tpl = await resolveTemplate(input.event, channel);
       const title = renderTemplate(tpl.subject, data).trim() || DEFAULT_TEMPLATES[input.event].name;
       const body = renderTemplate(tpl.body, data).trim();
+      const storedTitle = secretKeys.size ? renderTemplate(tpl.subject, storedData).trim() || DEFAULT_TEMPLATES[input.event].name : title;
+      const storedBody = secretKeys.size ? renderTemplate(tpl.body, storedData).trim() : body;
       const recipient = channel === "EMAIL" ? input.email ?? null : channel === "IN_APP" ? null : input.mobile ?? null;
 
       const row = await db.notification.create({
@@ -432,10 +485,10 @@ export async function notify(input: NotifyInput): Promise<void> {
           userId: input.userId ?? null,
           channel,
           recipient,
-          title,
-          body,
+          title: storedTitle,
+          body: storedBody,
           templateKey: `${input.event}:${channel}`,
-          data: JSON.parse(JSON.stringify(data)),
+          data: JSON.parse(JSON.stringify(storedData)),
           status: channel === "IN_APP" ? "SENT" : "PENDING",
           sentAt: channel === "IN_APP" ? new Date() : null,
         },

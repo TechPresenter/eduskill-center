@@ -8,9 +8,9 @@ const TONES: Record<BadgeTone, string> = {
   navy: "bg-navy-soft text-navy border-navy/10",
   orange: "bg-orange-light text-orange border-orange/20",
   success: "bg-success-light text-success-dark border-success/20",
-  warning: "bg-warning-light text-amber-700 border-warning/25",
+  warning: "bg-warning-light text-warning-dark border-warning/25",
   danger: "bg-danger-light text-danger border-danger/20",
-  info: "bg-info-light text-blue-700 border-info/20",
+  info: "bg-info-light text-info-dark border-info/20",
 };
 
 export function Badge({ tone = "neutral", className, dot, children, ...props }: React.HTMLAttributes<HTMLSpanElement> & { tone?: BadgeTone; dot?: boolean }) {

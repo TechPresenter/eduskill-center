@@ -157,13 +157,16 @@ export interface SegmentedControlProps {
   fullWidth?: boolean;
   /** Allow the strip to scroll sideways instead of squeezing many segments. */
   scrollable?: boolean;
+  /** Accessible name for the tablist ("Sign-in method", "Date range"). */
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 }
 
 /**
  * Pill-style single-choice switch (filters such as "All / Unread", date ranges). Same keyboard model and
  * the same 150ms motion as `Tabs`; the active segment is a white pill lifted one elevation step (`e1`).
  */
-export function SegmentedControl({ items, value, onChange, className, size = "md", fullWidth, scrollable }: SegmentedControlProps) {
+export function SegmentedControl({ items, value, onChange, className, size = "md", fullWidth, scrollable, "aria-label": ariaLabel, "aria-labelledby": ariaLabelledby }: SegmentedControlProps) {
   const { listRef, itemRefs, focusIndex, onKeyDown } = useTabStrip<HTMLButtonElement>(items, value, onChange);
   return (
     <div
@@ -177,6 +180,8 @@ export function SegmentedControl({ items, value, onChange, className, size = "md
       )}
       role="tablist"
       aria-orientation="horizontal"
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledby}
     >
       {items.map((t, i) => {
         const active = t.value === value;

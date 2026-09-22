@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Megaphone, Trash2, Send } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Building2, CalendarDays, GraduationCap, Megaphone, Plus, Trash2, Send, Users, UsersRound } from "lucide-react";
+import { Button, IconButton } from "@/components/ui/button";
+import { Fab } from "@/components/ui/fab";
 import { Input, Textarea, RadioCards } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Field } from "@/components/ui/form";
@@ -19,15 +20,17 @@ interface Targets {
 }
 
 const AUDIENCES = [
-  { value: "ALL", label: "Everyone", description: "All active students, trainers and staff" },
-  { value: "STUDENTS", label: "Students", description: "Active admissions and open applications" },
-  { value: "TRAINERS", label: "Trainers", description: "All active volunteer trainers" },
-  { value: "CENTER", label: "A training center", description: "Students and trainers of one center" },
-  { value: "BATCH", label: "A batch", description: "Students and the trainer of one batch" },
+  { value: "ALL", label: "Everyone", description: "All active students, trainers and staff", icon: <Users className="h-5 w-5" /> },
+  { value: "STUDENTS", label: "Students", description: "Active admissions and open applications", icon: <GraduationCap className="h-5 w-5" /> },
+  { value: "TRAINERS", label: "Trainers", description: "All active volunteer trainers", icon: <UsersRound className="h-5 w-5" /> },
+  { value: "CENTER", label: "A training center", description: "Students and trainers of one center", icon: <Building2 className="h-5 w-5" /> },
+  { value: "BATCH", label: "A batch", description: "Students and the trainer of one batch", icon: <CalendarDays className="h-5 w-5" /> },
 ];
 
-export function AnnouncementForm() {
+/** "New announcement" composer. `fab` renders the phone floating button instead of the header button. */
+export function AnnouncementForm({ variant = "button" }: { variant?: "button" | "fab" }) {
   const router = useRouter();
+  const formId = React.useId();
   const [open, setOpen] = React.useState(false);
   const [targets, setTargets] = React.useState<Targets | null>(null);
   const [title, setTitle] = React.useState("");
@@ -70,11 +73,35 @@ export function AnnouncementForm() {
 
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)} leftIcon={<Megaphone className="h-4 w-4" />}>
-        New announcement
-      </Button>
-      <Modal open={open} onClose={() => !busy && setOpen(false)} title="New announcement" description="Published announcements are delivered as in-app notifications to the chosen audience." size="lg">
+      {variant === "fab" ? (
+        <Fab aria-label="New announcement" icon={<Plus className="h-6 w-6" aria-hidden />} onClick={() => setOpen(true)} />
+      ) : (
+        <Button size="sm" onClick={() => setOpen(true)} leftIcon={<Megaphone className="h-4 w-4" />}>
+          New announcement
+        </Button>
+      )}
+      <Modal
+        open={open}
+        onClose={() => !busy && setOpen(false)}
+        title="New announcement"
+        description="Published announcements are delivered as in-app notifications to the chosen audience."
+        size="lg"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => void submit(false)} disabled={busy}>
+              Save draft
+            </Button>
+            <Button type="submit" form={formId} loading={busy} leftIcon={<Send className="h-4 w-4" />}>
+              Publish now
+            </Button>
+          </>
+        }
+      >
         <form
+          id={formId}
           onSubmit={(e) => {
             e.preventDefault();
             void submit(true);
@@ -90,7 +117,7 @@ export function AnnouncementForm() {
             <Textarea id="an-body" value={body} onChange={(e) => setBody(e.target.value)} rows={5} invalid={!!errors.body} required />
           </Field>
           <Field label="Audience" required error={errors.audience}>
-            <RadioCards name="audience" value={audience} onChange={setAudience} options={AUDIENCES} columns={3} />
+            <RadioCards name="audience" value={audience} onChange={setAudience} options={AUDIENCES} columns={2} />
           </Field>
           {audience === "CENTER" && (
             <Field label="Training center" htmlFor="an-center" required error={errors.centerId}>
@@ -102,24 +129,14 @@ export function AnnouncementForm() {
               <Select id="an-batch" value={batchId} onChange={(e) => setBatchId(e.target.value)} placeholder={targets ? "Select a batch" : "Loading…"} options={(targets?.batches ?? []).map((b) => ({ value: b.id, label: `${b.name} · ${b.course.name} · ${b.center.name} · ${titleCase(b.status)}` }))} invalid={!!errors.batchId} required />
             </Field>
           )}
-          <div className="flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>
-              Cancel
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => void submit(false)} disabled={busy}>
-              Save draft
-            </Button>
-            <Button type="submit" loading={busy} leftIcon={<Send className="h-4 w-4" />}>
-              Publish now
-            </Button>
-          </div>
         </form>
       </Modal>
     </>
   );
 }
 
-export function AnnouncementRowActions({ id, isPublished, title }: { id: string; isPublished: boolean; title: string }) {
+/** Publish / delete for one announcement. `compact` uses 44px icon buttons (phone list rows). */
+export function AnnouncementRowActions({ id, isPublished, title, compact }: { id: string; isPublished: boolean; title: string; compact?: boolean }) {
   const router = useRouter();
   const [confirm, setConfirm] = React.useState<"publish" | "delete" | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -143,14 +160,15 @@ export function AnnouncementRowActions({ id, isPublished, title }: { id: string;
   };
   return (
     <div className="inline-flex items-center gap-1">
-      {!isPublished && (
-        <Button size="xs" variant="navy" onClick={() => setConfirm("publish")} leftIcon={<Send className="h-3.5 w-3.5" />}>
-          Publish
-        </Button>
-      )}
-      <button type="button" onClick={() => setConfirm("delete")} className="rounded-lg p-1.5 text-muted hover:bg-danger-light hover:text-danger" aria-label={`Delete announcement ${title}`}>
-        <Trash2 className="h-4 w-4" />
-      </button>
+      {!isPublished &&
+        (compact ? (
+          <IconButton variant="outline" icon={<Send className="h-4 w-4" />} onClick={() => setConfirm("publish")} aria-label={`Publish announcement ${title}`} />
+        ) : (
+          <Button size="sm" variant="navy" onClick={() => setConfirm("publish")} leftIcon={<Send className="h-4 w-4" />}>
+            Publish
+          </Button>
+        ))}
+      <IconButton icon={<Trash2 className="h-4 w-4" />} onClick={() => setConfirm("delete")} aria-label={`Delete announcement ${title}`} className="hover:bg-danger-light hover:text-danger" />
       <ConfirmDialog
         open={!!confirm}
         onClose={() => !busy && setConfirm(null)}

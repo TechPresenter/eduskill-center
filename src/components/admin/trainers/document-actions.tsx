@@ -11,7 +11,12 @@ import { Alert } from "@/components/ui/feedback";
 import { toast } from "@/components/ui/toast";
 import { api, ApiClientError } from "@/lib/api-client";
 
-export function DocumentActions({ docId, status, canUpdate }: { docId: string; status: "PENDING" | "VERIFIED" | "REJECTED"; canUpdate: boolean }) {
+/**
+ * Verify / reject one trainer document. Works for both application documents and the ones a trainer
+ * uploads from their portal (same TrainerDocument row, same endpoint); `subject` only changes who the
+ * reject dialog says will read the remark.
+ */
+export function DocumentActions({ docId, status, canUpdate, subject = "applicant" }: { docId: string; status: "PENDING" | "VERIFIED" | "REJECTED"; canUpdate: boolean; subject?: "applicant" | "trainer" }) {
   const router = useRouter();
   const [rejectOpen, setRejectOpen] = React.useState(false);
   const [remarks, setRemarks] = React.useState("");
@@ -39,18 +44,18 @@ export function DocumentActions({ docId, status, canUpdate }: { docId: string; s
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
       {status !== "VERIFIED" && (
-        <Button size="sm" variant="outline" onClick={() => void send("VERIFIED")} loading={busy && !rejectOpen} leftIcon={<Check className="h-3.5 w-3.5" />}>
+        <Button size="sm" variant="outline" onClick={() => void send("VERIFIED")} loading={busy && !rejectOpen} leftIcon={<Check className="h-4 w-4" aria-hidden />}>
           Verify
         </Button>
       )}
       {status !== "REJECTED" && (
-        <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-light" onClick={() => setRejectOpen(true)} leftIcon={<X className="h-3.5 w-3.5" />}>
+        <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-light" onClick={() => setRejectOpen(true)} leftIcon={<X className="h-4 w-4" aria-hidden />}>
           Reject
         </Button>
       )}
-      <Modal open={rejectOpen} onClose={() => !busy && setRejectOpen(false)} title="Reject document" description="The applicant will see this remark and can upload a replacement." size="sm">
+      <Modal open={rejectOpen} onClose={() => !busy && setRejectOpen(false)} title="Reject document" description={subject === "trainer" ? "The trainer will see this remark in their portal and can upload a replacement." : "The applicant will see this remark and can upload a replacement."} size="sm">
         <form
           onSubmit={(e) => {
             e.preventDefault();

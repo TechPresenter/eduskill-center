@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 export interface HeroSlideData {
   eyebrow?: string;
   title: string;
+  /** Optional short title for phones (≤ 2 lines). Falls back to the first line of `title`. */
+  mobileTitle?: string;
   subtitle?: string;
   primaryLabel?: string;
   primaryHref?: string;
@@ -24,8 +26,47 @@ export interface HeroSlideData {
 
 const AUTOPLAY_MS = 7000;
 
+/** A line ending in one of these reads as cut off, so the phone title carries on into the next line. */
+const DANGLING = /\b(for|in|to|of|and|or|the|a|an|with|at|by|from|through)$|&$/i;
+
+/**
+ * The phone title: the CMS `mobileTitle` when set, otherwise the first CMS line of the title, plus the
+ * following line while the text so far ends on a connector ("Foundational Learning for" + "Class 1 to 4").
+ */
+export function phoneTitle(title: string, mobileTitle?: string) {
+  const short = mobileTitle?.trim();
+  if (short) return short;
+  const lines = title
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return title;
+  let text = lines[0];
+  for (let i = 1; i < lines.length && DANGLING.test(text.replace(/\]\]$/, "")); i++) text = `${text} ${lines[i]}`;
+  return text;
+}
+
+/**
+ * The hero <h1>. One heading, two renderings: the short phone title at the h1 step below lg, and the
+ * full CMS title (its line breaks honoured) from lg, sized so the seeded three lines stay three lines
+ * in the seven-column copy area. The hidden rendering is `display: none`, so screen readers and the
+ * accessibility tree only ever get one of them.
+ */
+export function HeroTitle({ title, mobileTitle }: { title: string; mobileTitle?: string }) {
+  return (
+    <h1 className="text-white">
+      <span className="block text-h1 text-balance lg:hidden">
+        <Highlight text={phoneTitle(title, mobileTitle)} />
+      </span>
+      <span className="hidden font-heading text-[2.5rem] leading-[1.1] font-extrabold tracking-tight lg:block xl:text-[3rem]">
+        <Highlight text={title} />
+      </span>
+    </h1>
+  );
+}
+
 /** Cross-fade duration. Kept under the project's 300ms animation ceiling. */
-const FADE_MS = 280;
+const FADE_MS = 250; // --duration-element
 
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = React.useState(false);
@@ -142,10 +183,10 @@ export function HeroSlider({
         Slide {active + 1} of {count}. Use the left and right arrow keys to change slide.
       </p>
 
-      <div className="container-x relative grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-12 lg:gap-8 lg:py-24">
+      <div className="container-x relative grid items-center gap-8 pt-6 pb-4 sm:pt-10 lg:grid-cols-12 lg:py-24">
         {/* Editorial column — every slide occupies the same grid cell, so the column is as tall as
             the longest slide and nothing reflows on change. */}
-        <div className="grid lg:col-span-6" aria-live={manual && !autoplayOn ? "polite" : "off"}>
+        <div className="grid lg:col-span-7" aria-live={manual && !autoplayOn ? "polite" : "off"}>
           {slides.map((s, i) => {
             const on = i === active;
             return (
@@ -164,12 +205,16 @@ export function HeroSlider({
                 // Keeps Tab out of the slides that are faded out.
                 inert={!on}
               >
-                {s.eyebrow && <p className="eyebrow mb-4 text-orange">{s.eyebrow}</p>}
-                <h1 className="font-heading text-4xl leading-[1.1] font-extrabold tracking-tight text-white sm:text-5xl lg:text-[3.5rem]">
-                  <Highlight text={s.title} />
-                </h1>
-                {s.subtitle && <p className="mt-6 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg">{s.subtitle}</p>}
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+                {s.eyebrow && <p className="eyebrow mb-2 text-orange lg:mb-4">{s.eyebrow}</p>}
+                <HeroTitle title={s.title} mobileTitle={s.mobileTitle} />
+                {s.subtitle && <p className="mt-2 line-clamp-3 max-w-xl text-body-sm text-white/80 sm:text-body lg:mt-6 lg:line-clamp-none lg:text-body-lg">{s.subtitle}</p>}
+                {/* On phones a slide's own CTA is one compact link; the full button row is desktop's. */}
+                {s.primaryLabel && s.primaryHref && (
+                  <ButtonLink href={s.primaryHref} variant="link" className="mt-2 min-h-11 text-white hover:text-orange lg:hidden" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                    {s.primaryLabel}
+                  </ButtonLink>
+                )}
+                <div className="mt-8 hidden gap-3 lg:flex lg:items-center">
                   {s.primaryLabel && s.primaryHref && (
                     <ButtonLink href={s.primaryHref} size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
                       {s.primaryLabel}
@@ -182,7 +227,7 @@ export function HeroSlider({
                   )}
                 </div>
                 {s.tertiaryLabel && s.tertiaryHref && (
-                  <ButtonLink href={s.tertiaryHref} variant="link" className="mt-5 text-white hover:text-orange" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                  <ButtonLink href={s.tertiaryHref} variant="link" className="mt-5 hidden text-white hover:text-orange lg:inline-flex" rightIcon={<ArrowRight className="h-4 w-4" />}>
                     {s.tertiaryLabel}
                   </ButtonLink>
                 )}
@@ -191,9 +236,10 @@ export function HeroSlider({
           })}
         </div>
 
-        <div className="relative lg:col-span-6">
-          <div className="relative mx-auto max-w-lg lg:max-w-none">
-            <div className="relative grid aspect-square overflow-hidden rounded-[2rem]">
+        {/* Artwork, badge and finder card are the desktop hero's; phones get the quick-action tiles. */}
+        <div className="relative hidden lg:col-span-5 lg:block">
+          <div className="relative">
+            <div className="relative grid aspect-square overflow-hidden rounded-2xl">
               {slides.map((s, i) => {
                 const on = i === active;
                 return (
@@ -201,7 +247,7 @@ export function HeroSlider({
                     key={i}
                     aria-hidden
                     className={cn(
-                      "relative col-start-1 row-start-1 overflow-hidden rounded-[2rem] transition-opacity motion-reduce:transition-none",
+                      "relative col-start-1 row-start-1 overflow-hidden rounded-2xl transition-opacity motion-reduce:transition-none",
                       on ? "opacity-100" : "opacity-0",
                     )}
                     style={{ transitionDuration: `${FADE_MS}ms` }}
@@ -211,8 +257,9 @@ export function HeroSlider({
                         src={s.imageUrl}
                         alt=""
                         priority={i === 0}
-                        sizes="(max-width: 1024px) 90vw, 600px"
-                        className="rounded-[2rem]"
+                        // Never shown below lg: the 1px slot keeps phones from downloading a hero photo.
+                        sizes="(max-width: 1024px) 1px, 520px"
+                        className="rounded-2xl"
                       />
                     ) : (
                       <HeroIllustration className="h-full w-full" />
@@ -224,7 +271,7 @@ export function HeroSlider({
 
             {badge}
 
-            <div className="animate-fade-up relative mt-6 flex justify-center lg:absolute lg:right-0 lg:-bottom-6 lg:mt-0 lg:justify-end" style={{ animationDelay: "150ms" }}>
+            <div className="animate-fade-up absolute right-0 -bottom-6 flex justify-end motion-reduce:animate-none" style={{ animationDelay: "150ms" }}>
               {finderCard}
             </div>
           </div>
@@ -232,7 +279,7 @@ export function HeroSlider({
       </div>
 
       {count > 1 && (
-        <div className="container-x relative -mt-6 flex items-center gap-3 pb-8 lg:-mt-2">
+        <div className="container-x relative flex items-center gap-3 pb-12 lg:-mt-2 lg:pb-8">
           <div className="flex items-center gap-2" role="group" aria-label="Choose slide">
             {slides.map((s, i) => (
               <button
@@ -241,11 +288,11 @@ export function HeroSlider({
                 onClick={() => go(i)}
                 aria-label={`Slide ${i + 1}: ${s.title.replace(/\[\[|\]\]/g, "")}`}
                 aria-current={i === active ? "true" : undefined}
-                className="group grid h-11 place-items-center px-1"
+                className="group grid h-11 min-w-11 place-items-center px-1"
               >
                 <span
                   className={cn(
-                    "block h-1.5 rounded-full transition-all duration-200 motion-reduce:transition-none",
+                    "block h-1.5 rounded-full transition-all duration-micro ease-soft motion-reduce:transition-none",
                     i === active ? "w-10 bg-orange" : "w-4 bg-white/35 group-hover:bg-white/60",
                   )}
                 />

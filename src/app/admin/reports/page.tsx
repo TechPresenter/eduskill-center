@@ -6,6 +6,7 @@ import { hasPermission } from "@/lib/rbac/permissions";
 import { REPORT_TYPES } from "@/server/reports";
 import { PageHeader } from "@/components/ui/misc";
 import { Alert } from "@/components/ui/feedback";
+import { AppList, AppListRow, IconTile, ListSection } from "@/components/admin/content/app-list";
 
 export const metadata: Metadata = { title: "Reports · Foundation Admin" };
 
@@ -38,34 +39,53 @@ export default async function ReportsHubPage() {
     <div className="space-y-6">
       <PageHeader title="Reports & exports" mobileTitle="Reports" description="Every report is computed live from the database. Filter, preview, then export as CSV, Excel or PDF." />
       {!canExport && <Alert tone="info">You can preview reports. Exporting files needs the “Export Reports & Analytics” permission.</Alert>}
-      {groups.map((g) => (
-        <section key={g.title} aria-labelledby={`grp-${g.title}`}>
-          <h2 id={`grp-${g.title}`} className="mb-3 text-xs font-bold tracking-[0.16em] text-muted uppercase">
-            {g.title}
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {g.keys.map((k) => {
-              const def = REPORT_TYPES.find((r) => r.key === k);
-              if (!def) return null;
-              const Icon = ICONS[k] ?? BarChart3;
-              return (
-                <Link key={k} href={`/admin/reports/${k}`} className="card card-hover flex items-start gap-4 p-4 tap-highlight-none sm:p-5">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lavender text-navy">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-bold text-navy">{def.label}</span>
-                    <span className="mt-0.5 block text-sm text-muted">{def.description}</span>
-                    <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-orange">
-                      Open report <ArrowRight className="h-3.5 w-3.5" />
+      {groups.map((g) => {
+        const defs = g.keys.map((k) => REPORT_TYPES.find((r) => r.key === k)).filter((d): d is (typeof REPORT_TYPES)[number] => !!d);
+        const id = `grp-${g.title.replace(/[^a-z]+/gi, "-").toLowerCase()}`;
+        return (
+          <ListSection key={g.title} id={id} title={g.title} count={defs.length}>
+            {/* Phones: app list rows. */}
+            <AppList aria-labelledby={id} className="sm:hidden">
+              {defs.map((def) => {
+                const Icon = ICONS[def.key] ?? BarChart3;
+                return (
+                  <AppListRow
+                    key={def.key}
+                    href={`/admin/reports/${def.key}`}
+                    leading={
+                      <IconTile>
+                        <Icon />
+                      </IconTile>
+                    }
+                    title={def.label}
+                    subtitle={def.description}
+                  />
+                );
+              })}
+            </AppList>
+            {/* sm+: card grid. */}
+            <div className="hidden gap-4 sm:grid sm:grid-cols-2 xl:grid-cols-3">
+              {defs.map((def) => {
+                const Icon = ICONS[def.key] ?? BarChart3;
+                return (
+                  <Link key={def.key} href={`/admin/reports/${def.key}`} className="card card-hover ring-focus flex items-start gap-4 p-5 tap-highlight-none">
+                    <IconTile size="lg">
+                      <Icon />
+                    </IconTile>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-h4 text-navy">{def.label}</span>
+                      <span className="mt-1 block text-body-sm text-muted">{def.description}</span>
+                      <span className="mt-3 inline-flex items-center gap-1 text-body-sm font-semibold text-orange">
+                        Open report <ArrowRight className="h-4 w-4" aria-hidden />
+                      </span>
                     </span>
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+                  </Link>
+                );
+              })}
+            </div>
+          </ListSection>
+        );
+      })}
     </div>
   );
 }

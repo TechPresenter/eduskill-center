@@ -1,11 +1,11 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { BookMarked, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DynamicIcon } from "@/components/ui/icon";
 import { formatDate, truncate } from "@/lib/utils";
 import { EntityManager } from "@/components/admin/content/entity-manager";
-import { QuickToggle } from "@/components/admin/content/toggle-action";
+import { IconTile } from "@/components/admin/content/app-list";
 import type { FieldDef, FormValues } from "@/components/admin/content/fields";
 
 export interface ProgramRow {
@@ -45,36 +45,47 @@ export function ProgramsManager({ items, canEdit }: { items: ProgramRow[]; canEd
       fields={FIELDS}
       toValues={toValues}
       emptyValues={{ title: "", slug: "", icon: "", summary: "", content: "", image: "", sortOrder: 0, isActive: true }}
+      search={(p) => `${p.title} ${p.slug} ${p.summary}`}
+      searchPlaceholder="Search programs"
+      segments={[
+        { value: "active", label: "Shown", test: (p) => p.isActive },
+        { value: "hidden", label: "Hidden", test: (p) => !p.isActive },
+      ]}
+      emptyIcon={<BookMarked className="h-7 w-7" />}
+      row={(p) => ({
+        leading: (
+          <IconTile tone={p.isActive ? "lavender" : "neutral"}>
+            <DynamicIcon name={p.icon ?? undefined} />
+          </IconTile>
+        ),
+        title: p.title,
+        subtitle: truncate(p.summary, 120),
+        meta: p.isActive ? <Badge tone="success">Shown</Badge> : <Badge tone="neutral">Hidden</Badge>,
+      })}
       toolbar={`${items.length} program${items.length === 1 ? "" : "s"} · ${items.filter((p) => p.isActive).length} shown on the website`}
       columns={[
         {
           header: "Program",
           render: (p) => (
             <span className="flex items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-lavender text-navy">
-                <DynamicIcon name={p.icon ?? undefined} className="h-4 w-4" />
-              </span>
+              <IconTile size="sm">
+                <DynamicIcon name={p.icon ?? undefined} />
+              </IconTile>
               <span className="min-w-0">
                 <span className="block font-semibold text-ink">{p.title}</span>
-                <span className="block font-mono text-xs text-muted">/programs/{p.slug}</span>
+                <span className="block font-mono text-caption text-muted">/programs/{p.slug}</span>
               </span>
             </span>
           ),
         },
-        { header: "Summary", render: (p) => <span className="block max-w-md text-xs text-muted">{truncate(p.summary, 140)}</span> },
+        { header: "Summary", render: (p) => <span className="block max-w-md text-body-sm text-muted">{truncate(p.summary, 140)}</span> },
         { header: "Status", render: (p) => (p.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="neutral">Hidden</Badge>) },
         { header: "Updated", render: (p) => <span className="whitespace-nowrap text-muted">{formatDate(p.updatedAt)}</span>, className: "whitespace-nowrap" },
       ]}
-      extraActions={(p) => (
-        <>
-          <a href={`/programs/${p.slug}`} target="_blank" rel="noopener noreferrer" className="rounded-lg p-1.5 text-muted hover:bg-surface hover:text-navy" aria-label={`View ${p.title} on the website`}>
-            <ExternalLink className="h-4 w-4" />
-          </a>
-          {canEdit && <QuickToggle endpoint={`/api/admin/cms/programs/${p.id}`} body={toValues(p)} field="isActive" onLabel="Show" offLabel="Hide" />}
-        </>
-      )}
+      toggles={[{ field: "isActive", onLabel: "Show", offLabel: "Hide", icon: <Eye className="h-5 w-5" /> }]}
+      links={(p) => (p.isActive ? [{ href: `/programs/${p.slug}`, label: "View on website" }] : [])}
       deleteDescription={(p) => `"${p.title}" will be removed from the website and its detail page will stop working. This cannot be undone.`}
-      emptyText="No programs yet. Add the Foundation's programs to show them on the website."
+      emptyText="Add the Foundation's programs to show them on the homepage and the Programs page."
     />
   );
 }

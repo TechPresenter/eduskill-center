@@ -89,17 +89,24 @@ export function Pagination({ page, totalPages, total, limit, hrefFor, onPageChan
       <p className="text-caption text-muted">
         {from !== undefined && to !== undefined ? `Showing ${from}–${to} of ${total}` : `Page ${page} of ${totalPages}`}
       </p>
-      <div className="flex items-center gap-1">
+      {/*
+       * Below sm the numbered window (up to 9 × 44px controls ≈ 428px) cannot fit a 360px phone, so
+       * phones get the compact three-control form: ‹ · Page 4 of 21 · ›. The numbered window returns at sm.
+       */}
+      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start sm:gap-1">
         <PageButton {...common} p={page - 1} disabled={page <= 1} label="Previous page">
           <ChevronLeft className="h-4 w-4" />
         </PageButton>
+        <span className="text-body-sm font-semibold text-ink tabular-nums sm:hidden" aria-current="page">
+          Page {page} of {Math.max(totalPages, 1)}
+        </span>
         {pages.map((p, i) =>
           p === "…" ? (
-            <span key={`e${i}`} className="px-1 text-muted">
+            <span key={`e${i}`} className="hidden px-1 text-muted sm:inline">
               …
             </span>
           ) : (
-            <PageButton key={p} {...common} p={p}>
+            <PageButton key={p} {...common} p={p} className="max-sm:hidden">
               {p}
             </PageButton>
           )
@@ -120,7 +127,9 @@ function PageButton({
   children,
   disabled,
   label,
+  className,
 }: {
+  className?: string;
   p: number;
   current: number;
   hrefFor?: (page: number) => string;
@@ -133,7 +142,8 @@ function PageButton({
   const cls = cn(
     "text-body-sm duration-micro ring-focus tap-highlight-none inline-flex h-9 min-w-9 items-center justify-center rounded-md border px-2 font-semibold transition-colors motion-reduce:transition-none max-sm:h-11 max-sm:min-w-11 pointer-coarse:h-11 pointer-coarse:min-w-11",
     p === current ? "border-navy bg-navy text-white shadow-e1" : "border-line bg-white text-ink hover:border-navy/30 hover:bg-surface",
-    disabled && "pointer-events-none opacity-40"
+    disabled && "pointer-events-none opacity-40",
+    className
   );
   if (hrefFor) {
     // Server-safe: links for enabled pages, an inert span for disabled ones (no event handlers).

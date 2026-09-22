@@ -6,7 +6,7 @@ import { cmsPickerOptions } from "@/server/cms-admin";
 import { PageHeader } from "@/components/ui/misc";
 import { FilterBar } from "@/components/admin/pickers/filter-bar";
 import { GalleryManager } from "@/components/admin/content/gallery-manager";
-import { Pager } from "@/components/admin/content/pager";
+import { Pager } from "@/components/admin/pickers/pager";
 import { flattenSearchParams, parseListQuery, type RawSearchParams } from "@/components/admin/pickers/search-params";
 
 export const metadata = { title: "Gallery" };

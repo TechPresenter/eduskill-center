@@ -16,6 +16,7 @@ export * from "./input";
 export * from "./select";
 export * from "./date-input";
 export * from "./form";
+export * from "./error-summary";
 export * from "./file-upload";
 
 // Data display
@@ -25,6 +26,7 @@ export * from "./table"; // also re-exports TableWrap from ./table-wrap
 export * from "./responsive-table";
 export * from "./stats";
 export * from "./misc";
+export * from "./list";
 export * from "./highlight";
 export * from "./icon";
 export * from "./carousel";

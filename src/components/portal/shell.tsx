@@ -3,10 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, ChevronDown, LogOut, X, type LucideIcon } from "lucide-react";
+import { Bell, ChevronDown, ChevronRight, LogOut, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFocusTrap, useScrollLock, useVisualViewport } from "@/lib/hooks";
 import { Avatar } from "@/components/ui/misc";
+import { IconTile, ListGroup, ListRow } from "@/components/ui/list";
 import { Dropdown, DropdownSeparator } from "@/components/ui/dropdown";
 import { BrandMark } from "@/components/brand";
 import { api } from "@/lib/api-client";
@@ -15,7 +16,7 @@ import { purgeOfflineCaches } from "@/components/pwa/register-sw";
 import type { Branding } from "@/lib/settings";
 import { PortalHeaderProvider, usePortalHeader } from "./header-context";
 import { BottomNav, isNavActive } from "./bottom-nav";
-import { AccountRowIcon, MobileHeader, accountRowClass } from "./mobile-header";
+import { APP_BAR_ICON_CLASS, AccountRowIcon, MobileHeader, accountRowClass } from "./mobile-header";
 
 export interface NavItem {
   label: string;
@@ -100,7 +101,7 @@ export function LogoutButton({ className, children }: { className?: string; chil
     <button type="button" onClick={logout} disabled={busy} className={className}>
       {children ?? (
         <>
-          <LogOut className="h-4 w-4" /> Log out
+          <LogOut className="size-4" aria-hidden /> Log out
         </>
       )}
     </button>
@@ -172,20 +173,13 @@ function ShellInner({ nav, user, branding, portalLabel, homeHref, bottomNav, unr
 
   const rootStyle = hasBottomNav ? ({ "--bottom-nav-h": bottomNavVisible ? BOTTOM_NAV_HEIGHT : "0px" } as React.CSSProperties) : undefined;
 
+  /* Desktop (lg+): the navy sidebar, unchanged in structure — a dense, keyboard-friendly list. */
   const sidebar = (
     <nav className="flex h-full flex-col" aria-label={`${portalLabel} navigation`}>
-      <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
-        <Link href={homeHref} aria-label={branding.siteName} onClick={closeDrawer}>
+      <div className="flex h-16 items-center border-b border-white/10 px-4">
+        <Link href={homeHref} aria-label={branding.siteName} className="ring-focus-inverse rounded-md">
           <BrandMark branding={branding} variant="admin" light className="h-9" />
         </Link>
-        <button
-          type="button"
-          className="touch-target ring-focus-inverse -mr-2 inline-flex items-center justify-center rounded-md text-white/70 tap-highlight-none transition-colors duration-micro hover:bg-white/10 hover:text-white active:bg-white/10 motion-reduce:transition-none lg:hidden"
-          onClick={closeDrawer}
-          aria-label="Close menu"
-        >
-          <X className="h-5 w-5" aria-hidden />
-        </button>
       </div>
       <div className="scrollbar-thin flex-1 overflow-y-auto px-3 py-4">
         <p className="px-3 pb-2 text-overline text-white/40">{portalLabel}</p>
@@ -199,16 +193,15 @@ function ShellInner({ nav, user, branding, portalLabel, homeHref, bottomNav, unr
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      onClick={closeDrawer}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "group ring-focus-inverse flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-body-sm font-medium transition-colors duration-micro motion-reduce:transition-none lg:min-h-0",
-                        active ? "bg-white/12 text-white" : "text-white/70 hover:bg-white/8 hover:text-white"
+                        "group press-inverse ring-focus-inverse flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-body-sm font-medium",
+                        active ? "bg-white/12 text-white" : "text-white/70 hover:text-white"
                       )}
                     >
-                      <item.icon className={cn("h-4.5 w-4.5 shrink-0", active ? "text-orange" : "text-white/50 group-hover:text-white/80")} />
+                      <item.icon className={cn("size-4.5 shrink-0", active ? "text-orange" : "text-white/50 group-hover:text-white/80")} aria-hidden />
                       <span className="truncate">{item.label}</span>
-                      {item.badge ? <span className="ml-auto rounded-full bg-orange px-1.5 py-0.5 text-caption font-bold text-white">{item.badge}</span> : null}
+                      {item.badge ? <span className="ml-auto rounded-full bg-orange px-1.5 py-0.5 text-caption font-bold text-white tabular-nums">{item.badge}</span> : null}
                     </Link>
                   </li>
                 );
@@ -225,10 +218,79 @@ function ShellInner({ nav, user, branding, portalLabel, homeHref, bottomNav, unr
             <p className="truncate text-caption text-white/50">{user.subtitle ?? user.role}</p>
           </div>
         </div>
-        {/* Pinned Log out row (phone drawer only; the desktop header keeps the account menu). */}
-        <LogoutButton className="ring-focus-inverse mt-1 flex min-h-12 w-full items-center gap-3 rounded-md px-3 text-left text-body-sm font-medium text-white/80 tap-highlight-none transition-colors duration-micro hover:bg-white/8 hover:text-white active:bg-white/10 motion-reduce:transition-none lg:hidden">
-          <LogOut className="h-4.5 w-4.5 shrink-0 text-white/50" aria-hidden /> Log out
-        </LogoutButton>
+      </div>
+    </nav>
+  );
+
+  /*
+   * Phones: the drawer reads like a native settings screen — a light surface, the signed-in user as
+   * a card at the top, then each nav group as a rounded list of 56px rows with tinted icon tiles,
+   * and Log out in a group of its own at the bottom.
+   */
+  const userCardBody = (
+    <>
+      <Avatar name={user.name} src={user.avatarUrl} size={48} />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-h4 text-navy">{user.name}</span>
+        <span className="mt-0.5 block truncate text-body-sm text-muted">{user.subtitle ?? user.role}</span>
+      </span>
+    </>
+  );
+  const drawerNav = (
+    <nav className="flex h-full flex-col" aria-label={`${portalLabel} navigation`}>
+      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-line bg-white px-4">
+        <Link href={homeHref} aria-label={branding.siteName} onClick={closeDrawer} className="ring-focus inline-flex min-h-11 items-center rounded-md tap-highlight-none">
+          <BrandMark branding={branding} variant="mobile" className="h-8" />
+        </Link>
+        <button type="button" className={cn(APP_BAR_ICON_CLASS, "-mr-2")} onClick={closeDrawer} aria-label="Close menu">
+          <X className="size-6" aria-hidden />
+        </button>
+      </div>
+      <div className="scrollbar-thin flex-1 space-y-5 overflow-y-auto overscroll-contain bg-surface px-4 pt-4 pb-6">
+        {profileHref ? (
+          <Link href={profileHref} onClick={closeDrawer} className="card press ring-focus flex min-h-18 items-center gap-3 p-4" aria-label={`${user.name}: my profile`}>
+            {userCardBody}
+            <ChevronRight className="size-5 shrink-0 text-muted/60" aria-hidden />
+          </Link>
+        ) : (
+          <div className="card flex min-h-18 items-center gap-3 p-4">{userCardBody}</div>
+        )}
+
+        {groups.map((g, gi) => (
+          <ListGroup key={gi} title={g.title ?? (gi === 0 ? portalLabel : undefined)} aria-label={g.title ?? (gi === 0 ? portalLabel : undefined)}>
+            {g.items.map((item) => {
+              const active = isActive(pathname, item);
+              return (
+                <ListRow
+                  key={item.href}
+                  href={item.href}
+                  onClick={closeDrawer}
+                  icon={item.icon}
+                  iconTone={active ? "orange" : "navy"}
+                  title={item.label}
+                  active={active}
+                  chevron={false}
+                  trailing={
+                    item.badge ? (
+                      <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-orange px-1.5 text-caption font-bold text-white">
+                        {item.badge > 99 ? "99+" : item.badge}
+                      </span>
+                    ) : undefined
+                  }
+                />
+              );
+            })}
+          </ListGroup>
+        ))}
+
+        <ListGroup aria-label="Session">
+          <li data-list-row="" data-lead="" className="relative flex">
+            <LogoutButton className="press ring-focus-inset flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left text-body font-semibold text-danger disabled:opacity-60">
+              <IconTile icon={LogOut} tone="danger" />
+              Log out
+            </LogoutButton>
+          </li>
+        </ListGroup>
       </div>
     </nav>
   );
@@ -244,11 +306,11 @@ function ShellInner({ nav, user, branding, portalLabel, homeHref, bottomNav, unr
         <aside
           ref={drawerRef}
           className={cn(
-            "absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-navy-dark pt-safe pb-safe shadow-e3 transition-transform duration-overlay will-change-transform motion-reduce:transition-none",
+            "absolute inset-y-0 left-0 w-80 max-w-[85vw] overflow-hidden rounded-r-lg bg-white pt-safe pb-safe shadow-e3 transition-transform duration-overlay ease-soft will-change-transform motion-reduce:transition-none",
             shown ? "translate-x-0" : "-translate-x-full"
           )}
         >
-          {sidebar}
+          {drawerNav}
         </aside>
       </div>
 
@@ -284,7 +346,7 @@ function ShellInner({ nav, user, branding, portalLabel, homeHref, bottomNav, unr
           {notificationsHref && (
             <Link href={notificationsHref} className="relative rounded-md p-2 text-muted ring-focus transition-colors duration-micro hover:bg-surface hover:text-navy motion-reduce:transition-none" aria-label={`Notifications${unreadCount ? ` (${unreadCount} unread)` : ""}`}>
               <Bell className="h-5 w-5" />
-              {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-orange px-1 text-caption leading-none font-bold text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+              {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-orange px-1 text-caption leading-none font-bold text-white tabular-nums">{unreadCount > 99 ? "99+" : unreadCount}</span>}
             </Link>
           )}
           <Dropdown
@@ -316,12 +378,12 @@ function ShellInner({ nav, user, branding, portalLabel, homeHref, bottomNav, unr
             </Link>
             <DropdownSeparator />
             <LogoutButton className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-body-sm text-danger ring-focus transition-colors duration-micro hover:bg-danger-light motion-reduce:transition-none lg:min-h-0">
-              <LogOut className="h-4 w-4" /> Log out
+              <LogOut className="size-4" aria-hidden /> Log out
             </LogoutButton>
           </Dropdown>
         </header>
 
-        <main className={cn("flex-1 px-4 pt-6 sm:px-6 lg:px-8", hasBottomNav ? "pb-safe-nav lg:pb-8" : "pb-6 lg:pb-8")}>{children}</main>
+        <main className={cn("flex-1 px-4 pt-4 sm:px-6 sm:pt-6 lg:px-8", hasBottomNav ? "pb-safe-nav lg:pb-8" : "pb-6 lg:pb-8")}>{children}</main>
       </div>
 
       {hasBottomNav && (

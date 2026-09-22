@@ -1,16 +1,20 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ExternalLink, Save, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ExternalLink, Globe, ImageIcon, Save, Trash2 } from "lucide-react";
+import { Button, ButtonLink, buttonClasses } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
 import { ConfirmDialog } from "@/components/ui/modal";
+import { StatusBadge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { StickyActionBar } from "@/components/ui/sticky-action-bar";
 import { api, ApiClientError } from "@/lib/api-client";
-import { FormFields, finalizeSlugs, type FieldDef, type FormValues } from "@/components/admin/content/fields";
+import { withBasePath } from "@/lib/base-path";
+import { slugify, truncate } from "@/lib/utils";
+import { FormFields, finalizeSlugs, str, type FieldDef, type FormValues } from "@/components/admin/content/fields";
+import { SaveStatus, type SaveState } from "@/components/admin/content/app-list";
+import { useUnsavedChangesWarning } from "@/components/admin/content/use-unsaved";
 
 export interface ContentEditorProps {
   /** Collection endpoint, e.g. `/api/admin/blog`. POST for new, PUT/DELETE at `${endpoint}/${id}`. */
@@ -27,26 +31,87 @@ export interface ContentEditorProps {
   canDelete?: boolean;
   /** Explains why deleting is unavailable (rendered instead of the button). */
   deleteLocked?: string | null;
-  /** Public URL to preview the record (shown when set). */
+  /** Public URL to preview the record (shown when set). App-absolute paths get the deployment base path. */
   viewHref?: string | null;
   /** Small status line under the actions (e.g. "Last saved …"). */
   meta?: string | null;
+  /**
+   * Public URL prefix of the record (`/blog`, `/events`, `` for pages). Enables the live listing and
+   * search-result preview beside the form on wide screens.
+   */
+  publicPrefix?: string;
   /** Rendered above the form (e.g. informational alerts). */
   children?: React.ReactNode;
 }
 
-export function ContentEditor({ endpoint, id, fields, initial, itemLabel, backHref, canEdit, canDelete = canEdit, deleteLocked, viewHref, meta, children }: ContentEditorProps) {
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** How the record will look in a listing card and as a search result, updated as the author types. */
+function LivePreview({ values, publicPrefix }: { values: FormValues; publicPrefix: string }) {
+  const title = str(values.title) || "Untitled";
+  const summary = str(values.excerpt) || str(values.summary);
+  const image = str(values.coverImage) || str(values.image);
+  const slug = str(values.slug) || slugify(str(values.title)) || "your-address";
+  const status = str(values.status);
+  const seoTitle = str(values.seoTitle) || title;
+  const seoDescription = str(values.seoDescription) || summary;
+  return (
+    <div className="space-y-4">
+      <section aria-labelledby="pv-card" className="card overflow-hidden">
+        <h2 id="pv-card" className="sr-only">
+          Listing preview
+        </h2>
+        <div className="media media-16x9 rounded-none">
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={withBasePath(image)} alt="" />
+          ) : (
+            <span className="absolute inset-0 flex items-center justify-center text-navy/40" aria-hidden>
+              <ImageIcon className="h-8 w-8" />
+            </span>
+          )}
+        </div>
+        <div className="space-y-2 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-overline text-muted">Listing preview</p>
+            {status && <StatusBadge status={status} />}
+          </div>
+          <p className="text-h4 break-words text-navy">{title}</p>
+          <p className="text-body-sm text-muted">{summary ? truncate(summary, 160) : "Add a summary to show a line of text here."}</p>
+        </div>
+      </section>
+      <section aria-labelledby="pv-seo" className="card space-y-1 p-4">
+        <h2 id="pv-seo" className="mb-2 flex items-center gap-2 text-overline text-muted">
+          <Globe className="h-4 w-4" aria-hidden /> Search result
+        </h2>
+        <p className="truncate font-mono text-caption text-success-dark">
+          {publicPrefix}/{slug}
+        </p>
+        <p className="text-body font-semibold break-words text-navy-light">{truncate(seoTitle, 70)}</p>
+        <p className="text-body-sm text-muted">{seoDescription ? truncate(seoDescription, 160) : "Search engines will pick text from the page."}</p>
+      </section>
+    </div>
+  );
+}
+
+export function ContentEditor({ endpoint, id, fields, initial, itemLabel, backHref, canEdit, canDelete = canEdit, deleteLocked, viewHref, meta, publicPrefix, children }: ContentEditorProps) {
   const router = useRouter();
+  const [saved, setSaved] = React.useState<FormValues>(initial);
   const [values, setValues] = React.useState<FormValues>(initial);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [formError, setFormError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [justSaved, setJustSaved] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
-  const [dirty, setDirty] = React.useState(false);
+
+  const dirty = JSON.stringify(values) !== JSON.stringify(saved);
+  useUnsavedChangesWarning(dirty && canEdit && !saving);
+  const state: SaveState = saving ? "saving" : formError ? "error" : dirty ? "dirty" : justSaved ? "saved" : "clean";
+  const idle = meta ?? (id ? undefined : `New ${itemLabel} – not saved yet`);
 
   const onChange = (v: FormValues) => {
     setValues(v);
-    setDirty(true);
+    setJustSaved(false);
   };
 
   const save = async (e: React.FormEvent) => {
@@ -59,12 +124,13 @@ export function ContentEditor({ endpoint, id, fields, initial, itemLabel, backHr
       if (id) {
         await api.put(`${endpoint}/${id}`, payload);
         toast.success(`${cap(itemLabel)} saved`);
-        setDirty(false);
+        setSaved(values);
+        setJustSaved(true);
         router.refresh();
       } else {
         const created = await api.post<{ id: string }>(endpoint, payload);
         toast.success(`${cap(itemLabel)} created`);
-        setDirty(false);
+        setSaved(values);
         router.push(`${backHref}/${created.id}`);
         router.refresh();
       }
@@ -85,6 +151,7 @@ export function ContentEditor({ endpoint, id, fields, initial, itemLabel, backHr
       await api.delete(`${endpoint}/${id}`);
       toast.success(`${cap(itemLabel)} deleted`);
       setConfirmDelete(false);
+      setSaved(values);
       router.push(backHref);
       router.refresh();
     } catch (err) {
@@ -93,49 +160,56 @@ export function ContentEditor({ endpoint, id, fields, initial, itemLabel, backHr
     }
   };
 
+  const view = viewHref ? withBasePath(viewHref) : null;
+  const preview = publicPrefix !== undefined;
+
   return (
-    <form onSubmit={save} className="space-y-6" noValidate>
+    <form onSubmit={save} className="space-y-4 lg:space-y-6" noValidate>
       {formError && <Alert tone="danger">{formError}</Alert>}
       {!canEdit && <Alert tone="info">You can view this {itemLabel} but need the &ldquo;Edit Website Content&rdquo; permission to change it.</Alert>}
       {children}
-      <div className="card p-5">
-        <FormFields fields={fields} values={values} onChange={onChange} errors={errors} disabled={!canEdit || saving} idPrefix="ce" />
-      </div>
-      {/* Phones / tablets: secondary controls stay in the page, Save sits in the sticky bar below. */}
-      <div className="space-y-2 lg:hidden">
-        <p className="text-xs text-muted">
-          {meta}
-          {dirty && <span className={meta ? "ml-2 font-semibold text-orange" : "font-semibold text-orange"}>Unsaved changes</span>}
-        </p>
-        {viewHref && (
-          <a href={viewHref} target="_blank" rel="noopener noreferrer" className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-line bg-white px-5 text-sm font-semibold text-navy tap-highlight-none">
-            <ExternalLink className="h-4 w-4" /> View on site
-          </a>
-        )}
-        {id && canDelete && !deleteLocked && (
-          <Button type="button" variant="outline" className="w-full text-danger" onClick={() => setConfirmDelete(true)} disabled={saving} leftIcon={<Trash2 className="h-4 w-4" />}>
-            Delete {itemLabel}
-          </Button>
-        )}
-        {id && canDelete && deleteLocked && (
-          <p className="text-xs text-muted" title={deleteLocked}>
-            {deleteLocked}
-          </p>
+
+      <div className={preview ? "grid gap-4 xl:grid-cols-3 xl:gap-6" : undefined}>
+        <div className={preview ? "xl:col-span-2" : undefined}>
+          <div className="card card-p">
+            <FormFields fields={fields} values={values} onChange={onChange} errors={errors} disabled={!canEdit || saving} idPrefix="ce" />
+          </div>
+        </div>
+        {preview && (
+          <aside className="hidden xl:block" aria-label="Live preview">
+            <div className="sticky top-20">
+              <LivePreview values={values} publicPrefix={publicPrefix} />
+            </div>
+          </aside>
         )}
       </div>
 
-      <StickyActionBar innerClassName="lg:justify-between">
-        <p className="hidden text-xs text-muted lg:block">
-          {meta}
-          {dirty && <span className={meta ? "ml-2 font-semibold text-orange" : "font-semibold text-orange"}>Unsaved changes</span>}
-        </p>
+      {/* Phones / tablets: secondary controls stay in the page, Save sits in the sticky bar below. */}
+      {(view || (id && canDelete)) && (
+        <div className="grid gap-2 sm:grid-cols-2 lg:hidden">
+          {view && (
+            <a href={view} target="_blank" rel="noopener noreferrer" className={buttonClasses({ variant: "outline", size: "md", fullWidth: true })}>
+              <ExternalLink className="h-4 w-4" aria-hidden /> View on site
+            </a>
+          )}
+          {id && canDelete && !deleteLocked && (
+            <Button type="button" variant="outline" fullWidth className="text-danger" onClick={() => setConfirmDelete(true)} disabled={saving} leftIcon={<Trash2 className="h-4 w-4" />}>
+              Delete {itemLabel}
+            </Button>
+          )}
+          {id && canDelete && deleteLocked && <p className="text-caption text-muted sm:col-span-2">{deleteLocked}</p>}
+        </div>
+      )}
+
+      <StickyActionBar innerClassName="flex-col lg:flex-row lg:items-center lg:justify-between">
+        <SaveStatus state={state} idle={idle} className="justify-center lg:justify-start" />
         <div className="flex w-full items-center gap-2 lg:w-auto lg:flex-wrap">
-          <Link href={backHref} className="inline-flex h-12 flex-1 items-center justify-center rounded-xl border border-line bg-white px-5 text-sm font-semibold text-ink tap-highlight-none lg:h-11 lg:flex-none hover:bg-surface">
+          <ButtonLink href={backHref} variant="outline" className="flex-1 lg:flex-none">
             Back
-          </Link>
-          {viewHref && (
-            <a href={viewHref} target="_blank" rel="noopener noreferrer" className="hidden h-11 items-center gap-2 rounded-xl border border-line bg-white px-5 text-sm font-semibold text-navy hover:bg-surface lg:inline-flex">
-              <ExternalLink className="h-4 w-4" /> View on site
+          </ButtonLink>
+          {view && (
+            <a href={view} target="_blank" rel="noopener noreferrer" className={buttonClasses({ variant: "outline", className: "hidden lg:inline-flex" })}>
+              <ExternalLink className="h-4 w-4" aria-hidden /> View on site
             </a>
           )}
           {id && canDelete && !deleteLocked && (
@@ -144,12 +218,12 @@ export function ContentEditor({ endpoint, id, fields, initial, itemLabel, backHr
             </Button>
           )}
           {id && canDelete && deleteLocked && (
-            <span className="hidden text-xs text-muted lg:inline" title={deleteLocked}>
+            <span className="hidden max-w-xs text-caption text-muted lg:inline" title={deleteLocked}>
               {deleteLocked}
             </span>
           )}
           {canEdit && (
-            <Button type="submit" loading={saving} leftIcon={<Save className="h-4 w-4" />} className="flex-2 lg:flex-none">
+            <Button type="submit" loading={saving} disabled={!!id && !dirty} leftIcon={<Save className="h-4 w-4" />} className="flex-2 lg:flex-none">
               {id ? "Save changes" : `Create ${itemLabel}`}
             </Button>
           )}
@@ -158,8 +232,4 @@ export function ContentEditor({ endpoint, id, fields, initial, itemLabel, backHr
       <ConfirmDialog open={confirmDelete} onClose={() => !saving && setConfirmDelete(false)} onConfirm={remove} title={`Delete this ${itemLabel}?`} description="It will be removed from the website immediately. This cannot be undone." confirmLabel="Delete" danger loading={saving} />
     </form>
   );
-}
-
-function cap(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

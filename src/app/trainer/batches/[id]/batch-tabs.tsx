@@ -218,7 +218,7 @@ export function BatchTabs({ batch, roster, report, assignments, assessments, mat
                     <TD>{r.absent}</TD>
                     <TD>{r.leave}</TD>
                     <TD>
-                      <span className={cn("font-semibold tabular-nums", r.pct >= 75 ? "text-success-dark" : r.pct >= 60 ? "text-amber-700" : "text-danger")}>{r.pct}%</span>
+                      <span className={cn("font-semibold tabular-nums", r.pct >= 75 ? "text-success-dark" : r.pct >= 60 ? "text-warning-dark" : "text-danger")}>{r.pct}%</span>
                     </TD>
                   </TR>
                 ))

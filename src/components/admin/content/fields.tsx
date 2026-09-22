@@ -1,12 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Eye, EyeOff, Link2, X } from "lucide-react";
+import { Bold, Heading2, Italic, Link as LinkIcon, Link2, List, ListOrdered, Quote, X } from "lucide-react";
 import { Input, Textarea, Checkbox } from "@/components/ui/input";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { Field, FormGrid } from "@/components/ui/form";
 import { FileUpload, TagInput } from "@/components/ui/file-upload";
 import { DynamicIcon } from "@/components/ui/icon";
+import { IconButton } from "@/components/ui/button";
+import { SegmentedControl } from "@/components/ui/tabs";
+import { withBasePath } from "@/lib/base-path";
 import { LocationCascade } from "@/components/shared/location-cascade";
 import { CMS_ICONS } from "@/lib/cms/sections";
 import { cn, slugify } from "@/lib/utils";
@@ -66,18 +69,16 @@ export function ImageField({ value, onChange, folder, disabled, hint }: { value:
   if (value) {
     const fileName = value.split("/").pop() ?? "image";
     return (
-      <div className="flex items-center gap-3 rounded-xl border border-line bg-white p-3">
+      <div className="flex items-center gap-3 rounded-card border border-line bg-white p-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={value} alt="" className="h-14 w-14 rounded-lg bg-surface object-cover" />
+        <img src={withBasePath(value)} alt="" className="h-16 w-20 shrink-0 rounded-md border border-line bg-surface object-cover" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-ink">{fileName}</p>
-          <p className="truncate text-xs text-muted">{value}</p>
+          <p className="truncate text-body-sm font-semibold text-ink">{fileName}</p>
+          <p className="truncate text-caption text-muted" title={value}>
+            {value}
+          </p>
         </div>
-        {!disabled && (
-          <button type="button" onClick={() => onChange("")} className="rounded-lg p-2 text-muted hover:bg-danger-light hover:text-danger" aria-label="Remove image">
-            <X className="h-4 w-4" />
-          </button>
-        )}
+        {!disabled && <IconButton icon={<X className="h-4 w-4" />} onClick={() => onChange("")} aria-label="Remove image" className="hover:bg-danger-light hover:text-danger" />}
       </div>
     );
   }
@@ -86,15 +87,15 @@ export function ImageField({ value, onChange, folder, disabled, hint }: { value:
       {manual ? (
         <div className="flex gap-2">
           <Input placeholder="https://… or /api/files/public/…" onKeyDown={(e) => e.key === "Enter" && e.preventDefault()} onBlur={(e) => e.target.value.trim() && onChange(e.target.value.trim())} disabled={disabled} />
-          <button type="button" onClick={() => setManual(false)} className="inline-flex min-h-11 items-center text-xs font-medium text-muted tap-highlight-none md:min-h-0 md:hover:text-navy">
+          <button type="button" onClick={() => setManual(false)} className="ring-focus inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-body-sm font-medium text-muted tap-highlight-none md:hover:text-navy">
             Upload instead
           </button>
         </div>
       ) : (
         <>
           <FileUpload endpoint="/api/admin/uploads" fields={{ preset: "image", folder, visibility: "public" }} accept=".jpg,.jpeg,.png,.webp" maxSizeMb={5} value={null} onChange={(f) => f && onChange(f.url)} label="Upload image" hint={hint ?? "JPG, PNG or WEBP up to 5 MB"} disabled={disabled} />
-          <button type="button" onClick={() => setManual(true)} className="inline-flex min-h-11 items-center gap-1 text-xs font-medium text-muted tap-highlight-none md:min-h-0 md:hover:text-navy">
-            <Link2 className="h-3.5 w-3.5" /> Use an image URL instead
+          <button type="button" onClick={() => setManual(true)} className="ring-focus inline-flex min-h-11 items-center gap-1.5 rounded-md text-body-sm font-medium text-muted tap-highlight-none md:min-h-9 md:hover:text-navy">
+            <Link2 className="h-4 w-4" aria-hidden /> Use an image URL instead
           </button>
         </>
       )}
@@ -105,7 +106,7 @@ export function ImageField({ value, onChange, folder, disabled, hint }: { value:
 export function IconPicker({ value, onChange, disabled, id }: { value: string; onChange: (v: string) => void; disabled?: boolean; id?: string }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lavender text-navy" aria-hidden>
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-lavender text-navy" aria-hidden>
         <DynamicIcon name={value || undefined} className="h-5 w-5" />
       </span>
       <Select id={id} value={value} onChange={(e) => onChange(e.target.value)} options={CMS_ICONS.map((i) => ({ value: i, label: i }))} placeholder="No icon" disabled={disabled} />
@@ -113,24 +114,132 @@ export function IconPicker({ value, onChange, disabled, id }: { value: string; o
   );
 }
 
+type MdView = "write" | "preview" | "split";
+
+/** Wraps the selection (or inserts a placeholder) with Markdown syntax and restores the caret. */
+function applyMarkdown(el: HTMLTextAreaElement, value: string, kind: "bold" | "italic" | "h2" | "ul" | "ol" | "quote" | "link") {
+  const start = el.selectionStart ?? value.length;
+  const end = el.selectionEnd ?? value.length;
+  const selected = value.slice(start, end);
+  const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+  let next = value;
+  let caretFrom = start;
+  let caretTo = end;
+  const wrap = (before: string, after: string, placeholder: string) => {
+    const text = selected || placeholder;
+    next = value.slice(0, start) + before + text + after + value.slice(end);
+    caretFrom = start + before.length;
+    caretTo = caretFrom + text.length;
+  };
+  const prefixLines = (prefix: (i: number) => string) => {
+    const block = value.slice(lineStart, end) || "";
+    const lines = (block || "List item").split("\n").map((l, i) => prefix(i) + l.replace(/^(#{1,6}\s|[-*+]\s|\d+[.)]\s|>\s?)/, ""));
+    const text = lines.join("\n");
+    next = value.slice(0, lineStart) + text + value.slice(end);
+    caretFrom = lineStart;
+    caretTo = lineStart + text.length;
+  };
+  switch (kind) {
+    case "bold":
+      wrap("**", "**", "bold text");
+      break;
+    case "italic":
+      wrap("*", "*", "italic text");
+      break;
+    case "link":
+      wrap("[", "](https://)", "link text");
+      break;
+    case "h2":
+      prefixLines(() => "## ");
+      break;
+    case "ul":
+      prefixLines(() => "- ");
+      break;
+    case "ol":
+      prefixLines((i) => `${i + 1}. `);
+      break;
+    case "quote":
+      prefixLines(() => "> ");
+      break;
+  }
+  return { next, caretFrom, caretTo };
+}
+
+const MD_TOOLS: { kind: Parameters<typeof applyMarkdown>[2]; label: string; icon: React.ReactNode }[] = [
+  { kind: "bold", label: "Bold", icon: <Bold className="h-4 w-4" /> },
+  { kind: "italic", label: "Italic", icon: <Italic className="h-4 w-4" /> },
+  { kind: "h2", label: "Heading", icon: <Heading2 className="h-4 w-4" /> },
+  { kind: "ul", label: "Bulleted list", icon: <List className="h-4 w-4" /> },
+  { kind: "ol", label: "Numbered list", icon: <ListOrdered className="h-4 w-4" /> },
+  { kind: "quote", label: "Quote", icon: <Quote className="h-4 w-4" /> },
+  { kind: "link", label: "Link", icon: <LinkIcon className="h-4 w-4" /> },
+];
+
+/**
+ * Markdown field with a formatting toolbar (44px buttons on phones) and a Write / Preview switch; wide
+ * screens also get a side-by-side view. The preview is the same safe renderer the website uses.
+ */
 function MarkdownTextarea({ id, value, onChange, rows, placeholder, invalid, disabled }: { id: string; value: string; onChange: (v: string) => void; rows?: number; placeholder?: string; invalid?: boolean; disabled?: boolean }) {
-  const [preview, setPreview] = React.useState(false);
+  const [view, setView] = React.useState<MdView>("write");
+  const ref = React.useRef<HTMLTextAreaElement>(null);
+  const words = value.trim() ? value.trim().split(/\s+/).length : 0;
+
+  const tool = (kind: Parameters<typeof applyMarkdown>[2]) => {
+    const el = ref.current;
+    if (!el) return;
+    const { next, caretFrom, caretTo } = applyMarkdown(el, value, kind);
+    onChange(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(caretFrom, caretTo);
+    });
+  };
+
+  const showEditor = view !== "preview";
+  const showPreview = view !== "write";
+
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-muted">Markdown: # headings, **bold**, *italic*, - lists, [links](https://…)</p>
-        <button type="button" onClick={() => setPreview((p) => !p)} className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-navy tap-highlight-none md:min-h-0 md:hover:text-orange" aria-pressed={preview}>
-          {preview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />} {preview ? "Hide preview" : "Show preview"}
-        </button>
+    <div className={cn("overflow-hidden rounded-card border bg-white transition-colors duration-micro focus-within:border-navy focus-within:ring-2 focus-within:ring-navy/20 motion-reduce:transition-none", invalid ? "border-danger" : "border-line")}>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-surface/70 px-2 py-1.5">
+        <div className="no-scrollbar relative flex min-w-0 items-center gap-0.5 overflow-x-auto" role="toolbar" aria-label="Formatting" aria-controls={id}>
+          {MD_TOOLS.map((t) => (
+            <IconButton key={t.kind} size="sm" icon={t.icon} aria-label={t.label} title={t.label} onClick={() => tool(t.kind)} disabled={disabled || !showEditor} />
+          ))}
+        </div>
+        <SegmentedControl
+          value={view}
+          onChange={(v) => setView(v as MdView)}
+          items={[
+            { value: "write", label: "Write" },
+            { value: "preview", label: "Preview" },
+            { value: "split", label: "Side by side" },
+          ]}
+          className="[&>button:last-child]:hidden lg:[&>button:last-child]:inline-flex"
+        />
       </div>
-      <div className={cn("grid gap-3", preview && "lg:grid-cols-2")}>
-        <Textarea id={id} value={value} onChange={(e) => onChange(e.target.value)} rows={rows ?? 12} placeholder={placeholder} invalid={invalid} disabled={disabled} className="font-mono text-[13px]" />
-        {preview && (
-          <div className="max-h-[28rem] overflow-y-auto rounded-xl border border-line bg-surface/40 p-4" aria-live="polite">
+      <div className={cn("grid", view === "split" && "lg:grid-cols-2 lg:divide-x lg:divide-line")}>
+        {showEditor && (
+          <Textarea
+            id={id}
+            ref={ref}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            rows={rows ?? 12}
+            placeholder={placeholder ?? "Write in Markdown: # heading, **bold**, - list, [link](https://…)"}
+            invalid={invalid}
+            disabled={disabled}
+            className="rounded-none border-0 font-mono focus:ring-0"
+          />
+        )}
+        {showPreview && (
+          <div className={cn("max-h-[32rem] min-h-40 overflow-y-auto p-4", view === "split" && "max-lg:hidden")} aria-live="polite" aria-label="Preview">
             <MarkdownPreview content={value} />
           </div>
         )}
       </div>
+      <p className="border-t border-line px-3 py-1.5 text-caption text-muted tabular-nums">
+        {words} word{words === 1 ? "" : "s"} · Markdown
+      </p>
     </div>
   );
 }
@@ -223,7 +332,7 @@ export function FormFields({ fields, values, onChange, errors = {}, disabled, co
                 placeholder={f.placeholder ?? "auto-generated-from-title"}
                 invalid={!!err}
                 disabled={dis}
-                className="font-mono text-[13px]"
+                className="font-mono"
               />
             );
             break;

@@ -23,6 +23,8 @@ export default async function EditCmsPage({ params }: { params: Promise<{ id: st
     <div>
       <PageHeader
         breadcrumbs={[{ label: "Pages", href: "/admin/cms/pages" }, { label: page.title }]}
+        mobileTitle={page.title}
+        backHref="/admin/cms/pages"
         title={
           <span className="flex flex-wrap items-center gap-2">
             {page.title}
@@ -33,6 +35,7 @@ export default async function EditCmsPage({ params }: { params: Promise<{ id: st
         description={<span className="font-mono">/{page.slug}</span>}
       />
       <ContentEditor
+        publicPrefix=""
         endpoint="/api/admin/cms/pages"
         id={page.id}
         itemLabel="page"

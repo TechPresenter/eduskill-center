@@ -82,6 +82,20 @@
   --font-heading: var(--font-manrope), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   /*
+   * Tailwind's own small steps, redefined in place (design audit P0 #1) so every legacy call site
+   * lands on the product scale without touching it: text-xs was 12px, the reading floor, and is now
+   * 13px for meta and table labels; text-sm is 14px on a 22px line for dense admin body. 12px is
+   * text-caption / text-overline and nothing renders below it. The larger steps stay Tailwind's —
+   * headings use text-h1…text-h4.
+   */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.375rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+
+  /*
    * RADIUS SCALE — xs 6 · sm 8 · md 12 · lg 16 · xl 20 · 2xl 24 · full.
    * These deliberately REPLACE Tailwind's defaults so `rounded-lg` means one
    * thing everywhere. rounded-card (16) === rounded-lg; rounded-card-lg (20)
@@ -219,6 +233,12 @@
     --bottom-nav-h: 0px;
     --sticky-bar-h: 0px;
     --header-h: 3.5rem;
+    /* The public site header's row (without the safe-area inset): h-14 below lg, 72px from lg. Sticky
+       bars under it (the /courses filter bar) read this; change it together with header-client.tsx. */
+    --site-header-h: 3.5rem;
+    @media (width >= 64rem) {
+      --site-header-h: 4.5rem;
+    }
   }
 
   /*
@@ -332,7 +352,7 @@
 /*
  * ───────────── Minimum legible text: 12px, no exceptions ─────────────
  * Most of our students read this on a cheap Android phone in daylight.
- * text-xs (12px) is the smallest named step and no smaller one exists, so the
+ * text-caption (12px) is the smallest named step and no smaller one exists, so the
  * only way under the floor is an arbitrary value. These selectors catch the
  * ones that have actually appeared in this codebase; exact values only, so a
  * legitimate text-[110px] display size is never hit.
@@ -915,5 +935,101 @@
   }
   to {
     transform: scaleX(1);
+  }
+}
+
+/* ═════════════ APP-STYLE LAYER (app polish) ═════════════
+ * The small set of utilities that make every screen feel like one native app. Built only from the
+ * tokens above: the three durations, the one easing, the line/surface colours. Nothing here moves
+ * continuously, and every transform is a momentary :active one on a leaf control.
+ */
+
+/* Dark text partners for the warning and info tints (≥4.5:1 on their -light backgrounds and on white). */
+@theme {
+  --color-warning-dark: #b54708;
+  --color-info-dark: #175cd3;
+}
+
+/*
+ * The press state for anything tappable that is a surface (list rows, drawer rows, menu items):
+ * a 150ms tint on :active, a softer one on hover where a real pointer exists. Colour only — no
+ * transform, so a pressed row never becomes a containing block for a fixed sheet it opens.
+ */
+@utility press {
+  -webkit-tap-highlight-color: transparent;
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: var(--duration-micro);
+  transition-timing-function: var(--ease-out-soft);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background-color: rgb(248 248 252 / 0.7);
+    }
+  }
+  /* Lavender, not surface: surface on white is too faint to read as "I pressed that" in daylight. */
+  &:active {
+    background-color: rgb(232 234 246 / 0.85);
+  }
+}
+/* Same press on navy surfaces (desktop sidebar, navy bands). */
+@utility press-inverse {
+  -webkit-tap-highlight-color: transparent;
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: var(--duration-micro);
+  transition-timing-function: var(--ease-out-soft);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background-color: rgb(255 255 255 / 0.08);
+    }
+  }
+  &:active {
+    background-color: rgb(255 255 255 / 0.12);
+  }
+}
+/* A physical "push" for compact controls (icon buttons, chips, nav pills). Leaf elements only. */
+@utility press-scale {
+  -webkit-tap-highlight-color: transparent;
+  transition-property: color, background-color, box-shadow, transform;
+  transition-duration: var(--duration-micro);
+  transition-timing-function: var(--ease-out-soft);
+  &:active {
+    transform: scale(0.94);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &:active {
+      transform: none;
+    }
+  }
+}
+
+/* Focus ring drawn INSIDE the element: for full-bleed rows inside a card that clips its overflow. */
+@utility ring-focus-inset {
+  &:focus-visible {
+    outline: 2px solid var(--color-orange);
+    outline-offset: -2px;
+  }
+}
+
+/*
+ * ListGroup hairlines (src/components/ui/list.tsx). A row draws the divider ABOVE itself when another
+ * row precedes it; a row with a leading tile starts the line at its text column (16px gutter + 40px
+ * tile + 12px gap = 4.25rem), like a native settings list. `data-list-inset="false"` on the group
+ * makes every divider full-bleed.
+ */
+@layer components {
+  [data-list-row] + [data-list-row]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 1rem;
+    height: 1px;
+    background-color: var(--color-line);
+    pointer-events: none;
+  }
+  [data-list-row][data-lead] + [data-list-row][data-lead]::before {
+    left: 4.25rem;
+  }
+  [data-list-inset="false"] > [data-list-row] + [data-list-row]::before {
+    left: 0;
   }
 }

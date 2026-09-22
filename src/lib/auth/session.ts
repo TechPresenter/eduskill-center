@@ -180,3 +180,13 @@ export function portalHome(role: UserRole): string {
       return "/student/dashboard";
   }
 }
+
+/**
+ * Where to send someone right after they sign in: their own `next` when it is an app-relative path,
+ * otherwise their portal home. Protocol-relative (`//host`) and backslash (`/\host`) forms are refused
+ * because browsers treat both as a different origin. Shared by every sign-in route so the password
+ * and admission-number logins always land in the same place.
+ */
+export function postLoginRedirect(next: string | undefined | null, role: UserRole): string {
+  return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : portalHome(role);
+}

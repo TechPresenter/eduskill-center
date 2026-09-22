@@ -6,6 +6,7 @@ import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { SegmentedControl } from "@/components/ui/tabs";
 import { Field } from "@/components/ui/form";
 import { Alert } from "@/components/ui/feedback";
 import { Avatar } from "@/components/ui/misc";
@@ -33,8 +34,8 @@ export function TicketMessages({ messages, currentUserId }: { messages: ThreadMe
         return (
           <li key={m.id} className={cn("flex gap-3", m.isStaff && "flex-row-reverse")}>
             <Avatar name={m.user.name} size={34} className={m.isStaff ? "bg-navy text-white" : undefined} />
-            <div className={cn("max-w-[85%] rounded-2xl px-4 py-3 text-sm", m.isStaff ? "rounded-tr-sm bg-navy text-white" : "rounded-tl-sm bg-surface text-ink")}>
-              <p className={cn("mb-1 text-[11px] font-semibold", m.isStaff ? "text-white/70" : "text-muted")}>
+            <div className={cn("max-w-[85%] min-w-0 rounded-2xl px-4 py-3 text-body-sm break-words", m.isStaff ? "rounded-tr-sm bg-navy text-white" : "rounded-tl-sm bg-surface text-ink")}>
+              <p className={cn("mb-1 text-caption font-semibold", m.isStaff ? "text-white/75" : "text-muted")}>
                 {mine ? "You" : m.user.name} · {m.isStaff ? "Foundation staff" : titleCase(m.user.role)} · {formatDateTime(m.createdAt)}
               </p>
               <p className="whitespace-pre-line">{m.message}</p>
@@ -111,13 +112,13 @@ export function TicketStatusForm({ ticketId, status, assignedToId, staff }: { ti
 
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
-      <Field label="Status" htmlFor="tk-status" error={errors.status}>
-        <Select id="tk-status" value={next} onChange={(e) => setNext(e.target.value)} options={["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"].map((s) => ({ value: s, label: titleCase(s) }))} />
+      <Field label="Status" error={errors.status}>
+        <SegmentedControl fullWidth scrollable value={next} onChange={setNext} items={["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"].map((s) => ({ value: s, label: titleCase(s) }))} />
       </Field>
       <Field label="Assigned to" htmlFor="tk-assign" error={errors.assignedToId}>
         <Select id="tk-assign" value={assignee} onChange={(e) => setAssignee(e.target.value)} placeholder="Unassigned" options={staff.map((s) => ({ value: s.id, label: `${s.name} · ${s.role}` }))} invalid={!!errors.assignedToId} />
       </Field>
-      <Button type="submit" variant="navy" size="sm" fullWidth loading={busy} disabled={!dirty}>
+      <Button type="submit" variant="navy" fullWidth loading={busy} disabled={!dirty}>
         Update ticket
       </Button>
     </form>

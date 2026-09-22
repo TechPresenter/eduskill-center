@@ -29,12 +29,14 @@ export function CtaBand({
         className="pointer-events-none absolute inset-0 opacity-[0.14]"
         style={{ backgroundImage: "radial-gradient(circle at 1px 1px, #fff 1.5px, transparent 0)", backgroundSize: "28px 28px" }}
       />
-      <div className="container-x relative flex flex-col items-start gap-8 section-y lg:flex-row lg:items-center lg:justify-between lg:gap-12">
+      {/* Same rhythm as every band (section-y); the type steps down one on phones — h2 title, body
+          copy — so the closing band matches the section headings above it instead of shouting. */}
+      <div className="container-x relative flex flex-col items-start gap-6 section-y lg:flex-row lg:items-center lg:justify-between lg:gap-12">
         <div className="max-w-2xl">
-          <h2 className="text-h1 text-white">
+          <h2 className="text-h2 text-balance text-white lg:text-h1">
             <Highlight text={title} />
           </h2>
-          {description && <p className="mt-4 text-body-lg text-white/80">{description}</p>}
+          {description && <p className="mt-2 text-body text-white/80 lg:mt-4 lg:text-body-lg">{description}</p>}
         </div>
         {hasActions && (
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row lg:shrink-0">

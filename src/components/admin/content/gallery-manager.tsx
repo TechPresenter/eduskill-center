@@ -2,12 +2,14 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ImagePlus, Loader2, Pencil, Trash2, UploadCloud, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Eye, EyeOff, ImagePlus, Images, Loader2, MoreVertical, Pencil, Trash2, UploadCloud, X } from "lucide-react";
+import { Button, IconButton } from "@/components/ui/button";
 import { Input, Checkbox } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Field, FormGrid } from "@/components/ui/form";
 import { Modal, ConfirmDialog } from "@/components/ui/modal";
+import { ActionSheet } from "@/components/ui/action-sheet";
+import { Fab } from "@/components/ui/fab";
 import { Alert, EmptyState } from "@/components/ui/feedback";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
@@ -32,6 +34,13 @@ interface Uploaded {
   name: string;
 }
 
+const valuesOf = (g: GalleryRow): FormValues => ({ title: g.title ?? "", category: g.category ?? "", centerId: g.centerId ?? "", sortOrder: g.sortOrder, isPublished: g.isPublished });
+
+/**
+ * The photo library. A 2-up grid on phones (tap a photo for Edit / Hide / Delete in an action sheet),
+ * up to 5-up on desktop with the same actions on hover and keyboard focus. Uploading takes several
+ * photos at once; each shows as a thumbnail as soon as it lands.
+ */
 export function GalleryManager({ items, categories, centers, canEdit }: { items: GalleryRow[]; categories: string[]; centers: { id: string; name: string; code: string }[]; canEdit: boolean }) {
   const router = useRouter();
   const [addOpen, setAddOpen] = React.useState(false);
@@ -47,7 +56,9 @@ export function GalleryManager({ items, categories, centers, canEdit }: { items:
   const [editing, setEditing] = React.useState<GalleryRow | null>(null);
   const [values, setValues] = React.useState<FormValues>({});
   const [deleting, setDeleting] = React.useState<GalleryRow | null>(null);
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [sheetFor, setSheetFor] = React.useState<GalleryRow | null>(null);
+  const addFormId = React.useId();
+  const editFormId = React.useId();
 
   const centerOptions = centers.map((c) => ({ value: c.id, label: `${c.name} (${c.code})` }));
   const editFields: FieldDef[] = [
@@ -83,6 +94,16 @@ export function GalleryManager({ items, categories, centers, canEdit }: { items:
     }
   };
 
+  const resetAdd = () => {
+    setFiles([]);
+    setTitle("");
+    setCategory("");
+    setCenterId("");
+    setPublished(true);
+    setErrors({});
+    setFormError(null);
+  };
+
   const submitAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -92,10 +113,7 @@ export function GalleryManager({ items, categories, centers, canEdit }: { items:
       await api.post("/api/admin/gallery", { items: files.map((f) => ({ imageUrl: f.url, title: files.length === 1 ? title || null : null })), title: title || null, category: category || null, centerId: centerId || null, isPublished: published });
       toast.success(`${files.length} image${files.length === 1 ? "" : "s"} added to the gallery`);
       setAddOpen(false);
-      setFiles([]);
-      setTitle("");
-      setCategory("");
-      setCenterId("");
+      resetAdd();
       router.refresh();
     } catch (err) {
       if (err instanceof ApiClientError) {
@@ -105,6 +123,13 @@ export function GalleryManager({ items, categories, centers, canEdit }: { items:
     } finally {
       setBusy(false);
     }
+  };
+
+  const openEdit = (g: GalleryRow) => {
+    setEditing(g);
+    setValues(valuesOf(g));
+    setErrors({});
+    setFormError(null);
   };
 
   const submitEdit = async (e: React.FormEvent) => {
@@ -128,6 +153,16 @@ export function GalleryManager({ items, categories, centers, canEdit }: { items:
     }
   };
 
+  const togglePublished = async (g: GalleryRow) => {
+    try {
+      await api.put(`/api/admin/gallery/${g.id}`, { ...valuesOf(g), isPublished: !g.isPublished });
+      toast.success(g.isPublished ? "Image hidden from the website" : "Image published");
+      router.refresh();
+    } catch (err) {
+      toast.error("Could not update", err instanceof Error ? err.message : undefined);
+    }
+  };
+
   const remove = async () => {
     if (!deleting) return;
     setBusy(true);
@@ -143,79 +178,138 @@ export function GalleryManager({ items, categories, centers, canEdit }: { items:
     }
   };
 
+  const addButton = (
+    <Button onClick={() => setAddOpen(true)} leftIcon={<ImagePlus className="h-4 w-4" />}>
+      Add images
+    </Button>
+  );
+
   return (
     <div className="space-y-4">
-      {canEdit && (
-        <div className="flex justify-end">
-          <Button size="sm" onClick={() => setAddOpen(true)} leftIcon={<ImagePlus className="h-4 w-4" />}>
-            Add images
-          </Button>
-        </div>
-      )}
+      {canEdit && items.length > 0 && <div className="hidden justify-end lg:flex">{addButton}</div>}
 
       {items.length === 0 ? (
-        <EmptyState title="No gallery images" description="Upload photos of classes, events and centers to show on the website." action={canEdit ? <Button onClick={() => setAddOpen(true)} leftIcon={<ImagePlus className="h-4 w-4" />}>Add images</Button> : undefined} />
+        <EmptyState icon={<Images className="h-7 w-7" />} title="No gallery images" description="Upload photos of classes, events and centers to show them in the website gallery and on center pages." action={canEdit ? addButton : undefined} />
       ) : (
-        <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {items.map((g) => (
-            <li key={g.id} className="group card overflow-hidden">
-              <div className="relative aspect-[4/3] bg-surface">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={g.imageUrl} alt={g.title ?? ""} className="h-full w-full object-cover" loading="lazy" />
-                {!g.isPublished && <Badge tone="warning" className="absolute top-2 left-2">Hidden</Badge>}
-                {canEdit && (
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
-                    <button type="button" onClick={() => { setEditing(g); setValues({ title: g.title ?? "", category: g.category ?? "", centerId: g.centerId ?? "", sortOrder: g.sortOrder, isPublished: g.isPublished }); setErrors({}); setFormError(null); }} className="rounded-lg bg-white/90 p-1.5 text-navy shadow-sm hover:bg-white" aria-label="Edit image">
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button type="button" onClick={() => setDeleting(g)} className="rounded-lg bg-white/90 p-1.5 text-danger shadow-sm hover:bg-white" aria-label="Delete image">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+        <ul className="grid animate-fade-in grid-cols-2 gap-3 motion-reduce:animate-none sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5" aria-label="Gallery images">
+          {items.map((g) => {
+            const caption = g.title || "Untitled";
+            const meta = [g.category, g.center?.name].filter(Boolean).join(" · ") || "No category";
+            return (
+              <li key={g.id} className="group card relative overflow-hidden">
+                <div className="media media-4x3 rounded-none">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={withBasePath(g.imageUrl)} alt={g.title ?? ""} loading="lazy" decoding="async" className={cn(!g.isPublished && "opacity-60")} />
+                </div>
+                {!g.isPublished && (
+                  <Badge tone="warning" className="absolute top-2 left-2">
+                    <EyeOff className="h-3 w-3" aria-hidden /> Hidden
+                  </Badge>
                 )}
-              </div>
-              <div className="p-3">
-                <p className="truncate text-sm font-medium text-ink">{g.title || <span className="text-muted">Untitled</span>}</p>
-                <p className="truncate text-xs text-muted">{[g.category, g.center?.name].filter(Boolean).join(" · ") || "No category"}</p>
-              </div>
-            </li>
-          ))}
+                <div className="flex items-start gap-1 p-3 pr-1">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-body-sm font-semibold text-ink">{caption}</p>
+                    <p className="truncate text-caption text-muted">{meta}</p>
+                  </div>
+                  {canEdit && (
+                    <>
+                      {/* Phones / touch: one overflow button → action sheet. */}
+                      <IconButton icon={<MoreVertical className="h-5 w-5" />} aria-label={`Actions for ${caption}`} onClick={() => setSheetFor(g)} className="-my-2 lg:hidden lg:pointer-coarse:inline-flex" />
+                      {/* Desktop: inline actions, revealed on hover / focus. */}
+                      <div className="hidden items-center lg:flex lg:pointer-coarse:hidden lg:opacity-0 lg:transition-opacity lg:duration-micro lg:group-focus-within:opacity-100 lg:group-hover:opacity-100 motion-reduce:transition-none">
+                        <IconButton size="sm" icon={<Pencil className="h-4 w-4" />} aria-label={`Edit ${caption}`} onClick={() => openEdit(g)} />
+                        <IconButton size="sm" icon={g.isPublished ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />} aria-label={g.isPublished ? `Hide ${caption}` : `Publish ${caption}`} onClick={() => void togglePublished(g)} />
+                        <IconButton size="sm" icon={<Trash2 className="h-4 w-4" />} aria-label={`Delete ${caption}`} onClick={() => setDeleting(g)} className="hover:bg-danger-light hover:text-danger" />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 
-      <Modal open={addOpen} onClose={() => !busy && setAddOpen(false)} title="Add gallery images" description="Upload one or many photos. JPG, PNG or WEBP up to 5 MB each." size="lg">
-        <form onSubmit={submitAdd} className="space-y-4" noValidate>
+      {canEdit && <Fab aria-label="Add images" icon={<ImagePlus className="h-6 w-6" aria-hidden />} onClick={() => setAddOpen(true)} />}
+
+      <ActionSheet
+        open={!!sheetFor}
+        onClose={() => setSheetFor(null)}
+        title={sheetFor?.title || "Image"}
+        items={
+          sheetFor
+            ? [
+                { label: "Edit details", icon: <Pencil className="h-5 w-5" />, onSelect: () => openEdit(sheetFor) },
+                { label: sheetFor.isPublished ? "Hide from the website" : "Publish on the website", icon: sheetFor.isPublished ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />, onSelect: () => void togglePublished(sheetFor) },
+                { label: "Delete image", icon: <Trash2 className="h-5 w-5" />, danger: true, onSelect: () => setDeleting(sheetFor) },
+              ]
+            : []
+        }
+      />
+
+      <Modal
+        open={addOpen}
+        onClose={() => !busy && setAddOpen(false)}
+        title="Add gallery images"
+        description="Upload one or many photos. JPG, PNG or WEBP up to 5 MB each."
+        size="lg"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setAddOpen(false)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button type="submit" form={addFormId} loading={busy} disabled={files.length === 0 || uploading > 0}>
+              {files.length ? `Add ${files.length} image${files.length === 1 ? "" : "s"}` : "Add images"}
+            </Button>
+          </>
+        }
+      >
+        <form id={addFormId} onSubmit={submitAdd} className="space-y-4" noValidate>
           {formError && <Alert tone="danger">{formError}</Alert>}
           <div>
             <label
               htmlFor="gallery-files"
-              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line bg-surface/60 px-4 py-6 text-center hover:border-navy/40"
+              className="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-card border-2 border-dashed border-line bg-surface/60 px-4 py-6 text-center tap-highlight-none transition-colors duration-micro has-focus-visible:border-orange hover:border-navy/40 active:bg-surface motion-reduce:transition-none"
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
                 void uploadMany(e.dataTransfer.files);
               }}
             >
-              {uploading > 0 ? <Loader2 className="h-6 w-6 animate-spin text-orange" /> : <UploadCloud className="h-6 w-6 text-navy" />}
-              <span className="text-sm font-semibold text-ink">{uploading > 0 ? `Uploading ${uploading}…` : "Drag & drop or click to choose images"}</span>
-              <span className="text-xs text-muted">You can select several files at once.</span>
-              <input ref={inputRef} id="gallery-files" type="file" accept=".jpg,.jpeg,.png,.webp" multiple className="sr-only" onChange={(e) => { void uploadMany(e.target.files); e.target.value = ""; }} />
+              <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-lavender text-navy" aria-hidden>
+                {uploading > 0 ? <Loader2 className="h-6 w-6 animate-spin text-orange motion-reduce:animate-none" /> : <UploadCloud className="h-6 w-6" />}
+              </span>
+              <span className="text-body-sm font-semibold text-ink" aria-live="polite">
+                {uploading > 0 ? `Uploading ${uploading} image${uploading === 1 ? "" : "s"}…` : "Choose photos, or drop them here"}
+              </span>
+              <span className="text-caption text-muted">You can select several at once.</span>
+              <input
+                id="gallery-files"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp"
+                multiple
+                className="sr-only"
+                onChange={(e) => {
+                  void uploadMany(e.target.files);
+                  e.target.value = "";
+                }}
+              />
             </label>
             {errors.items && (
-              <p className="mt-1 text-xs font-medium text-danger" role="alert">
+              <p className="mt-1 text-caption font-medium text-danger" role="alert">
                 {errors.items}
               </p>
             )}
           </div>
           {files.length > 0 && (
-            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5" aria-label="Uploaded images">
               {files.map((f, i) => (
-                <li key={f.url} className="relative aspect-square overflow-hidden rounded-lg bg-surface">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={f.url} alt={f.name} className="h-full w-full object-cover" />
-                  <button type="button" onClick={() => setFiles((p) => p.filter((_, j) => j !== i))} className="absolute top-1 right-1 rounded-full bg-white/90 p-1 text-danger shadow-sm" aria-label={`Remove ${f.name}`}>
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+                <li key={f.url} className="relative animate-fade-in overflow-hidden rounded-md motion-reduce:animate-none">
+                  <div className="media media-1x1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={withBasePath(f.url)} alt={f.name} />
+                  </div>
+                  <IconButton size="sm" icon={<X className="h-4 w-4" />} onClick={() => setFiles((p) => p.filter((_, j) => j !== i))} aria-label={`Remove ${f.name}`} className="absolute top-1 right-1 bg-white/95 text-danger shadow-e1 hover:bg-white" />
                 </li>
               ))}
             </ul>
@@ -239,33 +333,34 @@ export function GalleryManager({ items, categories, centers, canEdit }: { items:
               <Checkbox label="Publish on the website" checked={published} onChange={(e) => setPublished(e.target.checked)} />
             </div>
           </FormGrid>
-          <div className={cn("flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end")}>
-            <Button type="button" variant="outline" onClick={() => setAddOpen(false)} disabled={busy}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={busy} disabled={files.length === 0 || uploading > 0}>
-              Add {files.length || ""} image{files.length === 1 ? "" : "s"}
-            </Button>
-          </div>
         </form>
       </Modal>
 
-      <Modal open={!!editing} onClose={() => !busy && setEditing(null)} title="Edit image" size="lg">
-        <form onSubmit={submitEdit} className="space-y-4" noValidate>
-          {formError && <Alert tone="danger">{formError}</Alert>}
-          {editing && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={editing.imageUrl} alt="" className="max-h-56 w-full rounded-xl object-cover" />
-          )}
-          <FormFields fields={editFields} values={values} onChange={setValues} errors={errors} disabled={busy} idPrefix="ge" />
-          <div className="flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end">
+      <Modal
+        open={!!editing}
+        onClose={() => !busy && setEditing(null)}
+        title="Edit image"
+        size="lg"
+        footer={
+          <>
             <Button type="button" variant="outline" onClick={() => setEditing(null)} disabled={busy}>
               Cancel
             </Button>
-            <Button type="submit" loading={busy}>
+            <Button type="submit" form={editFormId} loading={busy}>
               Save changes
             </Button>
-          </div>
+          </>
+        }
+      >
+        <form id={editFormId} onSubmit={submitEdit} className="space-y-4" noValidate>
+          {formError && <Alert tone="danger">{formError}</Alert>}
+          {editing && (
+            <div className="media media-16x9 rounded-card">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={withBasePath(editing.imageUrl)} alt="" />
+            </div>
+          )}
+          <FormFields fields={editFields} values={values} onChange={setValues} errors={errors} disabled={busy} idPrefix="ge" />
         </form>
       </Modal>
 

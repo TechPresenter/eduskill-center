@@ -21,7 +21,7 @@ export interface SupportActionsProps {
 const TILE = "card card-hover flex min-h-[72px] flex-col justify-center gap-1 p-3 tap-highlight-none transition-transform active:scale-[0.98] motion-reduce:transition-none";
 
 function Tile({ href, icon, label, hint, tone = "navy", external }: { href: string; icon: React.ReactNode; label: string; hint?: string; tone?: "navy" | "green" | "orange"; external?: boolean }) {
-  const wrap = tone === "green" ? "bg-success-light text-green-700" : tone === "orange" ? "bg-orange-light text-orange" : "bg-lavender text-navy";
+  const wrap = tone === "green" ? "bg-success-light text-success-dark" : tone === "orange" ? "bg-orange-light text-orange" : "bg-lavender text-navy";
   return (
     <a href={href} className={TILE} {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
       <span className={cn("flex h-9 w-9 items-center justify-center rounded-md", wrap)}>{icon}</span>

@@ -16,6 +16,8 @@ import { AdminListPage } from "@/components/admin/shared/list-page";
 import { FilterBar } from "@/components/admin/pickers/filter-bar";
 import { ExportButton } from "@/components/admin/pickers/export-button";
 import { Pager } from "@/components/admin/pickers/pager";
+import { QueryTabs } from "@/components/admin/pickers/query-tabs";
+import { RowLead } from "@/components/admin/locations/list-kit";
 import { flattenSearchParams, parseListQuery, withParams, type RawSearchParams } from "@/components/admin/pickers/search-params";
 
 export const metadata = { title: "Trainers" };
@@ -48,18 +50,31 @@ export default async function TrainersPage({ searchParams }: { searchParams: Pro
         actions: <ExportButton href={withParams("/api/admin/trainers/export", sp, { page: undefined, limit: undefined })} disabled={!canExport} />,
       }}
       tabs={
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
           <StatsCard label="Active trainers" value={countOf("ACTIVE")} tone="success" href={withParams(base, {}, { status: "ACTIVE" })} />
           <StatsCard label="Currently assigned" value={assignedCount} tone="navy" hint="Active at a training center" />
           <StatsCard label="Inactive" value={countOf("INACTIVE")} tone="warning" href={withParams(base, {}, { status: "INACTIVE" })} className="max-sm:col-span-2" />
-        </div>
+          </div>
+          {all > 0 && (
+            <QueryTabs
+              param="status"
+              keep={["q", "level", "skill", "centerId", "courseId", "stateId", "districtId", "blockId"]}
+              items={[
+                { value: "", label: "All", count: all },
+                { value: "ACTIVE", label: "Active", count: countOf("ACTIVE") },
+                { value: "INACTIVE", label: "Inactive", count: countOf("INACTIVE") },
+              ]}
+            />
+          )}
+        </>
       }
       filters={
         <FilterBar
           lookups={lookups}
+          preserve={["status"]}
           fields={[
             { type: "search", placeholder: "Trainer ID, name, email or mobile" },
-            { type: "select", name: "status", label: "Status", options: [{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }] },
             { type: "select", name: "level", label: "Volunteer level", options: LEVELS.map((l) => ({ value: l, label: titleCase(l) })) },
             { type: "select", name: "skill", label: "Skill", options: skills.map((s) => ({ value: s, label: s })), placeholder: skills.length ? "All skills" : "No skills yet" },
             { type: "center", label: "Assigned center" },
@@ -90,15 +105,19 @@ export default async function TrainersPage({ searchParams }: { searchParams: Pro
             {data.items.length === 0 && <EmptyRow colSpan={8}>No trainers match these filters.</EmptyRow>}
             {data.items.map((t) => (
               <TR key={t.id}>
-                <TD mobile="full">
-                  <Link href={`${base}/${t.id}`} className="flex items-center gap-3 tap-highlight-none md:hover:text-navy">
-                    <Avatar name={t.user.name} src={t.user.avatarUrl} size={40} />
-                    <span className="min-w-0">
-                      <span className="block font-mono text-caption font-semibold text-orange md:hidden">{t.trainerId}</span>
-                      <span className="block truncate font-semibold">{t.user.name}</span>
-                      <span className="block truncate text-caption font-normal text-muted">{t.user.email ?? t.user.mobile ?? "—"}</span>
-                    </span>
-                  </Link>
+                <TD primary>
+                  <RowLead
+                    href={`${base}/${t.id}`}
+                    lead={<Avatar name={t.user.name} src={t.user.avatarUrl} size={40} />}
+                    title={t.user.name}
+                    meta={
+                      <>
+                        <span className="font-mono font-semibold text-navy md:hidden">{t.trainerId} · </span>
+                        {t.user.email ?? t.user.mobile ?? "—"}
+                      </>
+                    }
+                    trailing={<StatusBadge status={t.status} />}
+                  />
                 </TD>
                 <TD label="Trainer ID" mobile="hidden">
                   <span className="font-mono text-caption font-semibold text-navy">{t.trainerId}</span>
@@ -135,16 +154,11 @@ export default async function TrainersPage({ searchParams }: { searchParams: Pro
                     {t.skills.length > 3 && <span className="text-caption text-muted">+{t.skills.length - 3}</span>}
                   </span>
                 </TD>
-                <TD label="Status">
+                <TD label="Status" mobile="hidden">
                   <StatusBadge status={t.status} />
                 </TD>
                 <TD label="Joined" className="text-muted md:whitespace-nowrap">
                   {formatDate(t.joinedAt)}
-                </TD>
-                <TD mobile="actions" className="md:hidden">
-                  <ButtonLink href={`${base}/${t.id}`} variant="outline" size="sm" className="w-full">
-                    Open profile
-                  </ButtonLink>
                 </TD>
               </TR>
             ))}

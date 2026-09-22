@@ -69,7 +69,7 @@ export function CentreSteps({ steps, current = 0, completed, size = "md", showSt
                   {s.title}
                 </h3>
                 {withState && done && (
-                  <span className="inline-flex items-center rounded-full bg-success-light px-2 py-0.5 text-xs font-semibold text-green-700">Done</span>
+                  <span className="inline-flex items-center rounded-full bg-success-light px-2 py-0.5 text-xs font-semibold text-success-dark">Done</span>
                 )}
                 {withState && active && (
                   <span className="inline-flex items-center rounded-full bg-orange px-2 py-0.5 text-xs font-semibold text-white">Current step</span>

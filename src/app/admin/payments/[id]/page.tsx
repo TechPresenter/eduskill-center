@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Paperclip } from "lucide-react";
+import { CreditCard, Paperclip } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/guards";
 import { hasPermission } from "@/lib/rbac/permissions";
@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/ui/badge";
 import { TableWrap, THead, TH, TBody, TR, TD } from "@/components/ui/table";
 import { Alert } from "@/components/ui/feedback";
 import { PaymentActions } from "@/components/admin/payments/payment-actions";
+import { IconTile, RecordIdentity } from "@/components/admin/locations/list-kit";
 
 export const metadata = { title: "Payment" };
 
@@ -46,6 +47,17 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div>
+      {/* Identity and status first on phones, where the app bar only has room for a code. */}
+      <RecordIdentity
+        lead={<IconTile icon={<CreditCard />} tone={p.status === "COMPLETED" ? "success" : p.status === "PENDING" || p.status === "PROCESSING" ? "warning" : "lavender"} size="lg" />}
+        title={<span className="tabular-nums">{formatINR(amount)}</span>}
+        meta={
+          <>
+            <span className="font-mono font-semibold text-navy">{p.paymentNo}</span> · {p.student.name}
+          </>
+        }
+        badges={<StatusBadge status={p.status} />}
+      />
       <PageHeader
         backHref="/admin/payments"
         mobileTitle={p.paymentNo}
@@ -60,11 +72,6 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
         actions={<PaymentActions paymentId={p.id} paymentNo={p.paymentNo} status={p.status} method={p.method} amount={amount} referenceNo={p.referenceNo} studentName={p.student.name} proofUrl={meta?.proofUrl ?? null} can={can} />}
       />
 
-      {/* The app bar shows only the payment number on phones – keep the status and amount in the page. */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 lg:hidden">
-        <StatusBadge status={p.status} />
-        <span className="text-h3 text-navy tabular-nums">{formatINR(amount)}</span>
-      </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">

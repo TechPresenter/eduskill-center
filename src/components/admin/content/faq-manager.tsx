@@ -1,9 +1,10 @@
 "use client";
 
+import { Eye, HelpCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { truncate } from "@/lib/utils";
-import { EntityManager } from "@/components/admin/content/entity-manager";
-import { QuickToggle } from "@/components/admin/content/toggle-action";
+import { EntityManager, type Segment } from "@/components/admin/content/entity-manager";
+import { IconTile } from "@/components/admin/content/app-list";
 import type { FieldDef, FormValues } from "@/components/admin/content/fields";
 
 export interface FaqRow {
@@ -25,6 +26,13 @@ export function FaqManager({ items, categories, canEdit, canPublish }: { items: 
     { key: "isPublished", label: "Published on the website", type: "boolean", disabled: !canPublish, description: canPublish ? undefined : "Requires the Publish permission" },
   ];
 
+  // Few options → chips instead of a select: visibility first, then each category.
+  const segments: Segment<FaqRow>[] = [
+    { value: "published", label: "Published", test: (f) => f.isPublished },
+    { value: "hidden", label: "Hidden", test: (f) => !f.isPublished },
+    ...categories.map((c) => ({ value: `cat:${c}`, label: c, test: (f: FaqRow) => f.category === c })),
+  ];
+
   return (
     <EntityManager<FaqRow>
       items={items}
@@ -37,21 +45,50 @@ export function FaqManager({ items, categories, canEdit, canPublish }: { items: 
       toValues={toValues}
       emptyValues={{ question: "", answer: "", category: "", sortOrder: 0, isPublished: canPublish }}
       toolbar={`${items.length} question${items.length === 1 ? "" : "s"} · ${items.filter((f) => f.isPublished).length} published${categories.length ? ` · ${categories.length} categor${categories.length === 1 ? "y" : "ies"}` : ""}`}
+      search={(f) => `${f.question} ${f.answer} ${f.category ?? ""}`}
+      searchPlaceholder="Search questions and answers"
+      segments={segments}
+      emptyIcon={<HelpCircle className="h-7 w-7" />}
+      emptyTitle="No FAQs yet"
+      emptyText="Add the questions students and parents ask most. They appear on the website's FAQ page, grouped by category."
+      row={(f) => ({
+        leading: (
+          <IconTile tone={f.isPublished ? "lavender" : "neutral"}>
+            <HelpCircle />
+          </IconTile>
+        ),
+        title: f.question,
+        subtitle: truncate(f.answer, 140),
+        meta: (
+          <>
+            {f.category && <Badge tone="navy">{f.category}</Badge>}
+            {f.isPublished ? <Badge tone="success">Published</Badge> : <Badge tone="neutral">Hidden</Badge>}
+          </>
+        ),
+      })}
       columns={[
         {
           header: "Question",
           render: (f) => (
             <span className="block max-w-xl">
               <span className="block font-semibold text-ink">{f.question}</span>
-              <span className="block text-xs text-muted">{truncate(f.answer, 160)}</span>
+              <span className="mt-0.5 block text-body-sm text-muted">{truncate(f.answer, 160)}</span>
             </span>
           ),
         },
-        { header: "Category", render: (f) => (f.category ? <Badge tone="navy">{f.category}</Badge> : <span className="text-xs text-muted">—</span>) },
+        { header: "Category", render: (f) => (f.category ? <Badge tone="navy">{f.category}</Badge> : <span className="text-caption text-muted">—</span>) },
         { header: "Visibility", render: (f) => (f.isPublished ? <Badge tone="success">Published</Badge> : <Badge tone="neutral">Hidden</Badge>) },
       ]}
-      extraActions={(f) => (canEdit ? <QuickToggle endpoint={`/api/admin/faqs/${f.id}`} body={toValues(f)} field="isPublished" onLabel="Publish" offLabel="Unpublish" disabled={!canPublish} title={canPublish ? undefined : "Requires the Publish permission"} /> : null)}
-      emptyText="No FAQs yet. Add the questions students and parents ask most."
+      toggles={[
+        {
+          field: "isPublished",
+          onLabel: "Publish",
+          offLabel: "Unpublish",
+          icon: <Eye className="h-5 w-5" />,
+          disabled: !canPublish,
+          title: "Requires the Publish permission",
+        },
+      ]}
     />
   );
 }

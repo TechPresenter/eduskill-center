@@ -14,6 +14,8 @@ import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/t
 import { orNotFound } from "@/components/admin/shared/server";
 import { CourseHeaderActions } from "@/components/admin/courses/course-actions";
 import { parseSyllabus } from "@/app/admin/courses/syllabus";
+import { IconTile, RecordIdentity } from "@/components/admin/locations/list-kit";
+import { withBasePath } from "@/lib/base-path";
 
 export const metadata: Metadata = { title: "Course · Foundation Admin" };
 
@@ -31,6 +33,22 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
   return (
     <div className="space-y-6">
+      {/* Identity and status first on phones, where the app bar only has room for a code. */}
+      <RecordIdentity
+        lead={<IconTile icon={<DynamicIcon name={course.icon ?? undefined} />} size="lg" />}
+        title={course.name}
+        meta={<span className="font-mono font-semibold text-navy">{course.code}</span>}
+        badges={
+          <>
+            <StatusBadge status={course.status} />
+            {course.isFeatured && (
+              <Badge tone="orange">
+                <Star className="h-3.5 w-3.5" /> Featured
+              </Badge>
+            )}
+          </>
+        }
+      />
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-3">
@@ -66,19 +84,6 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         actions={<CourseHeaderActions course={{ id: course.id, code: course.code, name: course.name, status: course.status, batches: course._count.batches, applications: course._count.applications }} perms={perms} />}
       />
 
-      {/* The app bar shows only the course code on phones – keep the name and status in the page. */}
-      <div className="flex flex-wrap items-center gap-2 lg:hidden">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">
-          <DynamicIcon name={course.icon ?? undefined} className="h-4 w-4" />
-        </span>
-        <h2 className="text-h4 min-w-0 text-navy">{course.name}</h2>
-        <StatusBadge status={course.status} />
-        {course.isFeatured && (
-          <Badge tone="orange">
-            <Star className="h-3.5 w-3.5" /> Featured
-          </Badge>
-        )}
-      </div>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-6">
         <StatsCard label="Centers offering" value={course.centers.length} icon={<Building2 className="h-5 w-5" />} tone="navy" />
@@ -192,7 +197,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         <div className="space-y-4">
           {course.image && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={course.image} alt={course.name} className="aspect-[4/3] w-full rounded-card border border-line object-cover" />
+            <img src={withBasePath(course.image)} alt={course.name} className="aspect-[4/3] w-full rounded-card border border-line object-cover" />
           )}
           <Card>
             <CardHeader title="Fees" />

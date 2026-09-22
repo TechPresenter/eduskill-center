@@ -1,10 +1,11 @@
 "use client";
 
+import { Eye, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/misc";
+import { withBasePath } from "@/lib/base-path";
 import { truncate } from "@/lib/utils";
 import { EntityManager } from "@/components/admin/content/entity-manager";
-import { QuickToggle } from "@/components/admin/content/toggle-action";
 import type { FieldDef, FormValues } from "@/components/admin/content/fields";
 
 export interface StoryRow {
@@ -73,16 +74,37 @@ export function StoriesManager({ items, courses, centers, canEdit, canPublish }:
       toValues={toValues}
       emptyValues={{ studentName: "", photoUrl: "", courseId: "", courseName: "", centerId: "", centerName: "", location: "", story: "", achievement: "", isPublished: false, isFeatured: false, sortOrder: 0 }}
       addLabel="Add success story"
+      itemLabelPlural="stories"
+      search={(s) => `${s.studentName} ${s.location ?? ""} ${s.achievement ?? ""} ${s.course?.name ?? s.courseName ?? ""} ${s.center?.name ?? s.centerName ?? ""}`}
+      searchPlaceholder="Search by student, course or center"
+      segments={[
+        { value: "published", label: "Published", test: (s) => s.isPublished },
+        { value: "draft", label: "Draft", test: (s) => !s.isPublished },
+        { value: "featured", label: "Featured", test: (s) => s.isFeatured },
+      ]}
+      emptyIcon={<Star className="h-7 w-7" />}
+      emptyTitle="No success stories yet"
+      row={(s) => ({
+        leading: <Avatar name={s.studentName} src={s.photoUrl ? withBasePath(s.photoUrl) : null} size={44} />,
+        title: s.studentName,
+        subtitle: s.achievement ?? truncate(s.story, 100),
+        meta: (
+          <>
+            {s.isPublished ? <Badge tone="success">Published</Badge> : <Badge tone="neutral">Draft</Badge>}
+            {s.isFeatured && <Badge tone="orange">Featured</Badge>}
+          </>
+        ),
+      })}
       toolbar={`${items.length} stor${items.length === 1 ? "y" : "ies"} · ${items.filter((s) => s.isPublished).length} published · ${items.filter((s) => s.isFeatured).length} featured`}
       columns={[
         {
           header: "Student",
           render: (s) => (
             <span className="flex items-center gap-3">
-              <Avatar name={s.studentName} src={s.photoUrl} size={36} />
+              <Avatar name={s.studentName} src={s.photoUrl ? withBasePath(s.photoUrl) : null} size={36} />
               <span className="min-w-0">
                 <span className="block font-semibold text-ink">{s.studentName}</span>
-                <span className="block text-xs text-muted">{s.location ?? "—"}</span>
+                <span className="block text-caption text-muted">{s.location ?? "—"}</span>
               </span>
             </span>
           ),
@@ -90,13 +112,13 @@ export function StoriesManager({ items, courses, centers, canEdit, canPublish }:
         {
           header: "Course / center",
           render: (s) => (
-            <span className="block text-xs">
+            <span className="block text-body-sm">
               <span className="block text-ink">{s.course?.name ?? s.courseName ?? "—"}</span>
               <span className="text-muted">{s.center?.name ?? s.centerName ?? "—"}</span>
             </span>
           ),
         },
-        { header: "Story", render: (s) => <span className="block max-w-md text-xs text-muted">{s.achievement ? <span className="block font-medium text-ink">{s.achievement}</span> : null}{truncate(s.story, 120)}</span> },
+        { header: "Story", render: (s) => <span className="block max-w-md text-body-sm text-muted">{s.achievement ? <span className="block font-medium text-ink">{s.achievement}</span> : null}{truncate(s.story, 120)}</span> },
         {
           header: "Visibility",
           render: (s) => (
@@ -108,15 +130,11 @@ export function StoriesManager({ items, courses, centers, canEdit, canPublish }:
         },
         { header: "Order", render: (s) => <span className="tabular-nums">{s.sortOrder}</span>, className: "text-center" },
       ]}
-      extraActions={(s) =>
-        canEdit ? (
-          <>
-            <QuickToggle endpoint={`/api/admin/cms/stories/${s.id}`} body={toValues(s)} field="isPublished" onLabel="Publish" offLabel="Unpublish" disabled={!canPublish} title={canPublish ? undefined : "Requires the Publish permission"} />
-            <QuickToggle endpoint={`/api/admin/cms/stories/${s.id}`} body={toValues(s)} field="isFeatured" onLabel="Feature" offLabel="Unfeature" />
-          </>
-        ) : null
-      }
-      emptyText="No success stories yet. Add stories of students who completed training."
+      toggles={[
+        { field: "isPublished", onLabel: "Publish", offLabel: "Unpublish", icon: <Eye className="h-5 w-5" />, disabled: !canPublish, title: "Requires the Publish permission" },
+        { field: "isFeatured", onLabel: "Feature", offLabel: "Unfeature", icon: <Star className="h-5 w-5" /> },
+      ]}
+      emptyText="Add stories of students who completed training. Featured stories appear on the homepage."
     />
   );
 }

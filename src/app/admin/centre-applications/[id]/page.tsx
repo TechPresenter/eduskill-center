@@ -269,7 +269,7 @@ export default async function CentreApplicationDetailPage({ params }: { params: 
                       </TD>
                       <TD mobile="actions">
                         <div className="flex items-center gap-2 max-md:w-full max-md:justify-end">
-                          <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold text-navy hover:underline md:min-h-0 md:px-0">
+                          <a href={d.url} target="_blank" rel="noopener noreferrer" className="ring-focus inline-flex min-h-11 items-center rounded-md px-2 text-body-sm font-semibold text-navy hover:underline md:min-h-0 md:px-0">
                             View
                           </a>
                           {app.status !== "APPROVED" && <CentreDocumentActions applicationId={app.id} docId={d.id} name={titleCase(d.type)} status={d.status} canVerify={can.verify} />}
@@ -383,7 +383,7 @@ export default async function CentreApplicationDetailPage({ params }: { params: 
                 <KeyValue label="Status" value={<StatusBadge status={app.center.status} />} />
                 <Link
                   href={`/admin/centers/${app.center.id}`}
-                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-navy px-4 text-sm font-semibold text-white tap-highlight-none hover:bg-navy-dark lg:h-11"
+                  className="ring-focus inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-navy px-4 text-body-sm font-semibold text-white tap-highlight-none transition-colors duration-micro hover:bg-navy-dark active:scale-[0.98] motion-reduce:transition-none lg:h-11"
                 >
                   <Building2 className="h-4 w-4" aria-hidden /> Open training centre
                 </Link>

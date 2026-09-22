@@ -890,7 +890,7 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
                 <>
                   <ul className="divide-y divide-line overflow-hidden rounded-md border border-line">
                     {detail.feeLines.length === 0 ? (
-                      <li className="p-4 text-body-sm font-semibold text-green-700">This course is free of cost.</li>
+                      <li className="p-4 text-body-sm font-semibold text-success-dark">This course is free of cost.</li>
                     ) : (
                       <>
                         {detail.feeLines.map((l) => (

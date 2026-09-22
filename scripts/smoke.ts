@@ -40,7 +40,7 @@ const STUDENT_ROUTES = [
 ];
 
 const TRAINER_ROUTES = [
-  "/trainer/dashboard", "/trainer/profile", "/trainer/assignments", "/trainer/batches", "/trainer/students", "/trainer/timetable", "/trainer/attendance",
+  "/trainer/dashboard", "/trainer/profile", "/trainer/profile/documents", "/trainer/assignments", "/trainer/batches", "/trainer/students", "/trainer/timetable", "/trainer/attendance",
   "/trainer/coursework", "/trainer/assessments", "/trainer/materials", "/trainer/announcements", "/trainer/notifications", "/trainer/settings",
 ];
 

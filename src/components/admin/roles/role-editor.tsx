@@ -14,6 +14,9 @@ import { useApiForm } from "@/components/admin/shared/use-api-form";
 import { ConfirmAction } from "@/components/admin/shared/confirm-action";
 import { PermissionMatrix } from "@/components/admin/shared/permission-matrix";
 import { StickyActionBar } from "@/components/ui/sticky-action-bar";
+import { Fab } from "@/components/ui/fab";
+import { SaveStatus } from "@/components/admin/content/app-list";
+import { useUnsavedChangesWarning } from "@/components/admin/content/use-unsaved";
 
 export interface RoleData {
   id: string;
@@ -47,9 +50,13 @@ function RoleFields({ name, setName, description, setDescription, permissions, s
   );
 }
 
-/** "Create role" button + modal; navigates to the new role on success. */
-export function CreateRoleButton({ disabled }: { disabled?: boolean }) {
+/**
+ * "Create role" button + editor; navigates to the new role on success. `fab` renders the phone
+ * floating action button instead of the header button (both open the same sheet).
+ */
+export function CreateRoleButton({ disabled, variant = "button" }: { disabled?: boolean; variant?: "button" | "fab" }) {
   const router = useRouter();
+  const formId = React.useId();
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
@@ -67,21 +74,33 @@ export function CreateRoleButton({ disabled }: { disabled?: boolean }) {
   };
   return (
     <>
-      <Button size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setOpen(true)} disabled={disabled}>
-        Create role
-      </Button>
-      <Modal open={open} onClose={() => !loading && setOpen(false)} title="Create a role" description="Roles bundle permissions. Assign them to staff from the staff profile." size="xl">
-        <form onSubmit={onSubmit} className="space-y-5" noValidate>
-          {error && Object.keys(fieldErrors).length === 0 && <Alert tone="danger">{error}</Alert>}
-          <RoleFields name={name} setName={setName} description={description} setDescription={setDescription} permissions={permissions} setPermissions={setPermissions} fieldErrors={fieldErrors} clearField={clearField} />
-          <div className="flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end">
+      {variant === "fab" ? (
+        disabled ? null : <Fab aria-label="Create role" icon={<Plus className="h-6 w-6" aria-hidden />} onClick={() => setOpen(true)} />
+      ) : (
+        <Button size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setOpen(true)} disabled={disabled}>
+          Create role
+        </Button>
+      )}
+      <Modal
+        open={open}
+        onClose={() => !loading && setOpen(false)}
+        title="Create a role"
+        description="Roles bundle permissions. Assign them to staff from the staff profile."
+        size="xl"
+        footer={
+          <>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" loading={loading}>
-              Create role
+            <Button type="submit" form={formId} loading={loading} leftIcon={<Save className="h-4 w-4" />}>
+              Create role · {permissions.length}
             </Button>
-          </div>
+          </>
+        }
+      >
+        <form id={formId} onSubmit={onSubmit} className="space-y-5" noValidate>
+          {error && Object.keys(fieldErrors).length === 0 && <Alert tone="danger">{error}</Alert>}
+          <RoleFields name={name} setName={setName} description={description} setDescription={setDescription} permissions={permissions} setPermissions={setPermissions} fieldErrors={fieldErrors} clearField={clearField} />
         </form>
       </Modal>
     </>
@@ -101,6 +120,9 @@ export function RoleEditor({ role, editable, deletable }: { role: RoleData; edit
     setPermissions(role.permissions);
   };
   const dirty = name !== role.name || description !== (role.description ?? "") || permissions.length !== role.permissions.length || permissions.some((p) => !role.permissions.includes(p));
+  useUnsavedChangesWarning(dirty && editable);
+  const state = loading ? "saving" : error ? "error" : dirty ? "dirty" : "clean";
+  const idle = `${role.permissions.length} permission${role.permissions.length === 1 ? "" : "s"} saved`;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +150,8 @@ export function RoleEditor({ role, editable, deletable }: { role: RoleData; edit
             )}
           </div>
           {/* Desktop action row; phones use the sticky bar below so Save is always reachable. */}
-          <div className="hidden gap-2 lg:flex">
+          <div className="hidden items-center gap-3 lg:flex">
+            <SaveStatus state={state} idle={idle} />
             <Button type="button" variant="outline" onClick={reset} disabled={!dirty || loading}>
               Discard
             </Button>
@@ -139,13 +162,16 @@ export function RoleEditor({ role, editable, deletable }: { role: RoleData; edit
         </div>
       )}
       {editable && (
-        <StickyActionBar desktop="hidden">
-          <Button type="button" variant="outline" onClick={reset} disabled={!dirty || loading} className="flex-1">
-            Discard
-          </Button>
-          <Button type="submit" loading={loading} disabled={!dirty} leftIcon={<Save className="h-4 w-4" />} className="flex-2">
-            Save role
-          </Button>
+        <StickyActionBar desktop="hidden" innerClassName="flex-col">
+          <SaveStatus state={state} idle={idle} className="justify-center" />
+          <div className="flex w-full gap-2">
+            <Button type="button" variant="outline" onClick={reset} disabled={!dirty || loading} className="flex-1">
+              Discard
+            </Button>
+            <Button type="submit" loading={loading} disabled={!dirty} leftIcon={<Save className="h-4 w-4" />} className="flex-2">
+              Save role
+            </Button>
+          </div>
         </StickyActionBar>
       )}
     </form>

@@ -44,13 +44,16 @@ export interface BottomNavProps {
   className?: string;
 }
 
-/** 56px row. One 150ms colour change, one focus treatment — inset, because the bar has no room for an offset ring. */
+/**
+ * 56px row. The press lands on the icon pill (a 150ms squeeze + tint, the Material 3 feel) rather than
+ * the whole cell; one focus treatment — inset, because the bar has no room for an offset ring.
+ */
 const ITEM_CLASS =
-  "flex min-h-14 w-full flex-col items-center justify-center gap-1 px-1 pt-1.5 pb-1.5 tap-highlight-none outline-none transition-colors duration-micro active:bg-surface/80 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orange motion-reduce:transition-none";
+  "group flex min-h-14 w-full flex-col items-center justify-center gap-1 px-1 pt-1.5 pb-1.5 tap-highlight-none outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orange";
 
 function Badge({ count }: { count: number }) {
   return (
-    <span className="absolute -top-0.5 right-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-orange px-1 text-caption leading-none font-bold text-white ring-2 ring-white" aria-hidden>
+    <span className="absolute -top-0.5 right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-orange px-1 text-caption leading-none font-bold text-white tabular-nums ring-2 ring-white" aria-hidden>
       {count > 99 ? "99+" : count}
     </span>
   );
@@ -82,11 +85,16 @@ export function BottomNav({ items, pathname, onMore, menuOpen = false, className
           const on = isMenu ? menuOpen : active === item;
           const inner = (
             <>
-              <span className={cn("relative flex h-8 w-14 items-center justify-center rounded-full transition-colors duration-micro motion-reduce:transition-none", on ? "bg-orange-light text-orange" : "text-muted")}>
-                <item.icon className="h-5.5 w-5.5" strokeWidth={on ? 2.25 : 2} aria-hidden />
+              <span
+                className={cn(
+                  "relative flex h-8 w-14 items-center justify-center rounded-full transition duration-micro ease-soft group-active:scale-95 motion-reduce:transition-none motion-reduce:group-active:scale-100",
+                  on ? "bg-orange-light text-orange" : "text-muted group-active:bg-lavender"
+                )}
+              >
+                <item.icon className="size-5.5" strokeWidth={on ? 2.25 : 2} aria-hidden />
                 {item.badge ? <Badge count={item.badge} /> : null}
               </span>
-              <span className={cn("max-w-full truncate text-caption leading-none font-semibold tracking-wide", on ? "text-orange" : "text-muted")}>{item.label}</span>
+              <span className={cn("max-w-full truncate text-caption leading-none tracking-wide transition-colors duration-micro motion-reduce:transition-none", on ? "font-bold text-orange" : "font-semibold text-muted")}>{item.label}</span>
             </>
           );
           return (

@@ -4,6 +4,7 @@ import * as React from "react";
 import { Check, Eye, EyeOff, Lock, Minus } from "lucide-react";
 import { inputClasses } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { PASSWORD_RULES } from "@/lib/auth/password-rules";
 
 /**
  * The one password field for the whole product — login, register, reset, and any portal/admin
@@ -69,18 +70,8 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
 
 /* ───────────── Password rules ───────────── */
 
-/**
- * The three checks are a deliberate mirror of `passwordIssue()` in `src/lib/auth/password.ts`, which
- * stays the source of truth (the server rejects anything that fails it). They are duplicated rather
- * than imported because that module pulls in bcryptjs at the top level, and bcrypt has no business in
- * a browser bundle. A request to split the rules into a bcrypt-free module is filed alongside this
- * work; until then, these two lists change together.
- */
-const RULES: { id: string; label: string; test: (v: string) => boolean }[] = [
-  { id: "len", label: "8+ characters", test: (v) => v.length >= 8 },
-  { id: "letter", label: "a letter", test: (v) => /[A-Za-z]/.test(v) },
-  { id: "number", label: "a number", test: (v) => /\d/.test(v) },
-];
+/** The server's own rule (bcrypt-free module), so the checklist and the API can never disagree. */
+const RULES = PASSWORD_RULES;
 
 /** True when the value satisfies every rule shown by `PasswordRules` (and so by the server). */
 export function passwordMeetsRules(value: string): boolean {

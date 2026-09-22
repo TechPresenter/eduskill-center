@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Search, Send, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input, Textarea, Checkbox } from "@/components/ui/input";
+import { Bell, Mail, MessageCircle, MessageSquare, Search, Send, X } from "lucide-react";
+import { Button, IconButton } from "@/components/ui/button";
+import { StickyActionBar } from "@/components/ui/sticky-action-bar";
+import { Input, Textarea, CheckboxCards } from "@/components/ui/input";
 import { Field } from "@/components/ui/form";
 import { Alert } from "@/components/ui/feedback";
 import { Badge } from "@/components/ui/badge";
@@ -76,7 +77,7 @@ export function SendMessageForm({ enabled }: { enabled: { EMAIL: boolean; SMS: b
   };
 
   return (
-    <form onSubmit={submit} className="card max-w-3xl space-y-5 p-5" noValidate>
+    <form onSubmit={submit} className="card card-p max-w-3xl space-y-5" noValidate>
       {formError && <Alert tone="danger">{formError}</Alert>}
       {sent && (
         <Alert tone="success" title="Message sent">
@@ -86,17 +87,24 @@ export function SendMessageForm({ enabled }: { enabled: { EMAIL: boolean; SMS: b
 
       <Field label="Recipient" htmlFor="sm-q" required error={errors.userId} hint={!user ? "Search by name, email, mobile, Student ID or Trainer ID." : undefined}>
         {user ? (
-          <div className="flex items-center gap-3 rounded-xl border border-line bg-surface/50 p-3">
-            <Avatar name={user.name} size={36} />
+          <div className="flex items-center gap-3 rounded-card border border-line bg-surface/50 p-3">
+            <Avatar name={user.name} size={44} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-ink">
-                {user.name} <Badge tone="navy" className="ml-1">{titleCase(user.role)}</Badge>
-              </p>
-              <p className="truncate text-xs text-muted">{[user.code, user.email, user.mobile].filter(Boolean).join(" · ")}</p>
+              <p className="truncate text-body font-semibold text-ink">{user.name}</p>
+              <p className="truncate text-caption text-muted">{[user.code, user.email, user.mobile].filter(Boolean).join(" · ")}</p>
+              <Badge tone="navy" className="mt-1">
+                {titleCase(user.role)}
+              </Badge>
             </div>
-            <button type="button" onClick={() => { setUser(null); setQ(""); }} className="rounded-lg p-2 text-muted hover:bg-white hover:text-danger" aria-label="Change recipient">
-              <X className="h-4 w-4" />
-            </button>
+            <IconButton
+              icon={<X className="h-4 w-4" />}
+              onClick={() => {
+                setUser(null);
+                setQ("");
+              }}
+              aria-label="Change recipient"
+              className="hover:bg-white hover:text-danger"
+            />
           </div>
         ) : (
           <div className="relative">
@@ -109,23 +117,23 @@ export function SendMessageForm({ enabled }: { enabled: { EMAIL: boolean; SMS: b
               }}
               placeholder="Start typing…" leftIcon={<Search className="h-4 w-4" />} autoComplete="off" invalid={!!errors.userId} />
             {(hits.length > 0 || searching) && q.trim().length >= 2 && (
-              <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-line bg-white p-1 shadow-card-hover" role="listbox">
-                {searching && hits.length === 0 && <li className="px-3 py-2 text-sm text-muted">Searching…</li>}
+              <ul className="absolute z-overlay mt-1 max-h-72 w-full overflow-y-auto rounded-card border border-line bg-white p-1 shadow-e3" role="listbox" aria-label="Matching users">
+                {searching && hits.length === 0 && <li className="px-3 py-3 text-body-sm text-muted">Searching…</li>}
                 {hits.map((h) => (
                   <li key={h.id}>
-                    <button type="button" role="option" aria-selected={false} onClick={() => { setUser(h); setHits([]); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-surface">
-                      <Avatar name={h.name} size={30} />
+                    <button type="button" role="option" aria-selected={false} onClick={() => { setUser(h); setHits([]); }} className="flex min-h-14 w-full items-center gap-3 rounded-md px-3 py-2 text-left tap-highlight-none transition-colors duration-micro active:bg-surface hover:bg-surface motion-reduce:transition-none">
+                      <Avatar name={h.name} size={36} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-ink">
-                          {h.name} <span className="text-xs text-muted">· {titleCase(h.role)}</span>
+                        <span className="block truncate text-body-sm font-semibold text-ink">
+                          {h.name} <span className="font-normal text-muted">· {titleCase(h.role)}</span>
                         </span>
-                        <span className="block truncate text-xs text-muted">{[h.code, h.email, h.mobile].filter(Boolean).join(" · ")}</span>
+                        <span className="block truncate text-caption text-muted">{[h.code, h.email, h.mobile].filter(Boolean).join(" · ")}</span>
                       </span>
                       {h.status !== "ACTIVE" && <Badge tone="warning">{titleCase(h.status)}</Badge>}
                     </button>
                   </li>
                 ))}
-                {!searching && hits.length === 0 && <li className="px-3 py-2 text-sm text-muted">No users found.</li>}
+                {!searching && hits.length === 0 && <li className="px-3 py-3 text-body-sm text-muted">No users found.</li>}
               </ul>
             )}
           </div>
@@ -133,12 +141,18 @@ export function SendMessageForm({ enabled }: { enabled: { EMAIL: boolean; SMS: b
       </Field>
 
       <Field label="Channels" error={errors.channels} hint="In-app is always delivered. Other channels must be enabled in Settings → Communication.">
-        <div className="flex flex-wrap gap-4">
-          <Checkbox label="In-app" checked disabled />
-          <Checkbox label="Email" checked={!!channels.EMAIL} onChange={(e) => setChannels((c) => ({ ...c, EMAIL: e.target.checked }))} disabled={!enabled.EMAIL || (!!user && !user.email)} description={!enabled.EMAIL ? "Not enabled" : user && !user.email ? "No email on file" : undefined} />
-          <Checkbox label="SMS" checked={!!channels.SMS} onChange={(e) => setChannels((c) => ({ ...c, SMS: e.target.checked }))} disabled={!enabled.SMS || (!!user && !user.mobile)} description={!enabled.SMS ? "Not enabled" : user && !user.mobile ? "No mobile on file" : undefined} />
-          <Checkbox label="WhatsApp" checked={!!channels.WHATSAPP} onChange={(e) => setChannels((c) => ({ ...c, WHATSAPP: e.target.checked }))} disabled={!enabled.WHATSAPP || (!!user && !user.mobile)} description={!enabled.WHATSAPP ? "Not enabled" : user && !user.mobile ? "No mobile on file" : undefined} />
-        </div>
+        <CheckboxCards
+          name="channels"
+          columns={2}
+          value={["IN_APP", ...Object.entries(channels).filter(([, v]) => v).map(([k]) => k)]}
+          onChange={(next) => setChannels({ EMAIL: next.includes("EMAIL"), SMS: next.includes("SMS"), WHATSAPP: next.includes("WHATSAPP") })}
+          options={[
+            { value: "IN_APP", label: "In-app", description: "Always delivered", icon: <Bell className="h-5 w-5" />, disabled: true },
+            { value: "EMAIL", label: "Email", icon: <Mail className="h-5 w-5" />, disabled: !enabled.EMAIL || (!!user && !user.email), description: !enabled.EMAIL ? "Not enabled" : user && !user.email ? "No email on file" : undefined },
+            { value: "SMS", label: "SMS", icon: <MessageSquare className="h-5 w-5" />, disabled: !enabled.SMS || (!!user && !user.mobile), description: !enabled.SMS ? "Not enabled" : user && !user.mobile ? "No mobile on file" : undefined },
+            { value: "WHATSAPP", label: "WhatsApp", icon: <MessageCircle className="h-5 w-5" />, disabled: !enabled.WHATSAPP || (!!user && !user.mobile), description: !enabled.WHATSAPP ? "Not enabled" : user && !user.mobile ? "No mobile on file" : undefined },
+          ]}
+        />
       </Field>
 
       <Field label="Subject" htmlFor="sm-subject" required error={errors.subject}>
@@ -147,11 +161,11 @@ export function SendMessageForm({ enabled }: { enabled: { EMAIL: boolean; SMS: b
       <Field label="Message" htmlFor="sm-body" required error={errors.body}>
         <Textarea id="sm-body" value={body} onChange={(e) => setBody(e.target.value)} rows={6} invalid={!!errors.body} required />
       </Field>
-      <div className="flex justify-end border-t border-line pt-4">
-        <Button type="submit" loading={busy} leftIcon={<Send className="h-4 w-4" />}>
-          Send message
+      <StickyActionBar innerClassName="lg:justify-end lg:border-t lg:border-line lg:pt-4">
+        <Button type="submit" loading={busy} leftIcon={<Send className="h-4 w-4" />} className="flex-1 lg:flex-none">
+          {user ? `Send to ${user.name.split(" ")[0]}` : "Send message"}
         </Button>
-      </div>
+      </StickyActionBar>
     </form>
   );
 }

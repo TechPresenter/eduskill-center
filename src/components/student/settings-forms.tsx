@@ -40,7 +40,7 @@ function passwordStrength(value: string): 0 | 1 | 2 | 3 {
 const STRENGTH = [
   { label: "", bar: "", text: "" },
   { label: "Too weak", bar: "bg-danger", text: "text-danger" },
-  { label: "Good", bar: "bg-warning", text: "text-amber-700" },
+  { label: "Good", bar: "bg-warning", text: "text-warning-dark" },
   { label: "Strong", bar: "bg-success", text: "text-success-dark" },
 ] as const;
 

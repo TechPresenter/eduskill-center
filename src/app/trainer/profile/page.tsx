@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Building2, CalendarDays, ChevronRight, IdCard, Mail, MapPin, Phone, Settings, UsersRound } from "lucide-react";
+import { Building2, CalendarDays, ChevronRight, FolderOpen, IdCard, Mail, MapPin, Phone, Settings, UsersRound } from "lucide-react";
 import { requireTrainer } from "@/lib/auth/guards";
 import { formatDate, titleCase } from "@/lib/utils";
-import { trainerLocationLabel, trainerProfile } from "@/server/trainer-scope";
+import { trainerDocumentAttention, trainerLocationLabel, trainerProfile } from "@/server/trainer-scope";
 import { PageHeader, Avatar, KeyValue } from "@/components/ui/misc";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { ButtonLink } from "@/components/ui/button";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { InactiveBanner } from "@/components/trainer/inactive-banner";
 import { ProfileEditSheet, ProfileForm } from "./profile-form";
@@ -14,15 +15,16 @@ export const metadata: Metadata = { title: "My Profile" };
 
 const ROW = "flex min-h-14 items-center gap-3 px-4 py-2.5 text-left tap-highlight-none transition-colors duration-micro active:bg-surface motion-reduce:transition-none";
 
-function HubRow({ href, icon, label, hint }: { href: string; icon: React.ReactNode; label: string; hint?: string }) {
+function HubRow({ href, icon, label, hint, badge }: { href: string; icon: React.ReactNode; label: string; hint?: string; badge?: React.ReactNode }) {
   return (
     <li>
       <Link href={href} className={ROW}>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lavender text-navy">{icon}</span>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-lavender text-navy">{icon}</span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-body font-semibold text-ink">{label}</span>
           {hint && <span className="block truncate text-caption text-muted">{hint}</span>}
         </span>
+        {badge}
         <ChevronRight className="h-5 w-5 shrink-0 text-muted" aria-hidden />
       </Link>
     </li>
@@ -31,7 +33,9 @@ function HubRow({ href, icon, label, hint }: { href: string; icon: React.ReactNo
 
 export default async function TrainerProfilePage() {
   const user = await requireTrainer();
-  const p = await trainerProfile(user.trainer.id);
+  const [p, docs] = await Promise.all([trainerProfile(user.trainer.id), trainerDocumentAttention(user.trainer.id)]);
+  const docsHint = docs.total ? [docs.missing && `${docs.missing} required missing`, docs.rejected && `${docs.rejected} to upload again`].filter(Boolean).join(" · ") : "Resume and certificates on file";
+  const docsBadge = docs.total ? <Badge tone="orange" className="shrink-0">{docs.total}</Badge> : null;
   const location = trainerLocationLabel(p);
   const initial = { bio: p.bio ?? "", qualification: p.qualification ?? "", skills: p.skills, languages: p.languages, avatarUrl: p.user.avatarUrl };
 
@@ -98,6 +102,7 @@ export default async function TrainerProfilePage() {
         <section aria-label="Shortcuts">
           <h3 className="mb-2 px-1 text-overline text-muted">More</h3>
           <ul className="card divide-y divide-line overflow-hidden">
+            <HubRow href="/trainer/profile/documents" icon={<FolderOpen className="h-5 w-5" aria-hidden />} label="My documents" hint={docsHint} badge={docsBadge} />
             <HubRow href="/trainer/assignments" icon={<Building2 className="h-5 w-5" aria-hidden />} label="My assignments" hint="Centers, courses and batches" />
             <HubRow href="/trainer/batches" icon={<UsersRound className="h-5 w-5" aria-hidden />} label="My batches" hint="Everything you teach" />
             <HubRow href="/trainer/timetable" icon={<CalendarDays className="h-5 w-5" aria-hidden />} label="Timetable" hint="Your week at a glance" />
@@ -126,6 +131,20 @@ export default async function TrainerProfilePage() {
               {p.application && <KeyValue label="Experience" value={`${p.application.experienceYears} yrs work · ${p.application.teachingExperienceYears} yrs teaching`} />}
               {p.application?.availability && <KeyValue label="Availability" value={p.application.availability} />}
               {p.application && <KeyValue label="Preferred mode" value={titleCase(p.application.trainingMode)} />}
+            </div>
+            <div className="mt-6 w-full rounded-lg border border-line bg-surface/60 p-4 text-left">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-lavender text-navy" aria-hidden>
+                  <FolderOpen className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-body font-semibold text-ink">My documents</p>
+                  <p className={docs.total ? "text-caption font-semibold text-orange" : "text-caption text-muted"}>{docsHint}</p>
+                </div>
+              </div>
+              <ButtonLink href="/trainer/profile/documents" variant={docs.total ? "primary" : "outline"} size="sm" fullWidth className="mt-3">
+                {docs.total ? "Review documents" : "View or update documents"}
+              </ButtonLink>
             </div>
           </CardBody>
         </Card>

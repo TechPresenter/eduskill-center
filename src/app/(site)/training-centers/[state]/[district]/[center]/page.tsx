@@ -150,13 +150,13 @@ export default async function CenterDetailPage({ params }: Props) {
             ) : (
               <ul className="mt-6 grid gap-4 sm:grid-cols-2">
                 {c.courses.map(({ course }) => (
-                  <li key={course.id} className="card card-hover flex gap-4 card-p">
+                  <li key={course.id} className="card card-hover relative flex gap-4 card-p">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-orange-light text-orange">
                       <DynamicIcon name={course.icon ?? undefined} className="h-5 w-5" aria-hidden />
                     </span>
                     <div className="min-w-0 flex-1">
                       <h3 className="text-h4 text-navy">
-                        <Link href={`/courses/${course.slug}`} className="transition-colors duration-micro hover:text-orange motion-reduce:transition-none">
+                        <Link href={`/courses/${course.slug}`} className="ring-focus transition-colors duration-micro after:absolute after:inset-0 after:rounded-card hover:text-orange motion-reduce:transition-none">
                           {course.name}
                         </Link>
                       </h3>
@@ -167,7 +167,7 @@ export default async function CenterDetailPage({ params }: Props) {
                         <span className="font-semibold text-navy tabular-nums">{Number(course.courseFee) > 0 ? formatINR(course.courseFee) : "Free"}</span>
                         {course.scholarshipAvailable && <Badge tone="orange">Scholarship</Badge>}
                       </p>
-                      <Link href={applyHref(user, { centerId: c.id, courseId: course.id })} className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-body-sm font-semibold text-orange ring-focus hover:underline">
+                      <Link href={applyHref(user, { centerId: c.id, courseId: course.id })} className="relative z-10 mt-2 inline-flex min-h-11 items-center gap-1.5 text-body-sm font-semibold text-orange ring-focus hover:underline">
                         Apply for this course <ArrowRight className="h-4 w-4" aria-hidden />
                       </Link>
                     </div>
@@ -203,7 +203,7 @@ export default async function CenterDetailPage({ params }: Props) {
                           <span className="block text-xs text-muted">{b.code}</span>
                         </TD>
                         <TD>
-                          <Link href={`/courses/${b.course.slug}`} className="hover:text-orange">
+                          <Link href={`/courses/${b.course.slug}`} className="inline-flex min-h-11 items-center hover:text-orange">
                             {b.course.name}
                           </Link>
                         </TD>
@@ -342,7 +342,7 @@ export default async function CenterDetailPage({ params }: Props) {
                 {c.phone && (
                   <p className="flex items-center gap-3">
                     <Phone className="h-4.5 w-4.5 shrink-0 text-orange" aria-hidden />
-                    <a href={`tel:${c.phone.replace(/[^\d+]/g, "")}`} className="text-ink hover:text-orange">
+                    <a href={`tel:${c.phone.replace(/[^\d+]/g, "")}`} className="inline-flex min-h-11 items-center text-ink hover:text-orange">
                       {c.phone}
                     </a>
                   </p>
@@ -350,7 +350,7 @@ export default async function CenterDetailPage({ params }: Props) {
                 {waHref && (
                   <p className="flex items-center gap-3">
                     <MessageCircle className="h-4.5 w-4.5 shrink-0 text-orange" aria-hidden />
-                    <a href={waHref} target="_blank" rel="noopener noreferrer" className="text-ink hover:text-orange">
+                    <a href={waHref} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-ink hover:text-orange">
                       WhatsApp {c.whatsapp}
                     </a>
                   </p>
@@ -358,7 +358,7 @@ export default async function CenterDetailPage({ params }: Props) {
                 {c.email && (
                   <p className="flex items-center gap-3">
                     <Mail className="h-4.5 w-4.5 shrink-0 text-orange" aria-hidden />
-                    <a href={`mailto:${c.email}`} className="break-all text-ink hover:text-orange">
+                    <a href={`mailto:${c.email}`} className="inline-flex min-h-11 items-center break-all text-ink hover:text-orange">
                       {c.email}
                     </a>
                   </p>

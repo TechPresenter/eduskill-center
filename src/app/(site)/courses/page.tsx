@@ -41,7 +41,8 @@ export default async function CoursesPage({ searchParams }: Props) {
       <PageHero eyebrow={section.label} title={section.title} description={section.description} breadcrumbs={[{ label: "Home", href: "/" }, { label: "Courses" }]} />
       <section className="bg-white section-y">
         <div className="container-x">
-          <CourseCatalog courses={courses} categories={categories} applyHrefs={applyHrefs} initialCategory={initialCategory} />
+          {/* Keyed so a header link from /courses?category=a to ?category=b re-applies the filter. */}
+          <CourseCatalog key={initialCategory ?? "all"} courses={courses} categories={categories} applyHrefs={applyHrefs} initialCategory={initialCategory} />
         </div>
       </section>
       <CtaBand title="Need help choosing a [[course]]?" description="Our team can suggest the right course based on your background and the centers near you." primary={{ label: "Contact Us", href: "/contact?type=ADMISSION" }} secondary={{ label: "Find a Training Center", href: "/training-centers" }} />

@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/ui/feedback";
 import { AdminListPage } from "@/components/admin/shared/list-page";
 import { FilterBar } from "@/components/admin/pickers/filter-bar";
 import { QueryTabs } from "@/components/admin/pickers/query-tabs";
+import { RowLead } from "@/components/admin/locations/list-kit";
 import { ExportButton } from "@/components/admin/pickers/export-button";
 import { flattenSearchParams, parseListQuery, withParams, type RawSearchParams } from "@/components/admin/pickers/search-params";
 
@@ -105,22 +106,29 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
               return (
                 <TR key={a.id}>
                   <TD primary>
-                    <span className="flex items-start justify-between gap-2">
-                      <Link href={`${base}/${a.id}`} className="font-mono text-caption font-semibold text-navy hover:underline">
-                        {a.applicationNo}
-                      </Link>
-                      {/* The status column is dropped on phones – show the badge in the card title instead. */}
-                      <span className="md:hidden">
-                        <StatusBadge status={a.status} />
-                      </span>
-                    </span>
+                    {/* Phones: an app list row led by the applicant, with the status trailing. */}
+                    <RowLead
+                      className="md:hidden"
+                      href={`${base}/${a.id}`}
+                      lead={<Avatar name={a.student.name} src={a.student.photoUrl} size={40} />}
+                      title={a.student.name}
+                      meta={
+                        <>
+                          <span className="font-mono font-semibold text-navy">{a.applicationNo}</span> · {a.course.name}
+                        </>
+                      }
+                      trailing={<StatusBadge status={a.status} />}
+                    />
+                    <Link href={`${base}/${a.id}`} className="hidden font-mono text-caption font-semibold text-navy hover:underline md:inline">
+                      {a.applicationNo}
+                    </Link>
                     {a.scholarshipRequested && (
                       <Badge tone={a.scholarshipAmount > 0 ? "success" : "warning"} className="mt-1">
                         {a.scholarshipAmount > 0 ? "Scholarship" : "Scholarship requested"}
                       </Badge>
                     )}
                   </TD>
-                  <TD label="Applicant">
+                  <TD label="Applicant" mobile="hidden">
                     <Link href={`/admin/students/${a.student.id}`} className="flex items-center justify-end gap-3 hover:text-navy md:justify-start">
                       <Avatar name={a.student.name} src={a.student.photoUrl} size={34} />
                       <span className="min-w-0 text-left">
@@ -144,7 +152,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
                   </TD>
                   <TD label="Fee" className="text-right tabular-nums">
                     <span className="block font-semibold">{formatINR(a.payableAmount)}</span>
-                    <span className={`text-caption ${due > 0 ? "text-amber-700" : "text-success-dark"}`}>{a.payableAmount === 0 ? "Free" : due > 0 ? `Due ${formatINR(due)}` : "Paid"}</span>
+                    <span className={`text-caption ${due > 0 ? "text-warning-dark" : "text-success-dark"}`}>{a.payableAmount === 0 ? "Free" : due > 0 ? `Due ${formatINR(due)}` : "Paid"}</span>
                   </TD>
                   <TD mobile="hidden">
                     <StatusBadge status={a.status} />

@@ -11,14 +11,33 @@ import { EmptyState, ErrorState, SkeletonList } from "@/components/ui/feedback";
 import { toast } from "@/components/ui/toast";
 import { useApi } from "@/components/trainer/use-api";
 import { NotificationRow, type TrainerNotification } from "@/components/trainer/mobile";
+import type { NotificationCategory } from "@/lib/notifications/categories";
+import { cn } from "@/lib/utils";
+import { categoryOf } from "@/lib/notifications/categories";
 
 interface Page {
   items: TrainerNotification[];
   meta: { total: number; page: number; limit: number; totalPages: number };
   unread: number;
+  unreadByCategory?: Partial<Record<NotificationCategory, number>>;
 }
 
+/**
+ * Chips offered to a trainer: the categories trainer events actually land in (see EVENT_CATEGORY).
+ * Application / Payment / Certificate are student-only, so a trainer is never shown a chip that can
+ * only ever be empty. A category with unread items still gets a chip, whatever it is.
+ */
 const LIMIT = 20;
+
+const TRAINER_CATEGORIES: NotificationCategory[] = ["Training", "Attendance", "Admission", "System"];
+
+function url(page: number, unreadOnly: boolean, category: NotificationCategory | null) {
+  const p = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+  if (unreadOnly) p.set("unread", "true");
+  if (category) p.set("category", category);
+  return `/api/trainer/notifications?${p.toString()}`;
+}
+
 
 /**
  * Trainer inbox. Same shape as the student inbox: every row carries a category icon, opens the screen
@@ -28,6 +47,7 @@ const LIMIT = 20;
 export function NotificationsClient() {
   const router = useRouter();
   const [unreadOnly, setUnreadOnly] = React.useState(false);
+  const [category, setCategory] = React.useState<NotificationCategory | null>(null);
   const [page, setPage] = React.useState(1);
   const [busy, setBusy] = React.useState(false);
   const [loadingMore, setLoadingMore] = React.useState(false);
@@ -35,10 +55,10 @@ export function NotificationsClient() {
   const [loadedPage, setLoadedPage] = React.useState(1);
   const [read, setRead] = React.useState<Set<string>>(new Set());
 
-  const { data, error, loading, reload, setData } = useApi<Page>(`/api/trainer/notifications?page=${page}&limit=${LIMIT}${unreadOnly ? "&unread=true" : ""}`);
+  const { data, error, loading, reload, setData } = useApi<Page>(url(page, unreadOnly, category));
 
   // A new server page (filter change, refresh, pager) drops anything appended by "Load more".
-  const key = `${unreadOnly}|${page}`;
+  const key = `${unreadOnly}|${category ?? ""}|${page}`;
   const [lastKey, setLastKey] = React.useState(key);
   if (lastKey !== key) {
     setLastKey(key);
@@ -50,7 +70,15 @@ export function NotificationsClient() {
     (id: string) => {
       if (read.has(id)) return;
       setRead((s) => new Set(s).add(id));
-      setData((d) => ({ ...d, unread: Math.max(0, d.unread - 1), items: d.items.map((i) => (i.id === id && !i.readAt ? { ...i, readAt: new Date().toISOString() } : i)) }));
+      setData((d) => {
+        const row = d.items.find((i) => i.id === id);
+        const byCat = { ...(d.unreadByCategory ?? {}) };
+        if (row && !row.readAt) {
+          const c = categoryOf(row.templateKey);
+          byCat[c] = Math.max(0, (byCat[c] ?? 0) - 1);
+        }
+        return { ...d, unread: Math.max(0, d.unread - 1), unreadByCategory: byCat, items: d.items.map((i) => (i.id === id && !i.readAt ? { ...i, readAt: new Date().toISOString() } : i)) };
+      });
       api
         .post(`/api/trainer/notifications/${id}/read`)
         .then(() => router.refresh())
@@ -83,7 +111,7 @@ export function NotificationsClient() {
     setLoadingMore(true);
     const next = loadedPage + 1;
     try {
-      const res = await api.get<Page>(`/api/trainer/notifications?page=${next}&limit=${LIMIT}${unreadOnly ? "&unread=true" : ""}`);
+      const res = await api.get<Page>(url(next, unreadOnly, category));
       setExtra((prev) => [...prev, ...res.items]);
       setLoadedPage(next);
     } catch (e) {
@@ -94,9 +122,41 @@ export function NotificationsClient() {
   };
 
   const all = data ? [...data.items, ...extra] : [];
+  const byCat = data?.unreadByCategory ?? {};
+  const chips: (NotificationCategory | null)[] = [null, ...TRAINER_CATEGORIES, ...(Object.keys(byCat) as NotificationCategory[]).filter((c) => (byCat[c] ?? 0) > 0 && !TRAINER_CATEGORIES.includes(c))];
 
   return (
     <div className="space-y-3">
+      <div role="group" aria-label="Notification categories" className="hscroll gap-2 py-0.5">
+        {chips.map((c) => {
+          const active = c === category;
+          const count = c === null ? (data?.unread ?? 0) : (byCat[c] ?? 0);
+          return (
+            <button
+              key={c ?? "All"}
+              type="button"
+              aria-pressed={active}
+              onClick={() => {
+                setCategory(c);
+                setPage(1);
+              }}
+              className={cn(
+                "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-body-sm font-semibold whitespace-nowrap tap-highlight-none ring-focus transition-colors duration-micro motion-reduce:transition-none",
+                active ? "border-navy bg-navy text-white" : "border-line bg-white text-ink active:bg-surface"
+              )}
+            >
+              {c ?? "All"}
+              {count > 0 && (
+                <span className={cn("rounded-full px-1.5 text-caption font-bold tabular-nums", active ? "bg-white/20 text-white" : "bg-orange text-white")}>
+                  <span className="sr-only">, unread: </span>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {/* One row at every width: the filter on the left, the bulk action on the right. The label
           shortens below `sm` so the pair still fits inside a 360px viewport. */}
       <div className="flex items-center justify-between gap-3">
@@ -125,7 +185,7 @@ export function NotificationsClient() {
       ) : all.length === 0 ? (
         <EmptyState
           icon={<Bell className="h-7 w-7" />}
-          title={unreadOnly ? "You're all caught up" : "No notifications yet"}
+          title={unreadOnly ? "You're all caught up" : category ? `No ${category.toLowerCase()} notifications` : "No notifications yet"}
           description={unreadOnly ? "There are no unread notifications." : "Updates about your batches, assignments and the Foundation will appear here."}
         />
       ) : (

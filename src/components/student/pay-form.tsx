@@ -315,7 +315,7 @@ export function PayForm({ summary, contact }: { summary: PaymentSummary; contact
 
 function Row({ label, value, strong, tone }: { label: string; value: string; strong?: boolean; tone?: "success" }) {
   return (
-    <div className={`flex items-center justify-between gap-3 py-2 text-body ${strong ? "font-semibold text-ink" : tone === "success" ? "text-green-700" : "text-muted"}`}>
+    <div className={`flex items-center justify-between gap-3 py-2 text-body ${strong ? "font-semibold text-ink" : tone === "success" ? "text-success-dark" : "text-muted"}`}>
       <span>{label}</span>
       <span className="tabular-nums">{value}</span>
     </div>

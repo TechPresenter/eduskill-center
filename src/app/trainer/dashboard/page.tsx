@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bell, BookOpen, Building2, CalendarCheck, CalendarDays, ClipboardCheck, FileText, ListChecks, Megaphone, Users, UsersRound } from "lucide-react";
+import { Bell, BookOpen, Building2, CalendarCheck, CalendarDays, ChevronRight, ClipboardCheck, FileText, FolderOpen, ListChecks, Megaphone, Users, UsersRound } from "lucide-react";
 import { requireTrainer } from "@/lib/auth/guards";
-import { formatDate, formatDateTime, titleCase } from "@/lib/utils";
+import { cn, formatDate, formatDateTime, titleCase } from "@/lib/utils";
 import { trainerDashboard, trainerLocationLabel } from "@/server/trainer-scope";
 import { formatSchedule } from "@/server/batches";
 import { PageHeader, Avatar, KeyValue } from "@/components/ui/misc";
@@ -12,6 +12,7 @@ import { Badge, StatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
 import { InactiveBanner } from "@/components/trainer/inactive-banner";
+import { trainerLinkFor } from "@/components/trainer/notification-links";
 import { TodayClasses, TrainerGreeting, TrainerIdCard, TrainerQuickActions, type TrainerQuickAction } from "@/components/trainer/mobile";
 
 export const metadata: Metadata = { title: "Trainer Dashboard" };
@@ -34,8 +35,13 @@ export default async function TrainerDashboardPage() {
     { label: "Coursework", href: "/trainer/coursework", icon: FileText },
     { label: "Assessments", href: "/trainer/assessments", icon: ListChecks },
     { label: "Study material", href: "/trainer/materials", icon: BookOpen },
-    { label: "Announcements", href: "/trainer/announcements", icon: Megaphone },
+    // Announcements has its own section below the grid, so its tile gives way to documents (keeps the grid even).
+    { label: "My documents", href: "/trainer/profile/documents", icon: FolderOpen, badge: d.documents.total ? `${d.documents.total} need${d.documents.total === 1 ? "s" : ""} attention` : null, attention: d.documents.total > 0 },
   ];
+  // "Needs attention" first, so the tile the trainer must act on is never below the fold.
+  quickActions.sort((a, b) => Number(!!b.attention) - Number(!!a.attention));
+
+  const ROW = "flex min-h-16 items-start gap-3 px-4 py-3 tap-highlight-none transition-colors duration-micro active:bg-surface hover:bg-surface/60 motion-reduce:transition-none";
 
   return (
     <>
@@ -70,15 +76,22 @@ export default async function TrainerDashboardPage() {
           ) : (
             <ul className="card divide-y divide-line overflow-hidden">
               {d.announcements.slice(0, 3).map((a) => (
-                <li key={a.id} className="px-4 py-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="min-w-0 flex-1 text-body font-semibold text-ink">{a.title}</p>
-                    <Badge tone="navy" className="shrink-0">
-                      {a.audience === "BATCH" && a.batch ? a.batch.code : titleCase(a.audience)}
-                    </Badge>
-                  </div>
-                  <p className="mt-0.5 line-clamp-2 text-body-sm text-muted">{a.body}</p>
-                  <p className="mt-1 text-caption text-muted">{formatDateTime(a.createdAt)}</p>
+                <li key={a.id}>
+                  <Link href="/trainer/announcements" className={ROW}>
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-lavender text-navy" aria-hidden>
+                      <Megaphone className="h-5 w-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-start justify-between gap-2">
+                        <span className="min-w-0 flex-1 truncate text-body font-semibold text-ink">{a.title}</span>
+                        <Badge tone="navy" className="shrink-0">
+                          {a.audience === "BATCH" && a.batch ? a.batch.code : titleCase(a.audience)}
+                        </Badge>
+                      </span>
+                      <span className="mt-0.5 line-clamp-2 block text-body-sm text-muted">{a.body}</span>
+                      <span className="mt-1 block text-caption text-muted">{formatDateTime(a.createdAt)}</span>
+                    </span>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -97,10 +110,21 @@ export default async function TrainerDashboardPage() {
           ) : (
             <ul className="card divide-y divide-line overflow-hidden">
               {d.notifications.slice(0, 3).map((n) => (
-                <li key={n.id} className={n.readAt ? "px-4 py-3" : "bg-orange-light/25 px-4 py-3"}>
-                  <p className="text-body font-semibold text-ink">{n.title}</p>
-                  <p className="mt-0.5 line-clamp-2 text-body-sm text-muted">{n.body}</p>
-                  <p className="mt-1 text-caption text-muted">{formatDateTime(n.createdAt)}</p>
+                <li key={n.id} className={n.readAt ? undefined : "bg-orange-light/25"}>
+                  <Link href={trainerLinkFor(n) ?? "/trainer/notifications"} className={ROW}>
+                    <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-md", n.readAt ? "bg-lavender text-navy" : "bg-orange-light text-orange")} aria-hidden>
+                      <Bell className="h-5 w-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className={cn("block truncate text-body", n.readAt ? "font-semibold text-ink" : "font-bold text-navy")}>{n.title}</span>
+                      <span className="mt-0.5 line-clamp-2 block text-body-sm whitespace-pre-line text-muted">{n.body}</span>
+                      <span className="mt-1 block text-caption text-muted">
+                        {!n.readAt && <span className="sr-only">Unread. </span>}
+                        {formatDateTime(n.createdAt)}
+                      </span>
+                    </span>
+                    <ChevronRight className="mt-2.5 h-5 w-5 shrink-0 text-muted" aria-hidden />
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -320,13 +344,18 @@ export default async function TrainerDashboardPage() {
               ) : (
                 <ul className="divide-y divide-line">
                   {d.notifications.map((n) => (
-                    <li key={n.id} className="flex items-start gap-3 px-5 py-3.5">
-                      <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.readAt ? "bg-line" : "bg-orange"}`} aria-hidden />
-                      <div className="min-w-0">
-                        <p className={`text-body ${n.readAt ? "font-medium text-ink" : "font-semibold text-navy"}`}>{n.title}</p>
-                        <p className="line-clamp-2 text-body-sm text-muted">{n.body}</p>
-                        <p className="mt-0.5 text-caption text-muted">{formatDateTime(n.createdAt)}</p>
-                      </div>
+                    <li key={n.id}>
+                      <Link href={trainerLinkFor(n) ?? "/trainer/notifications"} className="flex items-start gap-3 px-5 py-3.5 transition-colors duration-micro hover:bg-surface/60 motion-reduce:transition-none">
+                        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.readAt ? "bg-line" : "bg-orange"}`} aria-hidden />
+                        <div className="min-w-0">
+                          <p className={`text-body ${n.readAt ? "font-medium text-ink" : "font-semibold text-navy"}`}>
+                            {!n.readAt && <span className="sr-only">Unread: </span>}
+                            {n.title}
+                          </p>
+                          <p className="line-clamp-2 text-body-sm text-muted">{n.body}</p>
+                          <p className="mt-0.5 text-caption text-muted">{formatDateTime(n.createdAt)}</p>
+                        </div>
+                      </Link>
                     </li>
                   ))}
                 </ul>

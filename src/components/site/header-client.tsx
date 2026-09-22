@@ -22,19 +22,35 @@ import {
   Menu,
   Sparkles,
   UserCheck,
+  UserCircle,
   X,
 } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { useMounted, useOverlayPresence } from "@/components/ui/bottom-sheet";
 import { useFocusTrap, useIsDesktop, useScrollLock } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
+import { SearchPalette } from "@/components/site/search/search-palette";
+import { SearchFieldTrigger, SearchIconTrigger, useSearchShortcut } from "@/components/site/search/search-trigger";
+import { CoursesMegaMenu, MobileCoursesMenu, type CoursesMenuData } from "@/components/site/mega-menu";
+import { SITE_SEARCH_OPEN_EVENT, SITE_SEARCH_STATE_EVENT } from "@/components/site/public-bottom-nav";
+import { OPEN_SITE_SEARCH_EVENT } from "@/components/site/home/home-search-bar";
 
 export interface NavItem {
   label: string;
   href: string;
 }
 
-/** Items shown inline from lg; the rest sit in a "More" menu until 2xl where everything is inline. */
+/**
+ * Items shown inline from lg; the rest sit in a "More" menu until 1600px, where everything is inline.
+ *
+ * Measured budget (Inter 600 13px, px-2.5 links): all ten links are 936px, the logo 189px, Student Login
+ * + Apply Now 262px, the search field's 44px minimum and three 12px gaps — 1467px of row. At the old
+ * 2xl breakpoint (1536px, 1519px of layout width beside a classic scrollbar) the row is 1455px wide,
+ * so the full menu already scrolled the page sideways by ~20px before search existed; at 1600px it
+ * has ~50px to spare. The 2xl size bump (14px / px-3, 1049px of links) could never fit inside the
+ * 1600px container and is gone. At lg the row has ~6px to spare with a scrollbar (gap-2 there), so
+ * nothing may be added to it without moving an item into "More".
+ */
 const INLINE_AT_LG = 5;
 const INLINE_AT_XL = 6;
 
@@ -42,14 +58,25 @@ const INLINE_AT_XL = 6;
 const SHEET_MS = 250;
 
 /**
- * Grouping for the mobile sheet. Any nav entry not listed here is appended to the trailing group,
- * so every destination in SITE_NAV stays reachable even if the nav gains items later.
+ * Grouping for the mobile sheet. Below lg the public tab bar (PublicBottomNav) carries Home, Courses,
+ * Centres, Search and the account, so the sheet is the secondary "everything else" menu: Home is left
+ * out (tab bar + logo), Courses stays because its accordion adds popular courses and quick links, and
+ * Training Centers stays for pages whose sticky Apply bar replaces the tab bar. Any nav entry not listed
+ * (and not in MOBILE_EXCLUDED) is appended to the trailing group, so every destination stays reachable.
  */
 const MOBILE_SECTIONS: { label: string | null; hrefs: string[] }[] = [
-  { label: null, hrefs: ["/"] },
   { label: "Explore", hrefs: ["/about", "/programs", "/courses", "/training-centers"] },
-  { label: "Get involved", hrefs: ["/become-a-trainer", "/open-a-centre", "/scholarship"] },
+  { label: "Get involved", hrefs: ["/scholarship", "/become-a-trainer", "/open-a-centre"] },
   { label: "More", hrefs: ["/success-stories", "/contact"] },
+];
+const MOBILE_EXCLUDED = new Set(["/"]);
+
+/** Legal pages, listed quietly at the foot of the phone menu (the footer carries the same four). */
+const LEGAL_LINKS: NavItem[] = [
+  { label: "Privacy Policy", href: "/privacy-policy" },
+  { label: "Terms & Conditions", href: "/terms" },
+  { label: "Refund Policy", href: "/refund-policy" },
+  { label: "Disclaimer", href: "/disclaimer" },
 ];
 
 /** Leading icon per destination; unmapped hrefs fall back to a neutral compass. */
@@ -79,7 +106,7 @@ function buildMobileSections(nav: NavItem[]): MobileSection[] {
     items: section.hrefs.map((href) => byHref.get(href)).filter((item): item is NavItem => Boolean(item)),
   })).filter((section) => section.items.length > 0);
 
-  const ungrouped = nav.filter((item) => !grouped.has(item.href));
+  const ungrouped = nav.filter((item) => !grouped.has(item.href) && !MOBILE_EXCLUDED.has(item.href));
   if (ungrouped.length > 0) {
     const last = sections[sections.length - 1];
     if (last?.label === "More") last.items = [...last.items, ...ungrouped];
@@ -90,8 +117,20 @@ function buildMobileSections(nav: NavItem[]): MobileSection[] {
 
 /**
  * Public site header.
- * - >= lg (1024px): logo, menu (overflow items in "More" until 2xl), Student Login / My Dashboard, Apply Now.
- * - < lg: Android-style bar with logo, Apply Now and a hamburger opening a full-height right-hand sheet.
+ * - >= lg (1024px): logo, menu (overflow items in "More" until 1600px), a search field that takes whatever
+ *   room is left, Student Login / My Dashboard, Apply Now.
+ * - below lg the header is an app bar, 56px like the portal MobileHeader, and PublicBottomNav (mounted by
+ *   the site layout) is the primary navigation; the hamburger opens the secondary menu sheet.
+ * - sm..lg: logo, search field, account icon, Apply Now pill, hamburger.
+ * - < sm: logo, compact Apply pill, a 44px search icon and the hamburger.
+ *
+ * Search opens a command palette (sm+) / full-screen sheet (phones) — see components/site/search. The
+ * tab bar's Search tab opens the same sheet through SITE_SEARCH_OPEN_EVENT.
+ * Width budget at 360-412px: the phone row is logo + Apply pill (~64px incl. its 44px hit box) + two
+ * 44px icons edge to edge, with the hamburger bled 10px into the gutter so its glyph sits on the same
+ * 16px inset as the logo. At 381px, where the brand's "India Foundation" line appears (logo 189px),
+ * that is about 343 of 349px — which is why the account icon only joins the row from sm (on phones the
+ * tab bar's account tab is one thumb away). Re-measure before adding anything to this row.
  */
 export function HeaderClient({
   nav,
@@ -100,6 +139,7 @@ export function HeaderClient({
   siteName,
   dashboardHref,
   registrationOpen,
+  coursesMenu,
 }: {
   nav: NavItem[];
   logo: React.ReactNode;
@@ -108,12 +148,15 @@ export function HeaderClient({
   /** Portal home when a user is logged in; null renders "Student Login". */
   dashboardHref: string | null;
   registrationOpen: boolean;
+  /** Courses mega-menu data (getCoursesMenu); null/undefined keeps the plain Courses link. */
+  coursesMenu?: CoursesMenuData | null;
 }) {
   const pathname = usePathname();
   const isDesktop = useIsDesktop();
   const [scrolled, setScrolled] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [moreOpen, setMoreOpen] = React.useState(false);
+  const [searchOpen, setSearchOpen] = React.useState(false);
   const menuButtonRef = React.useRef<HTMLButtonElement>(null);
   const moreRef = React.useRef<HTMLLIElement>(null);
 
@@ -130,6 +173,7 @@ export function HeaderClient({
     setLastPathname(pathname);
     setOpen(false);
     setMoreOpen(false);
+    setSearchOpen(false);
   }
 
   // Growing past lg swaps in the desktop nav, so drop the sheet (and its scroll lock) with it.
@@ -174,27 +218,60 @@ export function HeaderClient({
   const moreActive = overflow.some((i) => isActive(i.href));
   const sections = React.useMemo(() => buildMobileSections(nav), [nav]);
   const closeMenu = React.useCallback(() => setOpen(false), []);
+  const openSearch = React.useCallback(() => {
+    setOpen(false);
+    setMoreOpen(false);
+    setSearchOpen(true);
+  }, []);
+  const closeSearch = React.useCallback(() => setSearchOpen(false), []);
+  useSearchShortcut(openSearch);
+
+  // The public tab bar's Search tab opens this same sheet, and mirrors its state.
+  React.useEffect(() => {
+    // The home screen's search bar is a link to /search; it dispatches a cancelable event first, and
+    // preventDefault() tells it the sheet opened so the navigation is cancelled.
+    const onHomeBar = (e: Event) => {
+      e.preventDefault();
+      openSearch();
+    };
+    window.addEventListener(SITE_SEARCH_OPEN_EVENT, openSearch);
+    window.addEventListener(OPEN_SITE_SEARCH_EVENT, onHomeBar);
+    return () => {
+      window.removeEventListener(SITE_SEARCH_OPEN_EVENT, openSearch);
+      window.removeEventListener(OPEN_SITE_SEARCH_EVENT, onHomeBar);
+    };
+  }, [openSearch]);
+  React.useEffect(() => {
+    window.dispatchEvent(new CustomEvent(SITE_SEARCH_STATE_EVENT, { detail: { open: searchOpen } }));
+  }, [searchOpen]);
 
   const linkClass = (active: boolean) =>
     cn(
-      "relative inline-flex h-10 items-center rounded-lg px-2.5 text-[13px] font-semibold whitespace-nowrap transition-colors 2xl:px-3 2xl:text-[14px]",
+      "relative inline-flex h-10 items-center rounded-lg px-2.5 text-[13px] font-semibold whitespace-nowrap transition-colors",
       active ? "text-orange" : "text-navy hover:bg-surface hover:text-navy-dark"
     );
 
   return (
     <header className={cn("sticky top-0 z-header bg-white transition-shadow duration-element motion-reduce:transition-none pt-safe", scrolled ? "shadow-[0_4px_24px_-8px_rgba(16,24,40,0.18)]" : "shadow-[0_1px_0_0_rgba(228,231,236,1)]")}>
-      <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center justify-between gap-3 px-4 sm:h-16 sm:px-6 lg:h-[72px] lg:px-8">
-        <Link href="/" aria-label={`${siteName} – home`} className="shrink-0 rounded-lg">
+      <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center gap-1 px-4 sm:gap-3 sm:px-6 lg:h-[72px] lg:gap-2 lg:px-8 xl:gap-3">
+        <Link href="/" aria-label={`${siteName} – home`} className="inline-flex min-h-11 shrink-0 items-center rounded-lg">
           <span className="hidden sm:block">{logo}</span>
           <span className="sm:hidden">{logoMobile}</span>
         </Link>
 
         {/* Desktop menu */}
-        <nav aria-label="Primary" className="hidden lg:block">
-          <ul className="flex items-center gap-0.5 2xl:gap-1">
+        <nav aria-label="Primary" className="hidden shrink-0 lg:block">
+          <ul className="flex items-center gap-0.5">
             {nav.map((item, index) => {
               const active = isActive(item.href);
-              const visibility = index < INLINE_AT_LG ? "" : index < INLINE_AT_XL ? "hidden xl:block" : "hidden 2xl:block";
+              const visibility = index < INLINE_AT_LG ? "" : index < INLINE_AT_XL ? "hidden xl:block" : "hidden min-[1600px]:block";
+              if (item.href === "/courses" && coursesMenu) {
+                return (
+                  <li key={item.href} className={visibility}>
+                    <CoursesMegaMenu data={coursesMenu} label={item.label} active={active} />
+                  </li>
+                );
+              }
               return (
                 <li key={item.href} className={visibility}>
                   <Link href={item.href} aria-current={active ? "page" : undefined} className={linkClass(active)}>
@@ -205,7 +282,7 @@ export function HeaderClient({
               );
             })}
             {overflow.length > 0 && (
-              <li className="relative 2xl:hidden" ref={moreRef}>
+              <li className="relative min-[1600px]:hidden" ref={moreRef}>
                 <button
                   type="button"
                   onClick={() => setMoreOpen((o) => !o)}
@@ -242,7 +319,12 @@ export function HeaderClient({
           </ul>
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2">
+        {/* Grows into the room the row leaves; on phones it is only the spacer that pushes the actions right. */}
+        <div className="flex min-w-0 flex-1 justify-end sm:min-w-11">
+          <SearchFieldTrigger onOpen={openSearch} open={searchOpen} className="hidden max-w-80 sm:flex" />
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {dashboardHref ? (
             <ButtonLink href={dashboardHref} variant="outline" size="sm" className="hidden lg:inline-flex" leftIcon={<LayoutDashboard className="h-4 w-4" />}>
               <span className="hidden xl:inline">My Dashboard</span>
@@ -254,22 +336,44 @@ export function HeaderClient({
               <span className="xl:hidden">Login</span>
             </ButtonLink>
           )}
-          {registrationOpen && (
-            <ButtonLink href="/register" size="sm" className="h-10 px-3.5 text-[13px] sm:h-11 sm:px-4 sm:text-sm">
-              Apply Now
-            </ButtonLink>
-          )}
-          <button
-            ref={menuButtonRef}
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-label="Open menu"
-            aria-expanded={open}
-            aria-controls="site-mobile-menu"
-            className="touch-target inline-flex items-center justify-center rounded-xl text-navy tap-highlight-none active:bg-surface lg:hidden"
+          {/* Account icon for the tablet app bar; on phones the tab bar's account tab covers it. */}
+          <Link
+            href={dashboardHref ?? "/login"}
+            aria-label={dashboardHref ? "My account" : "Student login"}
+            className="touch-target hidden items-center justify-center rounded-full text-navy tap-highlight-none transition-colors duration-micro active:bg-surface ring-focus motion-reduce:transition-none sm:inline-flex lg:hidden"
           >
-            <Menu className="h-6 w-6" />
-          </button>
+            <UserCircle className="h-6 w-6" aria-hidden />
+          </Link>
+          {registrationOpen && (
+            <>
+              {/* App-bar pill (below lg): a 36px orange pill inside a 44px hit box. "Apply" alone on
+                  phones buys the room for the search icon at 381-412px. */}
+              <Link href="/register" className="group inline-flex h-11 shrink-0 items-center tap-highlight-none outline-none lg:hidden">
+                <span className="inline-flex h-9 items-center rounded-full bg-orange px-3.5 text-[13px] font-bold text-white shadow-e1 transition duration-micro ease-soft group-hover:bg-orange-hover group-active:scale-95 group-focus-visible:ring-2 group-focus-visible:ring-orange group-focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:group-active:scale-100 sm:px-4 sm:text-sm">
+                  <span className="sm:hidden">Apply</span>
+                  <span className="hidden sm:inline">Apply Now</span>
+                </span>
+              </Link>
+              <ButtonLink href="/register" size="sm" className="hidden h-11 px-4 text-sm lg:inline-flex">
+                Apply Now
+              </ButtonLink>
+            </>
+          )}
+          {/* The two app-bar icons sit edge to edge (each is already a 44px target with its own air). */}
+          <span className="flex items-center lg:hidden">
+            <SearchIconTrigger onOpen={openSearch} open={searchOpen} className="sm:hidden" />
+            <button
+              ref={menuButtonRef}
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-label="Open menu"
+              aria-expanded={open}
+              aria-controls="site-mobile-menu"
+              className="touch-target -mr-2.5 inline-flex items-center justify-center rounded-xl text-navy tap-highlight-none active:bg-surface ring-focus sm:mr-0 lg:hidden"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+          </span>
         </div>
       </div>
 
@@ -290,7 +394,10 @@ export function HeaderClient({
         dashboardHref={dashboardHref}
         registrationOpen={registrationOpen}
         isActive={isActive}
+        coursesMenu={coursesMenu}
       />
+      {/* Portalled by OverlaySurface, so the header never becomes its containing block. */}
+      <SearchPalette open={searchOpen} onClose={closeSearch} />
     </header>
   );
 }
@@ -308,6 +415,7 @@ function MobileMenu({
   dashboardHref,
   registrationOpen,
   isActive,
+  coursesMenu,
 }: {
   open: boolean;
   onClose: () => void;
@@ -316,6 +424,7 @@ function MobileMenu({
   dashboardHref: string | null;
   registrationOpen: boolean;
   isActive: (href: string) => boolean;
+  coursesMenu?: CoursesMenuData | null;
 }) {
   const mounted = useMounted();
   const { rendered, closing } = useOverlayPresence(open, SHEET_MS);
@@ -351,7 +460,7 @@ function MobileMenu({
   const shown = open && entered;
 
   return createPortal(
-    <div hidden={!rendered} className={cn("fixed inset-0 z-80 lg:hidden", closing && "pointer-events-none")}>
+    <div hidden={!rendered} className={cn("fixed inset-0 z-drawer lg:hidden", closing && "pointer-events-none")}>
       <div
         onClick={onClose}
         aria-hidden
@@ -390,6 +499,13 @@ function MobileMenu({
                 {section.items.map((item) => {
                   const active = isActive(item.href);
                   const Icon = NAV_ICONS[item.href] ?? Compass;
+                  if (item.href === "/courses" && coursesMenu) {
+                    return (
+                      <li key={item.href}>
+                        <MobileCoursesMenu data={coursesMenu} label={item.label} active={active} onNavigate={onClose} />
+                      </li>
+                    );
+                  }
                   return (
                     <li key={item.href}>
                       <Link
@@ -417,6 +533,27 @@ function MobileMenu({
               </ul>
             </div>
           ))}
+
+          <div className="mt-4 border-t border-line px-1 pt-3">
+            <p className="px-2 pb-1 text-[12px] font-bold tracking-[0.08em] text-muted uppercase">Legal</p>
+            <ul className="grid grid-cols-2 gap-x-1">
+              {LEGAL_LINKS.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <li key={item.href} className="min-w-0">
+                    <Link
+                      href={item.href}
+                      onClick={onClose}
+                      aria-current={active ? "page" : undefined}
+                      className={cn("flex min-h-11 items-center rounded-lg px-2 text-[13px] font-medium tap-highlight-none active:bg-surface", active ? "text-orange" : "text-muted")}
+                    >
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </nav>
 
         <div className="shrink-0 space-y-2 border-t border-line bg-white p-4">

@@ -197,7 +197,7 @@ export function InstallmentPlanButton({ applicationId, due, existing, allowed }:
               <Button type="button" variant="outline" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} disabled={rows.length >= 12} onClick={() => setRows((rs) => [...rs, { amount: String(Math.max(0, diff < 0 ? -diff : 0)), dueDate: "" }])}>
                 Add installment
               </Button>
-              <p className={`text-body-sm tabular-nums ${Math.abs(diff) > 0.01 ? "text-amber-700" : "text-success-dark"}`}>
+              <p className={`text-body-sm tabular-nums ${Math.abs(diff) > 0.01 ? "text-warning-dark" : "text-success-dark"}`}>
                 Total {formatINR(total)} of {formatINR(due)}
                 {Math.abs(diff) > 0.01 && ` (${diff > 0 ? "over" : "short"} by ${formatINR(Math.abs(diff))})`}
               </p>

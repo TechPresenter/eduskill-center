@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, Bell, Globe, LayoutGrid, Menu, Settings, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/misc";
+import { IconTile } from "@/components/ui/list";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { BrandMark } from "@/components/brand";
 import type { Branding } from "@/lib/settings";
@@ -13,21 +14,24 @@ import { usePortalHeader } from "./header-context";
 import { matchNavItem } from "./bottom-nav";
 import type { NavItem, ShellUser } from "./shell";
 
-/** The 44px icon control of the app bar: one size, one radius, one 150ms press, one focus ring. */
+/**
+ * The 44px icon control of the app bar (and the drawer's close button): one size, a round Material
+ * press surface, one 150ms press, one focus ring.
+ */
 export const APP_BAR_ICON_CLASS =
-  "touch-target ring-focus inline-flex items-center justify-center rounded-md text-ink tap-highlight-none transition-colors duration-micro active:bg-surface motion-reduce:transition-none";
+  "touch-target ring-focus inline-flex items-center justify-center rounded-full text-ink press motion-reduce:transition-none";
 
 /** 56px row inside the account sheet; shared with the LogoutButton row rendered by the shell. */
 export function accountRowClass(danger?: boolean) {
   return cn(
-    "ring-focus flex min-h-14 w-full items-center gap-3 rounded-md px-3 text-left text-body font-medium tap-highlight-none transition-colors duration-micro active:bg-surface motion-reduce:transition-none",
+    "press ring-focus flex min-h-14 w-full items-center gap-3 rounded-md px-3 text-left text-body font-semibold motion-reduce:transition-none",
     danger ? "text-danger" : "text-ink"
   );
 }
 
-/** Icon well for account-sheet rows. */
+/** Icon well for account-sheet rows: the shared IconTile, so the sheet matches the drawer and every list. */
 export function AccountRowIcon({ children, danger }: { children: React.ReactNode; danger?: boolean }) {
-  return <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-md", danger ? "bg-danger-light text-danger" : "bg-lavender text-navy")}>{children}</span>;
+  return <IconTile tone={danger ? "danger" : "navy"}>{children}</IconTile>;
 }
 
 export interface MobileHeaderProps {
@@ -115,7 +119,7 @@ export function MobileHeader({ portalLabel, homeHref, branding, navItems, user, 
               <Link href={notificationsHref} className={cn(APP_BAR_ICON_CLASS, "relative")} aria-label={`Notifications${unreadCount ? ` (${unreadCount} unread)` : ""}`}>
                 <Bell className="h-5.5 w-5.5" aria-hidden />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-orange px-1 text-caption leading-none font-bold text-white ring-2 ring-white" aria-hidden>
+                  <span className="absolute top-1.5 right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-orange px-1 text-caption leading-none font-bold text-white tabular-nums ring-2 ring-white" aria-hidden>
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}

@@ -41,7 +41,7 @@ function Row({ label, value, icon }: { label: string; value: string; icon?: Reac
 export function TrainerIdCard({ name, trainerId, photoUrl, level, status, location, center, centerCount = 0, profileHref = "/trainer/profile" }: TrainerIdCardProps) {
   const extra = centerCount > 1 ? ` +${centerCount - 1} more` : "";
   return (
-    <section className="overflow-hidden rounded-2xl bg-navy text-white shadow-e1" aria-label="Trainer card">
+    <section className="overflow-hidden rounded-card bg-navy text-white shadow-e1" aria-label="Trainer card">
       <div className="flex items-center gap-3 p-4">
         <Avatar name={name} src={photoUrl} size={56} className="ring-2 ring-white/25" />
         <div className="min-w-0 flex-1">

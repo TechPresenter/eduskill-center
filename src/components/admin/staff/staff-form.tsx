@@ -4,7 +4,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { KeyRound, RefreshCw } from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { Field, FormActions, FormGrid, FormSection } from "@/components/ui/form";
+import { Field, FormGrid, FormSection } from "@/components/ui/form";
+import { StickyActionBar } from "@/components/ui/sticky-action-bar";
 import { Input, RadioCards } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Modal } from "@/components/ui/modal";
@@ -48,10 +49,10 @@ export function TemporaryPasswordModal({ open, onClose, password, email, title =
   return (
     <Modal open={open} onClose={onClose} title={title} description="Share this with the staff member securely. It is shown only once and cannot be retrieved later." size="sm">
       <div className="space-y-4">
-        <div className="rounded-xl border border-line bg-surface p-4">
-          <p className="text-xs font-semibold tracking-wide text-muted uppercase">Login</p>
+        <div className="rounded-card border border-line bg-surface p-4">
+          <p className="text-overline text-muted">Login</p>
           <p className="text-sm font-medium text-ink">{email}</p>
-          <p className="mt-3 text-xs font-semibold tracking-wide text-muted uppercase">Password</p>
+          <p className="mt-3 text-overline text-muted">Password</p>
           <div className="mt-1 flex items-center justify-between gap-3">
             <code className="font-mono text-lg font-bold text-navy break-all">{password}</code>
             <CopyButton text={password} />
@@ -167,14 +168,15 @@ export function StaffCreateForm({ roles }: { roles: RoleOption[] }) {
         )}
       </FormSection>
 
-      <FormActions>
-        <Button type="button" variant="outline" onClick={() => router.push("/admin/staff")} disabled={loading}>
+      {/* Phones: the form is long (the permission matrix), so the primary action stays under the thumb. */}
+      <StickyActionBar innerClassName="lg:justify-end">
+        <Button type="button" variant="outline" onClick={() => router.push("/admin/staff")} disabled={loading} className="flex-1 lg:flex-none">
           Cancel
         </Button>
-        <Button type="submit" loading={loading} leftIcon={<KeyRound className="h-4 w-4" />}>
-          Create staff account
+        <Button type="submit" loading={loading} leftIcon={<KeyRound className="h-4 w-4" />} className="flex-2 lg:flex-none">
+          Create account
         </Button>
-      </FormActions>
+      </StickyActionBar>
     </form>
   );
 }

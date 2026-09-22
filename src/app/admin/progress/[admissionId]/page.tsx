@@ -11,6 +11,7 @@ import { StatusBadge, Badge } from "@/components/ui/badge";
 import { ProgressBar, RingProgress, StatsCard } from "@/components/ui/stats";
 import { EligibilityChecklist } from "@/components/admin/progress/eligibility-checklist";
 import { ProgressRowActions } from "@/components/admin/progress/progress-actions";
+import { RecordIdentity } from "@/components/admin/locations/list-kit";
 
 export const metadata = { title: "Progress" };
 
@@ -25,6 +26,13 @@ export default async function ProgressDetailPage({ params }: { params: Promise<{
 
   return (
     <div>
+      {/* Identity and status first on phones, where the app bar only has room for a code. */}
+      <RecordIdentity
+        lead={<Avatar name={s.name} src={s.photoUrl} size={48} />}
+        title={s.name}
+        meta={<span className="font-mono font-semibold text-navy">{s.studentId ?? a.admissionNo}</span>}
+        badges={<StatusBadge status={a.status} />}
+      />
       <PageHeader
         backHref="/admin/progress"
         mobileTitle={s.name}
@@ -52,16 +60,6 @@ export default async function ProgressDetailPage({ params }: { params: Promise<{
         }
       />
 
-      {/* The app bar shows only the student name on phones – keep the ID, status and avatar in the page. */}
-      <div className="mb-4 flex items-center gap-3 lg:hidden">
-        <Avatar name={s.name} src={s.photoUrl} size={44} />
-        <span className="min-w-0">
-          <span className="block truncate font-mono text-body-sm font-semibold text-navy">{s.studentId ?? a.admissionNo}</span>
-          <span className="mt-0.5 flex flex-wrap items-center gap-2">
-            <StatusBadge status={a.status} />
-          </span>
-        </span>
-      </div>
 
       {!p ? (
         <Card>
