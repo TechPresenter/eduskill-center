@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { Tag } from "lucide-react";
 import { getBranding } from "@/lib/settings";
@@ -40,6 +41,13 @@ type Props = {
 /** Matches the index grid: 3 columns x 3 rows at `lg`. */
 const PAGE_SIZE = 9;
 
+/**
+ * Memoised for the request, exactly as `/blog/[slug]` memoises its post. Next calls
+ * `generateMetadata` and the page body separately and both need the tag, so without
+ * this every tag archive ran its lookup twice on every request.
+ */
+const loadTag = cache((slug: string) => getPublicTag(slug));
+
 /** How many tags the cloud under the grid offers — enough to browse sideways, not a wall of pills. */
 const CLOUD_SIZE = 24;
 
@@ -51,7 +59,7 @@ function pageParam(sp: Record<string, string | string[] | undefined>): number {
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
-  const tag = await getPublicTag(slug);
+  const tag = await loadTag(slug);
   if (!tag) return { title: "Tag not found" };
 
   const page = pageParam(sp);
@@ -71,7 +79,7 @@ export default async function BlogTagPage({ params, searchParams }: Props) {
   // filter on `postCount`: that column is a maintained cache, so a tag whose count is briefly
   // stale still renders its archive, and the grid below is what decides whether it has anything
   // in it.
-  const tag = await getPublicTag(slug);
+  const tag = await loadTag(slug);
   if (!tag) notFound();
 
   const [list, topTags, branding] = await Promise.all([

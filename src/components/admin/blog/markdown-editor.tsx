@@ -69,7 +69,10 @@ function applyMarkdown(el: HTMLTextAreaElement, value: string, kind: MdTool) {
       wrap("![", "](https://)", "describe the image");
       break;
     case "h2":
-      prefixLines(() => "## ");
+      // "# ", not "## ": the renderer maps `#` to <h2> and `##` to <h3>, because the page already
+      // owns the <h1>. Inserting "## " made the Heading button produce an <h3> directly under the
+      // title, skipping a level on every article written with the toolbar.
+      prefixLines(() => "# ");
       break;
     case "ul":
       prefixLines(() => "- ");

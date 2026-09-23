@@ -1,10 +1,11 @@
 import { apiHandler, parseBody } from "@/lib/api/handler";
-import { blogCategorySchema, deleteBlogCategory, updateBlogCategory } from "@/server/blog";
+import { blogCategoryUpdateSchema, deleteBlogCategory, updateBlogCategory } from "@/server/blog";
 
-// `.partial()` so the manager can PATCH-style save a single field (a tone, a sort order)
-// without having to echo back the whole category.
+// A dedicated update schema rather than `.partial()`: Zod keeps a `.default()` on an absent key,
+// so the plain partial was writing `isActive: true` and `sortOrder: 0` over the stored values
+// every time the manager saved a single field. See the note on the schema.
 export const PUT = apiHandler<{ id: string }>({ permission: "cms.update" }, async ({ req, params, user, ip, userAgent }) => {
-  const body = await parseBody(req, blogCategorySchema.partial());
+  const body = await parseBody(req, blogCategoryUpdateSchema);
   return updateBlogCategory(params.id, body, { user: user!, ip, userAgent });
 });
 

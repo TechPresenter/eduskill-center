@@ -74,7 +74,7 @@ export function OutlinePanel({ content, className }: { content: string; classNam
 
       {headings.length === 0 ? (
         <p className="text-body-sm text-muted">
-          Add <code className="rounded bg-surface px-1 py-0.5 font-mono text-[0.9em] text-navy">##</code> headings and they will appear here — and as a table of contents on the live page.
+          Add <code className="rounded bg-surface px-1 py-0.5 font-mono text-[0.9em] text-navy">#</code> headings and they will appear here — and as a table of contents on the live page.
         </p>
       ) : (
         <ol className="space-y-0.5">

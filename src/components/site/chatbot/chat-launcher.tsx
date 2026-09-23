@@ -95,8 +95,10 @@ export const ChatLauncher = React.forwardRef<HTMLButtonElement, ChatLauncherProp
       <span className="relative flex h-6 w-6 items-center justify-center" aria-hidden>
         {open ? <X className="h-6 w-6" /> : <Sparkles className="h-6 w-6" />}
       </span>
-      {/* Visible only in the pill form; the circle keeps the icon alone, and the accessible name
-          comes from `aria-label` either way, so this text never duplicates it in the a11y tree. */}
+      {/* Visible only in the pill form; the circle keeps the icon alone. The accessible name comes
+          from `aria-label` either way, and WCAG 2.5.3 (Label in Name) requires that name to CONTAIN
+          this visible text — otherwise someone driving the page by voice says "Ask a question" and
+          nothing happens. `LAUNCHER_COPY.open` therefore opens with exactly this string. */}
       {!open && <span className="hidden text-[15px] font-semibold text-white sm:inline">{LAUNCHER_COPY.label}</span>}
       {unread && !open && (
         <>

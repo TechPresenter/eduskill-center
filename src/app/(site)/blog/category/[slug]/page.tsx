@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { FolderOpen } from "lucide-react";
 import { getBranding } from "@/lib/settings";
@@ -37,6 +38,13 @@ type Props = {
 /** Matches the index grid: 3 columns x 3 rows at `lg`. */
 const PAGE_SIZE = 9;
 
+/**
+ * Memoised for the request, exactly as `/blog/[slug]` memoises its post. Next calls
+ * `generateMetadata` and the page body separately and both need the category, so without
+ * this every category archive ran its lookup twice on every request.
+ */
+const loadCategory = cache((slug: string) => getPublicCategory(slug));
+
 /** `?page=` as a positive integer; anything else (absent, "abc", "-2") is page 1. */
 function pageParam(sp: Record<string, string | string[] | undefined>): number {
   const raw = typeof sp.page === "string" ? Number(sp.page) : NaN;
@@ -45,7 +53,7 @@ function pageParam(sp: Record<string, string | string[] | undefined>): number {
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
-  const category = await getPublicCategory(slug);
+  const category = await loadCategory(slug);
   if (!category) return { title: "Category not found" };
 
   const page = pageParam(sp);
@@ -64,7 +72,7 @@ export default async function BlogCategoryPage({ params, searchParams }: Props) 
 
   // Loaded first and on its own: an unknown or deactivated category is a 404, and there is no
   // point paying for the posts, the chip row and the branding settings to render one.
-  const category = await getPublicCategory(slug);
+  const category = await loadCategory(slug);
   if (!category) notFound();
 
   const [list, allCategories, branding] = await Promise.all([

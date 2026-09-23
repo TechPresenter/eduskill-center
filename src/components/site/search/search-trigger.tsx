@@ -36,6 +36,12 @@ export function useSearchShortcut(onOpen: () => void, enabled = true) {
     if (!enabled) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.isComposing) return;
+      // `key` is required by the spec but is genuinely absent on some SYNTHETIC KeyboardEvents —
+      // password managers and autofill extensions dispatch bare `new KeyboardEvent("keydown")`
+      // into the page, and an Android IME can fire one mid-composition. Reading `.toLowerCase()`
+      // off that threw a TypeError out of a document-level listener, which surfaces as a full
+      // runtime error overlay on a page the visitor was only typing in.
+      if (typeof e.key !== "string") return;
       const k = e.key.toLowerCase();
       const combo = k === "k" && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey;
       const slash = e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey && !isEditable(e.target);

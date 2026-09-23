@@ -335,6 +335,23 @@ export const blogCategorySchema = z.object({
 export type BlogCategoryInput = z.infer<typeof blogCategorySchema>;
 
 /**
+ * The PARTIAL shape for a PUT, and the reason it is not just `schema.partial()`.
+ *
+ * Zod's `.partial()` makes a key optional but does NOT strip its `.default()`, so an absent
+ * `isActive` still parses to `true` and an absent `sortOrder` still parses to `0`. The taxonomy
+ * managers save one field at a time, so a rename was quietly reactivating a category the admin had
+ * switched off and dragging it back to the top of the order. Removing the defaults first means an
+ * omitted key stays `undefined`, which Prisma leaves alone.
+ */
+export const blogCategoryUpdateSchema = blogCategorySchema
+  .omit({ sortOrder: true, isActive: true })
+  .extend({
+    sortOrder: z.coerce.number().int().min(0).max(9999).optional(),
+    isActive: z.coerce.boolean().optional(),
+  })
+  .partial();
+
+/**
  * `_count.posts` counts EVERY post, not just the live ones: it is what the delete guard and the
  * admin manager need ("this category still holds 4 posts"). Public post counts are a
  * `blog-public` concern and go through `livePostWhere()` there.
@@ -419,6 +436,23 @@ export const blogAuthorSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).max(9999).default(0),
 });
 export type BlogAuthorInput = z.infer<typeof blogAuthorSchema>;
+
+/**
+ * The PARTIAL shape for a PUT, and the reason it is not just `schema.partial()`.
+ *
+ * Zod's `.partial()` makes a key optional but does NOT strip its `.default()`, so an absent
+ * `isActive` still parses to `true` and an absent `sortOrder` still parses to `0`. The taxonomy
+ * managers save one field at a time, so a rename was quietly reactivating a category the admin had
+ * switched off and dragging it back to the top of the order. Removing the defaults first means an
+ * omitted key stays `undefined`, which Prisma leaves alone.
+ */
+export const blogAuthorUpdateSchema = blogAuthorSchema
+  .omit({ isActive: true, sortOrder: true })
+  .extend({
+    isActive: z.coerce.boolean().optional(),
+    sortOrder: z.coerce.number().int().min(0).max(9999).optional(),
+  })
+  .partial();
 
 export async function listBlogAuthors(opts: { activeOnly?: boolean } = {}) {
   return db.blogAuthor.findMany({

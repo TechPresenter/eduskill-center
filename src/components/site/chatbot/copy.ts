@@ -135,7 +135,10 @@ export const UI_COPY: Record<ChatLang, ChatCopy> = { en, hi };
 
 /** English-only labels for the launcher, which exists before the conversation has a language. */
 export const LAUNCHER_COPY = {
-  open: "Open the chat assistant",
+  // Must START WITH `label` below. On desktop the launcher renders `label` as visible text, and
+  // WCAG 2.5.3 requires the accessible name to contain the visible one so speech control can
+  // address it by what the user can read.
+  open: "Ask a question — open the chat assistant",
   close: "Close the chat assistant",
   unread: "New message",
   /**

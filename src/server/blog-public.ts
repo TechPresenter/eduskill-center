@@ -58,8 +58,34 @@ export const publicPostCardSelect = {
 
 export type PublicPostCard = Prisma.BlogGetPayload<{ select: typeof publicPostCardSelect }>;
 
-/** The article page wants the whole row plus the joined taxonomy for the byline and chips. */
-export const publicPostInclude = { category: true, author: true } satisfies Prisma.BlogInclude;
+/**
+ * The public shape of an author. `email` is deliberately absent — a byline is not a reason to
+ * publish a staff mailbox, and the admin form that captures it says in so many words that it is
+ * "Internal only — it is never published". Every public surface that renders an author MUST go
+ * through this list.
+ */
+const publicAuthorFields = {
+  id: true,
+  name: true,
+  slug: true,
+  role: true,
+  bio: true,
+  avatar: true,
+  linkedinUrl: true,
+  twitterUrl: true,
+  websiteUrl: true,
+} satisfies Prisma.BlogAuthorSelect;
+
+/**
+ * The article page wants the joined taxonomy for the byline and chips.
+ *
+ * The author is an explicit SELECT, never `author: true`. A bare `include` returns every column
+ * on the row, and `ArticleBody` hands whatever it receives straight to `AuthorCard`, which turns
+ * an `email` into a `mailto:` link — so the blanket include quietly published the staff address
+ * that the admin UI promises to keep private, on every article that author wrote. The author
+ * archive never had the bug because it already selected fields by name; now both agree.
+ */
+export const publicPostInclude = { category: true, author: { select: publicAuthorFields } } satisfies Prisma.BlogInclude;
 
 export type PublicPost = Prisma.BlogGetPayload<{ include: typeof publicPostInclude }>;
 
@@ -372,22 +398,7 @@ export async function getPublicTag(slug: string): Promise<PublicBlogTag | null> 
   return db.blogTag.findUnique({ where: { slug }, select: publicTagFields });
 }
 
-const publicAuthorFields = {
-  id: true,
-  name: true,
-  slug: true,
-  role: true,
-  bio: true,
-  avatar: true,
-  linkedinUrl: true,
-  twitterUrl: true,
-  websiteUrl: true,
-} satisfies Prisma.BlogAuthorSelect;
-
-/**
- * `email` is deliberately not selected — a byline is not a reason to publish a staff mailbox.
- * The live post count is carried both ways, exactly as on {@link PublicBlogCategory}.
- */
+/** The live post count is carried both ways, exactly as on {@link PublicBlogCategory}. */
 export type PublicBlogAuthor = Prisma.BlogAuthorGetPayload<{ select: typeof publicAuthorFields }> & {
   _count: { posts: number };
   postCount: number;

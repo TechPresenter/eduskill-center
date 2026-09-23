@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { UserRound } from "lucide-react";
 import { getBranding } from "@/lib/settings";
@@ -37,6 +38,13 @@ type Props = {
 /** Matches the index grid: 3 columns x 3 rows at `lg`. */
 const PAGE_SIZE = 9;
 
+/**
+ * Memoised for the request, exactly as `/blog/[slug]` memoises its post. Next calls
+ * `generateMetadata` and the page body separately and both need the author, so without
+ * this every author archive ran its lookup twice on every request.
+ */
+const loadAuthor = cache((slug: string) => getPublicAuthor(slug));
+
 /** `?page=` as a positive integer; anything else (absent, "abc", "-2") is page 1. */
 function pageParam(sp: Record<string, string | string[] | undefined>): number {
   const raw = typeof sp.page === "string" ? Number(sp.page) : NaN;
@@ -50,7 +58,7 @@ function sameAsUrls(author: { linkedinUrl: string | null; twitterUrl: string | n
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
-  const author = await getPublicAuthor(slug);
+  const author = await loadAuthor(slug);
   if (!author) return { title: "Author not found" };
 
   const page = pageParam(sp);
@@ -82,7 +90,7 @@ export default async function BlogAuthorPage({ params, searchParams }: Props) {
   const page = pageParam(sp);
 
   // An unknown or deactivated author is a 404; there is no point loading their posts to find out.
-  const author = await getPublicAuthor(slug);
+  const author = await loadAuthor(slug);
   if (!author) notFound();
 
   const [list, branding] = await Promise.all([listPublicPosts({ page, limit: PAGE_SIZE, authorSlug: author.slug }), getBranding()]);

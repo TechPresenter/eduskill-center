@@ -54,9 +54,16 @@ export interface TagPillProps {
 }
 
 export function TagPill({ name, slug, href, active, size = "md", className }: TagPillProps) {
-  // The tag archive is the canonical home of a tag. `?tag=` on the index still works (the index
-  // keeps reading that param for old links), but new links point at the indexable route.
-  const to = href ?? `/blog/tag/${encodeURIComponent(slug ?? name)}`;
+  // The tag archive is the canonical home of a tag, but it resolves its segment through
+  // `BlogTag.slug` — so the LABEL must never be substituted for one. `Blog.tags` stores labels
+  // ("digital literacy"), and feeding those to `/blog/tag/[slug]` 404s every tag whose label is
+  // not already its own slug. It cannot be fixed by slugifying here either, because
+  // `uniqueContentSlug` may have disambiguated a colliding slug to `ai-2`, which no amount of
+  // slugifying the label would reproduce.
+  //
+  // So: use the archive only when a real slug was handed to us, and otherwise fall back to the
+  // index's `?tag=` filter, which matches on the label exactly as stored.
+  const to = href ?? (slug ? `/blog/tag/${encodeURIComponent(slug)}` : `/blog?tag=${encodeURIComponent(name)}`);
   return (
     <Link href={to} aria-current={active ? "page" : undefined} className={tagPillClasses({ active, size, className })}>
       {/* The hash is typography, not content: it is how a tag is written, but a screen reader
