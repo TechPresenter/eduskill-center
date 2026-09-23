@@ -2,6 +2,18 @@ import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { absoluteUrl } from "@/lib/utils";
 import { listAllCenterUrls } from "@/server/public";
+import { listLivePostUrls, listPublicAuthors, listPublicCategories, listPublicTags } from "@/server/blog-public";
+
+/**
+ * Rendered per request, never prerendered.
+ *
+ * A blog post is live only while `status = PUBLISHED AND published_at <= now()`, and that `now()`
+ * is evaluated when the query runs. Baked into the build output, the cut-off would freeze at deploy
+ * time: a post scheduled for next Tuesday would either be advertised to Google today or stay out of
+ * the sitemap long after it went live. The DB round-trips below are a handful of indexed reads and
+ * crawlers fetch this a few times a day, so there is nothing to gain from caching it anyway.
+ */
+export const dynamic = "force-dynamic";
 
 type Entry = MetadataRoute.Sitemap[number];
 type Freq = NonNullable<Entry["changeFrequency"]>;
@@ -48,11 +60,19 @@ const CMS_PAGE_PATHS: Record<string, string> = {
 const safe = <T,>(p: Promise<T[]>): Promise<T[]> => p.catch(() => []);
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [courses, programs, centers, blogs, events, cmsPages] = await Promise.all([
+  const [courses, programs, centers, blogs, blogCategories, blogTags, blogAuthors, events, cmsPages] = await Promise.all([
     safe(db.course.findMany({ where: { status: "ACTIVE", deletedAt: null }, select: { slug: true, updatedAt: true } })),
     safe(db.program.findMany({ where: { isActive: true }, select: { slug: true, updatedAt: true } })),
     safe(listAllCenterUrls()),
-    safe(db.blog.findMany({ where: { status: "PUBLISHED" }, select: { slug: true, updatedAt: true } })),
+    // Blog reads go through `@/server/blog-public`, never `db.blog` — that module is the only place
+    // `livePostWhere()` is applied, and it also drops `noIndex` posts. Querying the table here is how
+    // a future-dated post used to be handed to Google the moment it was saved.
+    safe(listLivePostUrls()),
+    // These three already exclude anything with no live posts, so the sitemap never advertises an
+    // archive URL that renders an empty page.
+    safe(listPublicCategories()),
+    safe(listPublicTags(100)),
+    safe(listPublicAuthors()),
     safe(db.event.findMany({ where: { status: "PUBLISHED" }, select: { slug: true, updatedAt: true } })),
     safe(db.cmsPage.findMany({ where: { status: "PUBLISHED", slug: { in: Object.keys(CMS_PAGE_PATHS) } }, select: { slug: true, updatedAt: true } })),
   ]);
@@ -77,6 +97,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const c of centers) entries.push({ url: absoluteUrl(c.url), lastModified: c.updatedAt, priority: 0.8, changeFrequency: "weekly" });
 
   for (const b of blogs) entries.push({ url: absoluteUrl(`/blog/${b.slug}`), lastModified: b.updatedAt, priority: 0.6, changeFrequency: "monthly" });
+
+  /*
+   * Blog archives. They rank below the posts themselves because they are navigation, not content,
+   * and their weights follow how often each one actually changes: a category gains a post every
+   * week or so, an author's archive moves with them, a tag is a long tail that rarely shifts.
+   *
+   * `lastModified` is deliberately absent. The honest value is the newest live post in that
+   * archive, which none of the list helpers return, and a wrong date (the taxonomy row's own
+   * `updatedAt`, which only moves when an admin renames it) teaches a crawler to ignore the field.
+   * Omitting it lets the crawler decide, which is the correct outcome for a listing page.
+   *
+   * Paginated `?page=` URLs are not listed: every archive page carries a self-referencing canonical
+   * and the posts they link to are already in this sitemap individually.
+   */
+  for (const c of blogCategories) entries.push({ url: absoluteUrl(`/blog/category/${c.slug}`), priority: 0.6, changeFrequency: "weekly" });
+  for (const a of blogAuthors) entries.push({ url: absoluteUrl(`/blog/author/${a.slug}`), priority: 0.5, changeFrequency: "weekly" });
+  for (const t of blogTags) entries.push({ url: absoluteUrl(`/blog/tag/${t.slug}`), priority: 0.4, changeFrequency: "monthly" });
+
   for (const e of events) entries.push({ url: absoluteUrl(`/events/${e.slug}`), lastModified: e.updatedAt, priority: 0.5, changeFrequency: "monthly" });
 
   return entries;

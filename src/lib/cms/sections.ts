@@ -499,6 +499,54 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
     },
   },
   {
+    key: "site.topbar",
+    name: "Top bar",
+    page: "Global",
+    description:
+      "The slim navy strip above the header: the scrolling announcements, the quick links beside them, and whether the strip appears at all. Contact details come from Settings → Contact and the social icons from Settings → Social Media.",
+    fields: [
+      { key: "enabled", label: "Show the top bar", type: "boolean" },
+      { key: "marquee", label: "Scroll the announcements", type: "boolean", help: "Off shows them standing still. Visitors can always pause the scroll themselves, and it never moves for anyone who has asked their device for reduced motion." },
+      {
+        key: "announcements",
+        label: "Announcements",
+        type: "list",
+        max: 6,
+        itemFields: [
+          { key: "text", label: "Announcement", type: "text", help: "One short line. Keep it true today — this is the first thing every visitor reads." },
+          { key: "href", label: "Link (optional)", type: "url", help: "A page on this website such as /training-centers." },
+        ],
+      },
+      {
+        key: "quickLinks",
+        label: "Quick links",
+        type: "list",
+        max: 4,
+        itemFields: [
+          { key: "label", label: "Label", type: "text" },
+          { key: "href", label: "Link", type: "url", help: "A page on this website such as /verify-certificate." },
+        ],
+      },
+    ],
+    defaults: {
+      enabled: true,
+      marquee: true,
+      // Every line is true of this Foundation and every link is a live public route.
+      announcements: [
+        { text: "Admissions are open — find a training centre near you", href: "/training-centers" },
+        { text: "Scholarships available for eligible students", href: "/scholarship" },
+        { text: "Verify any EduSkill certificate online", href: "/verify-certificate" },
+        { text: "Volunteer as a trainer in your own block or district", href: "/become-a-trainer" },
+      ],
+      quickLinks: [
+        { label: "Verify Certificate", href: "/verify-certificate" },
+        { label: "Donate", href: "/donate" },
+        { label: "FAQ", href: "/faq" },
+        { label: "Contact", href: "/contact" },
+      ],
+    },
+  },
+  {
     key: "site.footer",
     name: "Footer",
     page: "Global",

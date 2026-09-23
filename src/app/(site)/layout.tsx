@@ -1,6 +1,7 @@
 import { getBranding, getSetting } from "@/lib/settings";
 import { getSection } from "@/lib/cms";
 import { getSessionUser, portalHome } from "@/lib/auth/session";
+import { SiteTopbar } from "@/components/site/topbar";
 import { SiteHeader } from "@/components/site/header";
 import { SiteFooter } from "@/components/site/footer";
 import { PageViewTracker } from "@/components/site/page-view-tracker";
@@ -31,6 +32,13 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <noscript>
         <style>{`[data-reveal]{opacity:1!important}`}</style>
       </noscript>
+      {/*
+        The announcement strip. A SIBLING immediately before the header, never a wrapper around it:
+        the header is sticky and owns `position: fixed` descendants (the phone menu, the search
+        sheet), and any ancestor with a transform, filter or backdrop-filter would become their
+        containing block and pin them to the header's box. It scrolls away with the page.
+      */}
+      <SiteTopbar branding={branding} />
       <SiteHeader branding={branding} dashboardHref={dashboardHref} registrationOpen={registrationOpen !== false} />
       <main id="main-content" className="flex-1">
         {children}

@@ -11,8 +11,12 @@ export type ButtonSize = "xs" | "sm" | "md" | "lg" | "xl";
  * only colour changes. `ring-focus` is the product-wide focus ring; `white` sits on navy/photography
  * so it takes `ring-focus-inverse` instead.
  *
- * Buttons carry NO elevation. A button in the page flow is not raised, and the one genuinely floating
- * button (`Fab`) owns `shadow-e3` itself. This is why the old ad-hoc `shadow-sm` is gone.
+ * A button carries no elevation AT REST — it is part of the page, not floating above it. It only
+ * borrows `shadow-e2` for the moment a fine pointer is over it (see EFFECTS/`btn-lift`), and drops
+ * it again on press. The one genuinely floating button (`Fab`) owns `shadow-e3` itself.
+ *
+ * VARIANTS stays colour-only, because `iconButtonClasses` reuses it: icon buttons keep their own
+ * compact press and must not inherit the lift or the fill gradients.
  */
 const VARIANTS: Record<ButtonVariant, string> = {
   primary: "bg-orange text-white hover:bg-orange-hover ring-focus",
@@ -23,6 +27,31 @@ const VARIANTS: Record<ButtonVariant, string> = {
   danger: "bg-danger text-white hover:bg-danger/90 ring-focus",
   white: "bg-white text-navy hover:bg-lavender ring-focus-inverse",
   link: "text-orange underline-offset-4 hover:underline ring-focus",
+};
+
+/**
+ * Depth and motion, layered on top of the colour. All four utilities live in globals.css, where the
+ * contrast table for the gradients and the reduced-motion rules sit next to them.
+ *
+ *   btn-micro        every variant — owns the transition, the 0.97 press, the trailing-icon nudge
+ *   btn-lift         every variant except `link` — 1px hover lift + shadow-e2 on a fine pointer
+ *   btn-fill-*       the three solid fills — a within-hue gradient that DEEPENS downward, so the
+ *                    label never sits on the lightest stop (white on #E8520A is only 3.72:1)
+ *   btn-shine        the same three — one translucent band sweeping under the label per hover
+ *
+ * Light variants get the micro-interactions and nothing else: a white shine on lavender or on white
+ * is invisible, and a gradient on an outline button just muddies the border.
+ */
+const EFFECTS: Record<ButtonVariant, string> = {
+  primary: "btn-micro btn-lift btn-fill-orange btn-shine",
+  navy: "btn-micro btn-lift btn-fill-navy btn-shine",
+  danger: "btn-micro btn-lift btn-fill-danger btn-shine",
+  secondary: "btn-micro btn-lift",
+  outline: "btn-micro btn-lift",
+  ghost: "btn-micro btn-lift",
+  white: "btn-micro btn-lift",
+  // A text link has no box: raising it 1px with a shadow would read as a rendering bug.
+  link: "btn-micro",
 };
 
 /**
@@ -57,10 +86,14 @@ export function buttonClasses({
     // `relative` anchors the loading spinner over the (still measured) label — see Button below.
     // The base focus-visible ring is neutralised here so `ring-focus` is the single focus treatment.
     "relative inline-flex items-center justify-center font-semibold whitespace-nowrap select-none touch-manipulation tap-highlight-none",
-    "transition duration-micro active:scale-[0.98] motion-reduce:transition-none",
+    // `btn-micro` owns the transition and the press, so the cascade has a single owner (it replaces
+    // the old blanket `transition duration-micro active:scale-[0.98]`) and carries its own
+    // reduced-motion escape. Focus stays on `ring-focus` alone — never on a hover effect.
     "focus-visible:ring-0 focus-visible:ring-offset-0",
+    // Disabled/loading get pointer-events: none, which is what switches the lift and shine off.
     "disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50",
     VARIANTS[variant],
+    EFFECTS[variant],
     SIZES[size],
     // A text link keeps the 44px tap height but never the horizontal padding.
     variant === "link" && "px-0",
@@ -93,7 +126,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
       )}
       {leftIcon && (loading ? <span className="invisible inline-flex items-center">{leftIcon}</span> : leftIcon)}
       {loading ? <span className="invisible">{children}</span> : children}
-      {rightIcon && (loading ? <span className="invisible inline-flex items-center">{rightIcon}</span> : rightIcon)}
+      {/* data-btn-trail is the hook btn-micro nudges 2px right on hover — "this button goes forward". */}
+      {rightIcon && (
+        <span data-btn-trail className={loading ? "invisible" : undefined}>
+          {rightIcon}
+        </span>
+      )}
     </button>
   );
 });
@@ -111,7 +149,7 @@ export function ButtonLink({ variant = "primary", size = "md", leftIcon, rightIc
     <Link className={buttonClasses({ variant, size, fullWidth, className })} {...props}>
       {leftIcon}
       {children}
-      {rightIcon}
+      {rightIcon && <span data-btn-trail>{rightIcon}</span>}
     </Link>
   );
 }

@@ -3,6 +3,7 @@
  * Import from "@/lib/hooks"; every hook is SSR-safe (server snapshot defaults documented per hook).
  */
 export { useMediaQuery, useIsDesktop, useIsCoarsePointer, DESKTOP_QUERY, COARSE_POINTER_QUERY } from "./use-media-query";
+export { useHydrated } from "./use-hydrated";
 export { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 export { useScrollLock } from "./use-scroll-lock";
 export { useFocusTrap, getFocusable, type FocusTrapOptions } from "./use-focus-trap";

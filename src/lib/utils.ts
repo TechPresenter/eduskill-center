@@ -40,7 +40,7 @@ const twMerge = extendTailwindMerge<"focus-ring">({
       shadow: ["shadow-e1", "shadow-e2", "shadow-e3", "shadow-card", "shadow-card-hover", "shadow-float"],
       // Named stacking steps.
       z: ["z-raised", "z-sticky", "z-header", "z-drawer", "z-overlay", "z-toast"],
-      duration: ["duration-micro", "duration-element", "duration-overlay"],
+      duration: ["duration-micro", "duration-element", "duration-overlay", "duration-shine"],
       // Project radius aliases, so `rounded-card` and `rounded-full` still conflict.
       rounded: ["rounded-card", "rounded-card-lg"],
       p: ["card-p"],

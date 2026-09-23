@@ -1565,6 +1565,79 @@ model SuccessStory {
   @@map("success_stories")
 }
 
+// ───────────────────────────── BLOG ─────────────────────────────
+
+/// Editorial section a post belongs to. Mirrors CourseCategory (same shape, same
+/// SetNull relation) so the admin UI and services have a pattern to copy, plus its
+/// own SEO copy because every category gets a public archive at /blog/category/<slug>.
+model BlogCategory {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  name           String   @unique
+  slug           String   @unique
+  description    String?
+  icon           String?
+  /// A BadgeTone name ("info", "success", …) so a category chip can be tinted
+  /// without inventing new CSS for every section the Foundation adds later.
+  colorTone      String?  @map("color_tone")
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  seoTitle       String?  @map("seo_title")
+  seoDescription String?  @map("seo_description")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  posts Blog[]
+
+  @@index([isActive, sortOrder])
+  @@map("blog_categories")
+}
+
+/// The byline shown on a post. Deliberately NOT a relation to `User`: staff accounts
+/// carry no avatar, bio, role or social links, so pointing a byline at a User row
+/// would leave the author card with nothing to render. Legacy `Blog.authorName`
+/// survives as a guest-byline fallback and is backfilled into this table.
+model BlogAuthor {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  name        String
+  slug        String   @unique
+  role        String?
+  bio         String?
+  avatar      String?
+  email       String?
+  linkedinUrl String?  @map("linkedin_url")
+  twitterUrl  String?  @map("twitter_url")
+  websiteUrl  String?  @map("website_url")
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  posts Blog[]
+
+  @@index([isActive, sortOrder])
+  @@map("blog_authors")
+}
+
+/// Lookup/normalisation layer over `Blog.tags`, which stays a plain String[]. This is
+/// NOT a join table — `name` holds the exact label stored inside the array, so existing
+/// ?tag= links keep working — it just adds a slug for the public archive, per-tag SEO
+/// copy, and a maintained `postCount` so the admin list no longer has to scan every
+/// post in memory to build its tag filter. Kept in sync by the blog service on save.
+model BlogTag {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  name           String   @unique
+  slug           String   @unique
+  description    String?
+  seoTitle       String?  @map("seo_title")
+  seoDescription String?  @map("seo_description")
+  postCount      Int      @default(0) @map("post_count")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([postCount])
+  @@map("blog_tags")
+}
+
 model Blog {
   id             String        @id @default(uuid(7)) @db.Uuid
   title          String
@@ -1572,17 +1645,48 @@ model Blog {
   excerpt        String?
   content        String
   coverImage     String?       @map("cover_image")
+  /// Authored alt text for the cover. Both public pages hard-code the title today,
+  /// which is wrong for a decorative or a caption-bearing image.
+  coverImageAlt  String?       @map("cover_image_alt")
   authorName     String?       @map("author_name")
+  authorId       String?       @map("author_id") @db.Uuid
+  categoryId     String?       @map("category_id") @db.Uuid
   tags           String[]      @default([])
+  /// No SCHEDULED value is added to ContentStatus — it is shared by six models and
+  /// `ALTER TYPE … ADD VALUE` inside a migration transaction is a foot-gun. A post is
+  /// live iff `status = PUBLISHED AND publishedAt <= now()`; "scheduled" is derived.
   status         ContentStatus @default(DRAFT)
   publishedAt    DateTime?     @map("published_at")
+  isFeatured     Boolean       @default(false) @map("is_featured")
+  /// Stored on save rather than recomputed per render, so the body column never has to
+  /// be fetched just to draw a card, and both values are sortable and usable in JSON-LD.
+  readingMinutes Int           @default(1) @map("reading_minutes")
+  wordCount      Int           @default(0) @map("word_count")
+  /// Manually pinned related articles, capped at 3 by Zod. An array matches the existing
+  /// `tags` idiom and avoids a self-join table for what is pure editorial curation.
+  relatedPostIds String[]      @default([]) @map("related_post_ids") @db.Uuid
   seoTitle       String?       @map("seo_title")
   seoDescription String?       @map("seo_description")
+  /// Set when the article was first published elsewhere; otherwise the canonical is
+  /// derived from the slug. `ogImage` is a 1200×630 crop, because the 16:9 cover is not
+  /// one. `noIndex` keeps a post off search engines without unpublishing it.
+  canonicalUrl   String?       @map("canonical_url")
+  ogImage        String?       @map("og_image")
+  noIndex        Boolean       @default(false) @map("no_index")
+  /// Intentionally still a bare column with no FK: adding one would need a cleanup pass
+  /// for ids whose User row is gone. `authorId` supersedes it for display.
   createdById    String?       @map("created_by_id") @db.Uuid
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 
+  author   BlogAuthor?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  category BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   @@index([status, publishedAt])
+  @@index([categoryId, status, publishedAt])
+  @@index([authorId, status, publishedAt])
+  @@index([status, isFeatured, publishedAt])
+  @@index([tags(ops: ArrayOps)], type: Gin)
   @@map("blogs")
 }
 

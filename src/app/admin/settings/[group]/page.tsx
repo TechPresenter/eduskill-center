@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth/guards";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { getAllSettings, SETTING_GROUPS } from "@/lib/settings";
+// Server-only, and it must stay that way: it returns a boolean about process.env, never the value.
+import { isChatbotConfigured } from "@/server/chatbot";
 import { settingGroup, settingsGroupFields } from "@/app/admin/settings/lib";
 import { PageHeader } from "@/components/ui/misc";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -50,6 +52,10 @@ export default async function SettingsGroupPage({ params }: { params: Promise<{ 
   const groupValues: Record<string, unknown> = {};
   for (const f of fields) groupValues[f.key] = values[f.key];
   const note = GROUP_NOTES[def.key];
+  // Computed only for the chatbot group, so no other group pays for a status nobody renders.
+  // `!== false` mirrors getChatbotConfig() exactly: until someone saves this form there are no
+  // `chatbot.*` rows at all, and an absent value means the default `true`, not "switched off".
+  const chatbot = def.key === "chatbot" ? { keyPresent: isChatbotConfigured(), toggleOn: groupValues["chatbot.enabled"] !== false } : null;
 
   return (
     // One rhythm between the page title, the group tabs and the panel — settings used to have none.
@@ -64,6 +70,33 @@ export default async function SettingsGroupPage({ params }: { params: Promise<{ 
               {note.body}
             </Alert>
           )}
+          {/*
+            The one fact an admin cannot learn from the fields below: whether this server actually has a key.
+            Without it, ticking "AI assistant enabled", saving, and then finding nothing on the public site is a
+            dead end with no diagnosis. Deliberately a BOOLEAN and nothing more — no prefix, no masked form, no
+            character count, no log — so a settings page can never turn into a secret-disclosure page.
+          */}
+          {chatbot &&
+            (!chatbot.keyPresent ? (
+              <Alert tone="warning" title="No OpenAI key on this server" className="mb-6">
+                <p>
+                  The assistant is hidden from every visitor, no matter what is ticked below. An administrator with server access must add <Code>OPENAI_API_KEY</Code> to
+                  the server&rsquo;s <Code>.env</Code> file and restart the service. The key is deliberately not a setting on this page, and it must never be pasted into a
+                  form here.
+                </p>
+              </Alert>
+            ) : !chatbot.toggleOn ? (
+              <Alert tone="info" title="Key detected — the assistant is switched off" className="mb-6">
+                <p>The server has an OpenAI key, so the only thing hiding the assistant from visitors is the &ldquo;AI assistant enabled&rdquo; switch below.</p>
+              </Alert>
+            ) : (
+              <Alert tone="success" title="Key detected — the assistant is live" className="mb-6">
+                <p>
+                  The server has an OpenAI key and the switch is on, so visitors see the assistant on the public website. Every answer is billed to the
+                  Foundation&rsquo;s OpenAI account.
+                </p>
+              </Alert>
+            ))}
           <SettingsForm group={def.key} groupLabel={def.label} fields={fields} values={groupValues} canUpdate={hasPermission(user, "settings.update")} defaultTestEmail={user.email ?? ""} />
         </CardBody>
       </Card>

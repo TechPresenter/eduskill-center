@@ -5,6 +5,7 @@ import { Mic, SendHorizontal, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsCoarsePointer } from "@/lib/hooks";
 import { useSpeechInput } from "./use-speech";
+import { ICON_BTN_ON_WHITE, SEND_BTN, STOP_BTN } from "./chat-theme";
 import { MAX_MESSAGE_CHARS, type ChatLang } from "./types";
 import type { ChatCopy } from "./copy";
 
@@ -23,6 +24,12 @@ const COUNTER_FROM = MAX_MESSAGE_CHARS - 200;
 /**
  * The input row: auto-growing textarea, optional dictation and one primary action that flips between
  * Send and Stop. The draft lives here and is never cleared by a failure — only by a successful send.
+ *
+ * The three controls live INSIDE one capsule rather than floating beside it: the `<form>` owns the
+ * border, the shadow and the focus ring, and the textarea is frameless on a transparent background.
+ * That is why the focus treatment is `focus-within:*` on the form (the field itself can no longer
+ * draw it) and why the dictation highlight moved up here too — while the mic is live the whole
+ * capsule turns orange, which is a far clearer "we are recording" signal than one glowing circle.
  */
 export function ChatComposer({ t, lang, busy, onSend, onStop }: ChatComposerProps) {
   const [draft, setDraft] = React.useState("");
@@ -87,74 +94,91 @@ export function ChatComposer({ t, lang, busy, onSend, onStop }: ChatComposerProp
   const remaining = MAX_MESSAGE_CHARS - draft.length;
 
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        submit();
-      }}
-      className="flex items-end gap-2"
-    >
-      <div className="relative min-w-0 flex-1">
-        <label htmlFor={fieldId} className="sr-only">
-          {t.placeholder}
-        </label>
-        <textarea
-          id={fieldId}
-          ref={textareaRef}
-          rows={1}
-          value={draft}
-          maxLength={MAX_MESSAGE_CHARS}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder={speech.listening ? t.listening : t.placeholder}
-          aria-describedby={remaining <= COUNTER_FROM ? countId : undefined}
-          className={cn(
-            "block max-h-[120px] min-h-11 w-full resize-none rounded-2xl border border-line bg-white px-4 py-3 text-base leading-6 text-ink transition-colors placeholder:text-muted/80 focus:border-navy focus:ring-2 focus:ring-navy/15 focus:outline-none sm:text-[15px]",
-            speech.listening && "border-orange ring-2 ring-orange/20"
-          )}
-        />
-        {remaining <= COUNTER_FROM && (
-          <p id={countId} className="mt-1 text-right text-[12px] text-muted">
-            {t.charactersLeft(remaining)}
-          </p>
+    <>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+        className={cn(
+          // `items-end` keeps the buttons pinned to the bottom edge as the field grows, so a
+          // five-line draft pushes the capsule up rather than floating Send in the middle of it.
+          "flex items-end gap-1.5 rounded-2xl border border-line bg-white p-1.5 shadow-e1",
+          "transition-[border-color,box-shadow] duration-micro ease-soft focus-within:border-navy focus-within:ring-2 focus-within:ring-navy/15 motion-reduce:transition-none",
+          speech.listening && "border-orange ring-2 ring-orange/20"
         )}
-      </div>
+      >
+        <div className="min-w-0 flex-1">
+          <label htmlFor={fieldId} className="sr-only">
+            {t.placeholder}
+          </label>
+          <textarea
+            id={fieldId}
+            ref={textareaRef}
+            rows={1}
+            value={draft}
+            maxLength={MAX_MESSAGE_CHARS}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder={speech.listening ? t.listening : t.placeholder}
+            aria-describedby={remaining <= COUNTER_FROM ? countId : undefined}
+            className={cn(
+              // Frameless: the capsule around it owns the border and the focus ring, so every
+              // `focus:` treatment here is explicitly turned OFF rather than merely unstyled —
+              // otherwise the browser's default outline would draw a second box inside the first.
+              // `text-base` (16px) on phones is non-negotiable: Android zooms the viewport on any
+              // smaller focused input, and globals.css force-corrects it under 40rem anyway.
+              "block max-h-[120px] min-h-11 w-full resize-none border-0 bg-transparent px-3 py-2.5 text-base leading-6 text-ink placeholder:text-muted/80 focus:ring-0 focus:outline-none sm:text-[15px]"
+            )}
+          />
+        </div>
 
-      {speech.supported && (
-        <button
-          type="button"
-          onClick={toggleDictation}
-          aria-label={speech.listening ? t.micStop : t.micStart}
-          aria-pressed={speech.listening}
-          className={cn(
-            "relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors tap-highlight-none active:scale-95 motion-reduce:transition-none",
-            speech.listening ? "border-orange bg-orange text-white" : "border-line bg-white text-muted hover:border-navy/30 hover:text-navy"
-          )}
-        >
-          {speech.listening && <span className="absolute inset-0 animate-ping rounded-full bg-orange/40 motion-reduce:animate-none" aria-hidden />}
-          <Mic className="relative h-5 w-5" aria-hidden />
-        </button>
-      )}
+        {speech.supported && (
+          <button
+            type="button"
+            onClick={toggleDictation}
+            aria-label={speech.listening ? t.micStop : t.micStart}
+            aria-pressed={speech.listening}
+            // ICON_BTN_ON_WHITE carries the 44px circle, `press-scale` and the transition; the
+            // ternary adds the fill AND the matching focus ring, because the ring is the one thing
+            // that has to change with the fill and `cn()` cannot merge the two ring utilities (see
+            // the note on ICON_BTN_ON_WHITE). White ring on the orange live state, the standard
+            // orange ring on the resting ghost circle — never both.
+            className={cn(
+              ICON_BTN_ON_WHITE,
+              speech.listening ? "bg-orange btn-fill-orange text-white ring-focus-inverse" : "border border-line bg-white text-muted ring-focus hover:border-navy/30 hover:text-navy"
+            )}
+          >
+            {/* Same rule as the launcher's pulse: `animate-ping` grows to `scale(2)`, which here is
+                an 88px hit box over a 44px button — wide enough to sit on top of Send, right beside
+                it. The halo is decoration and must not intercept that tap. */}
+            {speech.listening && <span className="pointer-events-none absolute inset-0 animate-ping rounded-full bg-orange/40 motion-reduce:animate-none" aria-hidden />}
+            <Mic className="relative h-5 w-5" aria-hidden />
+          </button>
+        )}
 
-      {busy ? (
-        <button
-          type="button"
-          onClick={onStop}
-          aria-label={t.stop}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy text-white transition-colors tap-highlight-none hover:bg-navy-dark active:scale-95 motion-reduce:transition-none"
-        >
-          <Square className="h-4 w-4 fill-current" aria-hidden />
-        </button>
-      ) : (
-        <button
-          type="submit"
-          disabled={draft.trim().length === 0}
-          aria-label={t.send}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange text-white transition-[background-color,transform,opacity] tap-highlight-none hover:bg-orange-hover active:scale-95 disabled:pointer-events-none disabled:opacity-40 motion-reduce:transition-none"
-        >
-          <SendHorizontal className="h-5 w-5" aria-hidden />
-        </button>
+        {busy ? (
+          <button type="button" onClick={onStop} aria-label={t.stop} className={STOP_BTN}>
+            <Square className="h-4 w-4 fill-current" aria-hidden />
+          </button>
+        ) : (
+          <button type="submit" disabled={draft.trim().length === 0} aria-label={t.send} className={SEND_BTN}>
+            <SendHorizontal className="h-5 w-5" aria-hidden />
+          </button>
+        )}
+      </form>
+
+      {/*
+        Outside the capsule on purpose. Inside it, the counter is a block in the flex row's first
+        column and its height shoves the field — and therefore the buttons — upward the moment it
+        appears. `aria-describedby` still resolves: it points at this id, and a reference is by id,
+        not by ancestry.
+      */}
+      {remaining <= COUNTER_FROM && (
+        <p id={countId} className="mt-1 text-right text-[12px] leading-4 text-muted">
+          {t.charactersLeft(remaining)}
+        </p>
       )}
-    </form>
+    </>
   );
 }

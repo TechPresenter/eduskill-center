@@ -1,62 +1,74 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Download, X } from "lucide-react";
 import { withBasePath } from "@/lib/base-path";
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
+import { promptInstall, useInstallPrompt } from "@/components/pwa/use-install-prompt";
 
 const DISMISS_KEY = "esk.install.dismissedAt";
 const DISMISS_DAYS = 14;
 
 /**
- * Android "Add to Home screen" banner. Appears only when the browser fires beforeinstallprompt,
- * the app is not already installed, and the user has not dismissed it in the last two weeks.
- * Sits above the bottom navigation on phones.
+ * The snooze, as a tiny external store. localStorage is unreadable on the server and can throw
+ * outright in a private window or with site data blocked, so it is read through
+ * `useSyncExternalStore`: the server and the hydration render both see "dismissed" (nothing shows),
+ * and the real answer arrives in one update rather than a render-then-correct.
  */
-export function InstallPrompt({ appName = "EduSkill" }: { appName?: string }) {
-  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
-  const [visible, setVisible] = useState(false);
+let dismissedCache: boolean | null = null;
+const dismissListeners = new Set<() => void>();
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
-    if (standalone) return;
-    let dismissedAt = 0;
+function getDismissed(): boolean {
+  if (dismissedCache === null) {
+    let at = 0;
     try {
-      dismissedAt = Number(localStorage.getItem(DISMISS_KEY) ?? 0);
+      at = Number(localStorage.getItem(DISMISS_KEY) ?? 0);
     } catch {
-      dismissedAt = 0;
+      at = 0;
     }
-    if (dismissedAt && Date.now() - dismissedAt < DISMISS_DAYS * 86400000) return;
-    const onPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferred(e as BeforeInstallPromptEvent);
-      setVisible(true);
-    };
-    window.addEventListener("beforeinstallprompt", onPrompt);
-    return () => window.removeEventListener("beforeinstallprompt", onPrompt);
-  }, []);
+    dismissedCache = !!at && Date.now() - at < DISMISS_DAYS * 86400000;
+  }
+  return dismissedCache;
+}
 
-  if (!visible || !deferred) return null;
-
-  const dismiss = () => {
-    setVisible(false);
+function setDismissed(remember: boolean) {
+  dismissedCache = true;
+  if (remember) {
     try {
       localStorage.setItem(DISMISS_KEY, String(Date.now()));
     } catch {
-      /* ignore */
+      /* dismissed for this page view only */
     }
+  }
+  for (const l of dismissListeners) l();
+}
+
+function subscribeDismissed(onChange: () => void): () => void {
+  dismissListeners.add(onChange);
+  return () => {
+    dismissListeners.delete(onChange);
   };
+}
+
+/**
+ * Android "Add to Home screen" banner. Appears only when the browser has offered an install prompt,
+ * the app is not already installed, and the user has not dismissed it in the last two weeks.
+ * Sits above the bottom navigation on phones.
+ *
+ * The `beforeinstallprompt` event itself is captured once per page by `use-install-prompt`, which
+ * this banner and the topbar's "Get the app" button share — the event fires once and `prompt()` may
+ * only be called once, so there can be exactly one listener and one owner of the deferred event.
+ */
+export function InstallPrompt({ appName = "EduSkill" }: { appName?: string }) {
+  const { canPrompt, standalone } = useInstallPrompt();
+  const dismissed = useSyncExternalStore(subscribeDismissed, getDismissed, () => true);
+
+  if (dismissed || standalone || !canPrompt) return null;
 
   const install = async () => {
-    await deferred.prompt();
-    const choice = await deferred.userChoice.catch(() => ({ outcome: "dismissed" as const }));
-    if (choice.outcome === "accepted") setVisible(false);
-    else dismiss();
+    const outcome = await promptInstall();
+    // Accepted: the banner has done its job, so it goes away for this page view. Declined: snooze it
+    // for two weeks rather than asking again on the next page.
+    setDismissed(outcome !== "accepted");
   };
 
   return (
@@ -71,7 +83,7 @@ export function InstallPrompt({ appName = "EduSkill" }: { appName?: string }) {
         <button type="button" onClick={install} className="inline-flex h-11 items-center gap-1.5 rounded-xl bg-orange px-3.5 text-sm font-semibold text-white active:scale-[0.98]">
           <Download className="h-4 w-4" /> Install
         </button>
-        <button type="button" onClick={dismiss} className="touch-target -mr-1 inline-flex items-center justify-center rounded-xl text-muted" aria-label="Not now">
+        <button type="button" onClick={() => setDismissed(true)} className="touch-target -mr-1 inline-flex items-center justify-center rounded-xl text-muted" aria-label="Not now">
           <X className="h-5 w-5" />
         </button>
       </div>

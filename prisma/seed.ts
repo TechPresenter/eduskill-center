@@ -62,6 +62,21 @@ function daysFromNow(days: number) {
   return d;
 }
 
+/**
+ * Rough word count and reading time for a markdown body, so the demo posts carry
+ * real numbers instead of hard-coded ones. The blog service recomputes both
+ * precisely on every save; this only has to be close enough that a seeded post
+ * does not claim "1 min read" for a 1,200-word article.
+ */
+function readingStats(markdown: string) {
+  const words = markdown
+    .replace(/```[\s\S]*?```/g, " ") // fenced code is not prose
+    .replace(/[#*_`>|]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean).length;
+  return { wordCount: words, readingMinutes: Math.max(1, Math.ceil(words / 200)) };
+}
+
 // ───────────────────────────── Core ─────────────────────────────
 
 async function seedPermissionsAndRoles() {
@@ -803,10 +818,223 @@ async function seedDemo(superAdminId: string) {
     });
   }
 
-  // Blog & event
-  await db.blog.create({
-    data: { title: "Why Digital Literacy Is the First Step to Employment", slug: "why-digital-literacy-first-step", excerpt: "How basic digital skills unlock access to jobs, government services and learning.", content: "## Digital first\n\nDigital literacy is the gateway skill. Students who can use a smartphone and computer confidently go on to complete other courses faster and find work sooner.\n\n_This is a demo article. Edit or delete it from Admin → CMS → Blog._", authorName: "EduSkill Team", tags: ["digital literacy", "employment"], status: "PUBLISHED", publishedAt: daysFromNow(-15) },
+  // ── Blog: categories, authors, posts and the tag lookup ──
+  // The demo set deliberately covers every state the blog UI has to render — live,
+  // featured, scheduled, draft and archived. The scheduled row (PUBLISHED with a
+  // future publishedAt) is the only way to confirm by inspection that scheduling
+  // holds: it must appear in Admin → CMS → Blog and be absent from every public
+  // surface. Covers are left null ON PURPOSE so the branded MediaPlaceholder
+  // fallback is what reviewers see rather than stock photography.
+  const blogCategoryIds = new Map<string, string>();
+  for (const c of [
+    { name: "Skill Development", icon: "GraduationCap", description: "Courses, curriculum and what employers are actually asking for." },
+    { name: "Student Stories", icon: "Users", description: "Where our students were before the course, and where they are now." },
+    { name: "Centre Updates", icon: "Building2", description: "New centres, new labs and news from the districts we work in." },
+    { name: "Foundation News", icon: "Megaphone", description: "Announcements, partnerships and reports from the Foundation." },
+  ].map((c, i) => ({ ...c, sortOrder: i + 1 }))) {
+    const row = await db.blogCategory.create({
+      data: { name: c.name, slug: slugify(c.name), description: c.description, icon: c.icon, sortOrder: c.sortOrder, isActive: true },
+    });
+    blogCategoryIds.set(c.name, row.id);
+  }
+
+  const blogAuthorIds = new Map<string, string>();
+  for (const a of [
+    { name: "EduSkill Team", role: "Foundation Desk", bio: "The Foundation's content desk writes up programme news, centre updates and guidance for students. Reach us through the contact form for anything you would like covered." },
+    { name: "Ananya Deshmukh", role: "Programme Lead — Digital Skills", bio: "Ananya has run digital literacy and computer-application batches across Maharashtra and Bihar since 2019. She writes about what works inside a classroom of twenty shared machines." },
+  ].map((a, i) => ({ ...a, sortOrder: i + 1 }))) {
+    const row = await db.blogAuthor.create({
+      data: { name: a.name, slug: slugify(a.name), role: a.role, bio: a.bio, isActive: true, sortOrder: a.sortOrder },
+    });
+    blogAuthorIds.set(a.name, row.id);
+  }
+
+  const demoPosts: {
+    title: string;
+    slug: string;
+    category: string;
+    author: string;
+    excerpt: string;
+    seoTitle: string;
+    seoDescription: string;
+    tags: string[];
+    status: "PUBLISHED" | "DRAFT" | "ARCHIVED";
+    publishedAt: Date | null;
+    isFeatured?: boolean;
+    content: string;
+  }[] = [
+    {
+      title: "Why Digital Literacy Is the First Step to Employment",
+      slug: "why-digital-literacy-first-step",
+      category: "Skill Development",
+      author: "EduSkill Team",
+      excerpt: "How basic digital skills unlock access to jobs, government services and learning — and why we teach them before anything else.",
+      seoTitle: "Why Digital Literacy Comes First in Skill Training",
+      seoDescription: "Digital literacy is the gateway skill for employment in India. Here is what we teach, how we test it, and what changes for students afterwards.",
+      tags: ["digital literacy", "employment"],
+      status: "PUBLISHED",
+      publishedAt: daysFromNow(-30),
+      content: [
+        "## The gateway skill",
+        "Almost every job our students apply for now asks for the same three things before it asks about a trade: a phone number that reliably receives an OTP, an email address the employer can write to, and the confidence to fill in an online form without help. None of that is a computer course. All of it is digital literacy, and it is the reason we teach it before anything else.",
+        "Across the last four batches at our Kolkata centre, students who cleared the digital literacy module in the first fortnight finished their main trade course roughly three weeks sooner than students who were still learning to type when the trade classes began.",
+        "## What digital literacy actually means",
+        "The phrase gets used loosely, so we made it concrete. A student has cleared the module when they can do all of the following unaided, on a shared machine, in front of a trainer who is not allowed to touch the mouse.",
+        "### The four skills we test for",
+        "1. **Operate the device.** Switch on a desktop, join the Wi-Fi, find a file they saved last week and use a pen drive without asking.\n2. **Communicate.** Create and use an email account, attach a document, and recognise a phishing message when one arrives.\n3. **Transact.** Use UPI safely, read an SMS receipt, and understand why an OTP is never read out to a caller.\n4. **Find and file.** Search for a government scheme, open the correct portal and complete an application with their own documents.",
+        "The fourth one matters more than people expect. A student who can navigate a state skill portal will register themselves for the next scheme years after they have left us, with nobody standing behind them.",
+        "## How we teach it",
+        "Two hours a day for three weeks, on the same machines the student will use for the rest of the course, with no textbook. Every exercise produces something real — an email to the centre coordinator, a resume saved as a PDF, a scholarship form submitted to the district office. Trainers narrate instead of demonstrating, because a student who watches somebody else click has learned nothing they can repeat at home.",
+        "Centres that run the module in the local language first and then repeat the identical tasks in English see fewer dropouts in week two. We now recommend that order everywhere.",
+        "## What changes afterwards",
+        "The visible change is employability: a candidate who can send a formatted resume by email is shortlisted more often than one who cannot, whatever their trade marks say. The quieter change is confidence. Students stop waiting for a cousin or a shopkeeper to fill in forms on their behalf, and that independence outlasts any single job.",
+        "That is what we are actually training. The certificate at the end is only the receipt.",
+        "_This is a demo article. Edit or delete it from Admin → CMS → Blog._",
+      ].join("\n\n"),
+    },
+    {
+      title: "From a Tailoring Batch in Nashik to Her Own Boutique",
+      slug: "from-tailoring-batch-to-her-own-boutique",
+      category: "Student Stories",
+      author: "Ananya Deshmukh",
+      excerpt: "Sunita joined a six-month tailoring course to find a factory job. Eighteen months later she employs four women from her own street.",
+      seoTitle: "From a Tailoring Course to a Boutique in Nashik",
+      seoDescription: "A student story from our Nashik centre: how a six-month tailoring course, a costing notebook and one borrowed machine turned into a four-person boutique.",
+      tags: ["student stories", "entrepreneurship", "tailoring"],
+      status: "PUBLISHED",
+      publishedAt: daysFromNow(-15),
+      content: [
+        "## She came for a job, not a business",
+        "When Sunita enrolled at our Nashik centre she wanted one thing: a supervisor's job at a garment unit on the highway. She had sewn at home for nine years and assumed the course would simply certify what she already knew. The first month proved otherwise, and not in the way she expected.",
+        "## The skill she was missing was arithmetic",
+        "Her stitching was better than most of the batch. What she had never done was cost a garment. Fabric at the running metre, lining, thread, buttons, the electricity the machine draws, and — the line almost everybody forgets — her own hours. Until a student writes those down, every order feels profitable and none of them are.",
+        "### What the costing notebook changed",
+        "By week six she was quoting from a notebook instead of from instinct. Three of her regular customers paid the higher, honest price without argument. One walked away. That ratio was the whole lesson: she had been subsidising her own work for nine years and had never seen it written down.",
+        "## The first four months after the course",
+        "She did not take the factory job. She took two alteration contracts from a local boutique, worked from her mother-in-law's front room on a borrowed machine, and bought her own machine in the fourth month out of retained earnings rather than a loan. Our centre coordinator helped her open a current account and register on the district's Udyam portal — exactly the online-form skill from the digital literacy module, applied for real.",
+        "### Hiring, carefully",
+        "The first woman she hired was a neighbour who had dropped out of the same course to care for a parent. The second and third came from the batch that followed hers. Sunita pays per piece, which she learned to calculate in the same costing class, and she keeps the rates on a board on the wall so nobody has to ask.",
+        "## What we took from it",
+        "Every trade course at EduSkill now carries a costing and pricing unit, not as an optional entrepreneurship add-on at the end but inside the trade module where the students are already holding the fabric. Sunita teaches that unit as a guest for the Nashik batches, two evenings per intake.",
+        "_This is a demo article. Edit or delete it from Admin → CMS → Blog._",
+      ].join("\n\n"),
+    },
+    {
+      title: "Five New Training Centres Open Across Bihar and Jharkhand",
+      slug: "five-new-centres-bihar-jharkhand",
+      category: "Centre Updates",
+      author: "EduSkill Team",
+      excerpt: "Muzaffarpur, Gaya, Bhagalpur, Ranchi and Dhanbad now have EduSkill centres, adding 600 seats per intake.",
+      seoTitle: "Five New EduSkill Training Centres in Bihar and Jharkhand",
+      seoDescription: "EduSkill India Foundation has opened training centres in Muzaffarpur, Gaya, Bhagalpur, Ranchi and Dhanbad, adding 600 seats per intake.",
+      tags: ["centres", "expansion"],
+      status: "PUBLISHED",
+      publishedAt: daysFromNow(-3),
+      isFeatured: true,
+      content: [
+        "## Where the new centres are",
+        "Five centres opened this quarter: Muzaffarpur, Gaya and Bhagalpur in Bihar, and Ranchi and Dhanbad in Jharkhand. Together they add roughly 600 seats per intake across digital literacy, computer applications, tailoring and electrical trades.",
+        "## Why these districts",
+        "Each location was chosen from block-level enquiry data rather than convenience. All five districts had sent us more than a hundred enquiries in the preceding year with no centre within reasonable travelling distance, which is the clearest signal we have that demand already exists.",
+        "## Admissions",
+        "Counselling has begun at all five. Walk in with an Aadhaar card, a passport photograph and your last mark sheet, or start the application online and finish the document upload at the centre.",
+        "_This is a demo article. Edit or delete it from Admin → CMS → Blog._",
+      ].join("\n\n"),
+    },
+    {
+      title: "What the 2026 Skills Report Means for Rural Training",
+      slug: "2026-skills-report-rural-training",
+      category: "Foundation News",
+      author: "Ananya Deshmukh",
+      excerpt: "Our reading of the year's skills report, and the three changes we are making to the rural curriculum because of it.",
+      seoTitle: "The 2026 Skills Report and Rural Vocational Training",
+      seoDescription: "What the 2026 skills report says about rural employability, and the three curriculum changes EduSkill India Foundation is making in response.",
+      tags: ["policy", "research"],
+      // Scheduled: PUBLISHED with a future date. This row must stay invisible on
+      // /blog, the archives, the sitemap and the feed until the date passes.
+      status: "PUBLISHED",
+      publishedAt: daysFromNow(3),
+      content: [
+        "## The headline finding",
+        "The report's central claim is that rural placement rates track trainer retention far more closely than they track infrastructure spend. That matches what our own centre data has been saying for three years.",
+        "## What we are changing",
+        "Three things: a longer paid induction for new trainers, a shift of the costing unit into every trade module, and quarterly refreshers run by trainers rather than by external consultants.",
+        "_This is a demo article, scheduled for a future date so you can confirm it does not appear on the public site yet._",
+      ].join("\n\n"),
+    },
+    {
+      title: "A Practical Guide to Choosing Your First Skill Course",
+      slug: "choosing-your-first-skill-course",
+      category: "Skill Development",
+      author: "EduSkill Team",
+      excerpt: "Four questions to answer before you enrol anywhere — including with us.",
+      seoTitle: "How to Choose Your First Skill Development Course",
+      seoDescription: "Four questions to answer before enrolling in any vocational course: travel time, entry requirements, what the certificate is worth, and who is hiring nearby.",
+      tags: ["career guidance", "digital literacy"],
+      status: "DRAFT",
+      publishedAt: null,
+      content: [
+        "## Start with the commute, not the course",
+        "A course you cannot reach six days a week is the wrong course, however good it looks in the brochure. Work out the travel first and choose from what is left.",
+        "## Then check the entry requirement honestly",
+        "If a course expects Class 10 mathematics and you left school in Class 8, ask the centre what bridging support exists before you enrol, not in week three.",
+        "_This is a demo draft. It must never appear on the public site._",
+      ].join("\n\n"),
+    },
+    {
+      title: "Highlights from the 2024 Annual Skill Mela",
+      slug: "highlights-2024-annual-skill-mela",
+      category: "Foundation News",
+      author: "EduSkill Team",
+      excerpt: "Two days, eleven centres and 1,400 visitors. An archive of our 2024 open house.",
+      seoTitle: "2024 Annual Skill Mela — Highlights",
+      seoDescription: "An archived report from the 2024 EduSkill Annual Skill Mela: eleven participating centres, 1,400 visitors and on-the-spot counselling.",
+      tags: ["events"],
+      status: "ARCHIVED",
+      publishedAt: daysFromNow(-400),
+      content: [
+        "## What happened",
+        "Eleven centres opened their labs for two days of demonstrations, counselling and on-the-spot registration. Around 1,400 visitors came through.",
+        "_This is a demo archived post, kept to show how an archived article behaves in the admin list._",
+      ].join("\n\n"),
+    },
+  ];
+
+  for (const p of demoPosts) {
+    await db.blog.create({
+      data: {
+        title: p.title,
+        slug: p.slug,
+        excerpt: p.excerpt,
+        content: p.content,
+        // coverImage stays null so the deterministic branded placeholder is exercised.
+        authorName: p.author,
+        authorId: blogAuthorIds.get(p.author)!,
+        categoryId: blogCategoryIds.get(p.category)!,
+        tags: p.tags,
+        status: p.status,
+        publishedAt: p.publishedAt,
+        isFeatured: p.isFeatured ?? false,
+        seoTitle: p.seoTitle,
+        seoDescription: p.seoDescription,
+        ...readingStats(p.content),
+        createdById: superAdminId,
+      },
+    });
+  }
+
+  // The tag lookup mirrors the labels stored in Blog.tags. postCount counts LIVE
+  // posts only — published AND past its date — so the scheduled, draft and archived
+  // demo rows contribute nothing, which is what the public tag cloud must show.
+  const tagPostCounts = new Map<string, number>();
+  for (const p of demoPosts) {
+    const isLive = p.status === "PUBLISHED" && p.publishedAt !== null && p.publishedAt.getTime() <= Date.now();
+    for (const tag of p.tags) tagPostCounts.set(tag, (tagPostCounts.get(tag) ?? 0) + (isLive ? 1 : 0));
+  }
+  await db.blogTag.createMany({
+    data: [...tagPostCounts].map(([name, postCount]) => ({ name, slug: slugify(name), postCount })),
   });
+
   await db.event.create({
     data: { title: "Skill Mela – Open House (Demo)", slug: "skill-mela-open-house-demo", summary: "Meet trainers, see the labs and register on the spot.", content: "Visit the EduSkill Kolkata Skill Center for a day of demos, counselling and instant registration. _Demo event – edit from Admin → CMS → Events._", startAt: daysFromNow(21), endAt: daysFromNow(21), location: "EduSkill Kolkata Skill Center", status: "PUBLISHED" },
   });

@@ -3,7 +3,7 @@ import { db, type Prisma } from "@/lib/db";
 import type { ContentStatus } from "@/generated/prisma/enums";
 import { Errors } from "@/lib/api/errors";
 import { audit } from "@/lib/audit";
-import { optionalString, slugSchema, stringList, uuid } from "@/lib/validation/common";
+import { optionalString, slugSchema, uuid } from "@/lib/validation/common";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid } from "@/lib/api/query";
 import { assertCanPublish, uniqueContentSlug, type Ctx } from "@/server/cms-admin";
 
@@ -89,70 +89,6 @@ export async function deleteGalleryItem(id: string, ctx: Ctx) {
   if (!existing) throw Errors.notFound("Gallery image");
   await db.galleryItem.delete({ where: { id } });
   await audit({ user: ctx.user, action: "delete", module: "cms", recordType: "GalleryItem", recordId: id, description: `${ctx.user.name} deleted gallery image${existing.title ? ` "${existing.title}"` : ""}`, oldValue: existing, ip: ctx.ip, userAgent: ctx.userAgent });
-}
-
-// ───────────────────────────── Blog ─────────────────────────────
-
-export const blogSchema = z.object({
-  title: z.string().trim().min(3, "Enter a title").max(200),
-  slug: z.union([z.literal(""), slugSchema]).optional().nullable(),
-  excerpt: z.string().trim().max(500).optional().nullable(),
-  content: z.string().min(20, "Write the post content (20+ characters)").max(200_000),
-  coverImage: optionalString,
-  authorName: z.string().trim().max(120).optional().nullable(),
-  tags: stringList.default([]),
-  status: contentStatus.default("DRAFT"),
-  publishedAt: optionalDateTimeInput,
-  seoTitle: z.string().trim().max(200).optional().nullable(),
-  seoDescription: z.string().trim().max(400).optional().nullable(),
-});
-export type BlogInput = z.infer<typeof blogSchema>;
-export const blogListSchema = paginationSchema.extend({ status: z.string().optional(), tag: z.string().trim().max(60).optional() });
-
-export async function listBlogs(q: z.infer<typeof blogListSchema>) {
-  const where: Prisma.BlogWhereInput = {};
-  if (q.status) where.status = { in: q.status.split(",") as ContentStatus[] };
-  if (q.tag) where.tags = { has: q.tag };
-  if (q.q) where.OR = [{ title: { contains: q.q, mode: "insensitive" } }, { slug: { contains: q.q, mode: "insensitive" } }, { authorName: { contains: q.q, mode: "insensitive" } }];
-  const orderBy = buildOrderBy(q.sort, q.order, ["updatedAt", "createdAt", "publishedAt", "title", "status"] as const, "updatedAt");
-  const [items, total] = await Promise.all([db.blog.findMany({ where, orderBy, ...getPaging(q), select: { id: true, title: true, slug: true, status: true, authorName: true, tags: true, publishedAt: true, updatedAt: true, createdAt: true, coverImage: true } }), db.blog.count({ where })]);
-  return paged(items, total, q);
-}
-
-export async function getBlog(id: string) {
-  const blog = await db.blog.findUnique({ where: { id } });
-  if (!blog) throw Errors.notFound("Blog post");
-  return blog;
-}
-
-function blogData(input: BlogInput, slug: string, existing?: { publishedAt: Date | null; status: ContentStatus }) {
-  const publishedAt = input.status === "PUBLISHED" ? (input.publishedAt ?? existing?.publishedAt ?? new Date()) : (input.publishedAt ?? existing?.publishedAt ?? null);
-  return { title: input.title, slug, excerpt: input.excerpt || null, content: input.content, coverImage: input.coverImage || null, authorName: input.authorName || null, tags: input.tags, status: input.status, publishedAt, seoTitle: input.seoTitle || null, seoDescription: input.seoDescription || null };
-}
-
-export async function createBlog(input: BlogInput, ctx: Ctx) {
-  assertCanPublish(ctx.user, input.status === "PUBLISHED");
-  const slug = await uniqueContentSlug("blog", input.slug || input.title);
-  const blog = await db.blog.create({ data: { ...blogData(input, slug), createdById: ctx.user.id } });
-  await audit({ user: ctx.user, action: "create", module: "cms", recordType: "Blog", recordId: blog.id, description: `${ctx.user.name} created blog post "${blog.title}"${blog.status === "PUBLISHED" ? " (published)" : ""}`, newValue: { ...blog, content: undefined }, ip: ctx.ip, userAgent: ctx.userAgent });
-  return blog;
-}
-
-export async function updateBlog(id: string, input: BlogInput, ctx: Ctx) {
-  const existing = await db.blog.findUnique({ where: { id } });
-  if (!existing) throw Errors.notFound("Blog post");
-  assertCanPublish(ctx.user, input.status !== existing.status);
-  const slug = input.slug && input.slug !== existing.slug ? await uniqueContentSlug("blog", input.slug, id) : existing.slug;
-  const blog = await db.blog.update({ where: { id }, data: blogData(input, slug, existing) });
-  await audit({ user: ctx.user, action: input.status !== existing.status ? input.status.toLowerCase() : "update", module: "cms", recordType: "Blog", recordId: id, description: `${ctx.user.name} ${input.status !== existing.status ? `set blog post "${blog.title}" to ${input.status.toLowerCase()}` : `updated blog post "${blog.title}"`}`, oldValue: { ...existing, content: undefined }, newValue: { ...blog, content: undefined }, ip: ctx.ip, userAgent: ctx.userAgent });
-  return blog;
-}
-
-export async function deleteBlog(id: string, ctx: Ctx) {
-  const existing = await db.blog.findUnique({ where: { id } });
-  if (!existing) throw Errors.notFound("Blog post");
-  await db.blog.delete({ where: { id } });
-  await audit({ user: ctx.user, action: "delete", module: "cms", recordType: "Blog", recordId: id, description: `${ctx.user.name} deleted blog post "${existing.title}"`, oldValue: { ...existing, content: undefined }, ip: ctx.ip, userAgent: ctx.userAgent });
 }
 
 // ───────────────────────────── Events ─────────────────────────────

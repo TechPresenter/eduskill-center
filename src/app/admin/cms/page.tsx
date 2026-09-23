@@ -15,13 +15,17 @@ export const metadata = { title: "Website Content" };
 
 export default async function CmsOverviewPage() {
   await requireAdmin("cms.view");
-  const [sections, pages, programs, stories, partners, blogs, events, faqs, gallery] = await Promise.all([
+  const [sections, pages, programs, stories, partners, blogs, scheduledPosts, events, faqs, gallery] = await Promise.all([
     listSectionsWithState(),
     db.cmsPage.groupBy({ by: ["status"], _count: { _all: true } }),
     db.program.groupBy({ by: ["isActive"], _count: { _all: true } }),
     db.successStory.groupBy({ by: ["isPublished"], _count: { _all: true } }),
     db.partner.groupBy({ by: ["isActive"], _count: { _all: true } }),
     db.blog.groupBy({ by: ["status"], _count: { _all: true } }),
+    // A scheduled post is PUBLISHED with a future date — there is no SCHEDULED status to group by,
+    // so it takes its own count. Without it the tile would call a post that nobody can read yet
+    // "published", and the only place a future-dated post is visible would be the blog list itself.
+    db.blog.count({ where: { status: "PUBLISHED", publishedAt: { gt: new Date() } } }),
     db.event.groupBy({ by: ["status"], _count: { _all: true } }),
     db.faq.groupBy({ by: ["isPublished"], _count: { _all: true } }),
     db.galleryItem.groupBy({ by: ["isPublished"], _count: { _all: true } }),
@@ -37,7 +41,10 @@ export default async function CmsOverviewPage() {
     { href: "/admin/cms/programs", icon: BookMarked, title: "Programs", total: `${sum(programs)} programs`, detail: `${sum(programs, (p) => p.isActive)} active` },
     { href: "/admin/cms/stories", icon: Star, title: "Success stories", total: `${sum(stories)} stories`, detail: `${sum(stories, (s) => s.isPublished)} published` },
     { href: "/admin/cms/partners", icon: Handshake, title: "Partners", total: `${sum(partners)} partners`, detail: `${sum(partners, (p) => p.isActive)} shown` },
-    { href: "/admin/blog", icon: Newspaper, title: "Blog", total: `${sum(blogs)} posts`, detail: `${sum(blogs, (b) => b.status === "PUBLISHED")} published` },
+    // "Live" is PUBLISHED minus the ones still waiting for their date: the `gt` count cannot match a
+    // NULL `publishedAt`, so a PUBLISHED post with no date stays on the live side of the subtraction,
+    // exactly as `displayStatus()` reads it on the blog screens.
+    { href: "/admin/blog", icon: Newspaper, title: "Blog", total: `${sum(blogs)} posts`, detail: `${sum(blogs, (b) => b.status === "PUBLISHED") - scheduledPosts} live · ${scheduledPosts} scheduled` },
     { href: "/admin/events", icon: CalendarDays, title: "Events", total: `${sum(events)} events`, detail: `${sum(events, (e) => e.status === "PUBLISHED")} published` },
     { href: "/admin/faqs", icon: HelpCircle, title: "FAQs", total: `${sum(faqs)} questions`, detail: `${sum(faqs, (f) => f.isPublished)} published` },
     { href: "/admin/gallery", icon: ImageIcon, title: "Gallery", total: `${sum(gallery)} images`, detail: `${sum(gallery, (g) => g.isPublished)} published` },

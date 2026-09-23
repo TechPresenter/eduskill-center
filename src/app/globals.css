@@ -673,6 +673,21 @@
   & h3 {
     @apply mt-6 mb-2 text-h3;
   }
+  /* `###` and `####` both flatten to h4 in the renderer, so the deepest step needs a size too —
+     without it a fourth-level heading inherited text-body-lg and read as bold body copy. */
+  & h4 {
+    @apply mt-5 mb-2 text-h4;
+  }
+  /*
+   * Anchor landing offset. A long-form article is the only place we deep-link INTO the page
+   * (table of contents, shared #heading links), and the site header is sticky — without this the
+   * heading you jumped to sits underneath it. 6rem clears the header at every breakpoint.
+   */
+  & h2,
+  & h3,
+  & h4 {
+    scroll-margin-top: 6rem;
+  }
   & p {
     @apply mb-4;
   }
@@ -703,6 +718,30 @@
   }
   & th {
     @apply bg-surface font-semibold text-navy;
+  }
+  /* Body illustrations: a plain <img> keeping its own intrinsic ratio (see markdown.tsx), so the
+     radius is the only thing the prose layer imposes. The caption is centred under it and set
+     one step down — it is an aside, not a sentence of the article. */
+  & figure {
+    @apply my-6;
+  }
+  & figcaption {
+    @apply mt-2 text-center text-body-sm text-muted;
+  }
+  & img {
+    @apply rounded-card;
+  }
+  & hr {
+    @apply my-8 border-line;
+  }
+  /*
+   * INLINE code only. A bare `& code` would also repaint the <code> inside a fenced block, which
+   * already sits on a navy <pre> — lavender on navy is unreadable. `:not(pre) >` scopes it to the
+   * inline case. 0.9em (not a fixed step) so it tracks whatever type size it is embedded in and
+   * never drops under the 12px floor on its own.
+   */
+  & :not(pre) > code {
+    @apply rounded-xs bg-lavender px-1.5 py-0.5 font-mono text-[0.9em] text-navy;
   }
 }
 
@@ -1032,4 +1071,315 @@
   [data-list-inset="false"] > [data-list-row] + [data-list-row]::before {
     left: 0;
   }
+}
+
+/* ═════════════ BUTTON DEPTH: GRADIENT FILLS, SHINE, MICRO-INTERACTIONS ═════════════
+ * Owned by src/components/ui/button.tsx (the only consumer). Everything here is built from the
+ * brand's own hues — a filled button is lit from above like a physical surface, never a two-colour
+ * or rainbow gradient.
+ *
+ * CONTRAST IS THE CONSTRAINT, not an afterthought. White on the brand orange #E8520A measures
+ * 3.72:1 — already under the 4.5:1 AA floor for normal-size text, and button labels (13-16px
+ * semibold) do not qualify as large text. So every fill gradient DEEPENS downward and reaches its
+ * AA-passing stop by 22-26% of the button height, which is above the cap height of the label at
+ * every size in the scale (the tightest case, a 32px `xs` button with 13px text, puts the top of
+ * the glyphs at ~35%). The brand orange therefore only ever lights the top edge, where no glyph
+ * sits, and the label always rests on >= 4.95:1. Measured, white against each stop:
+ *
+ *   orange  rest   #E8520A 3.72 (0%, edge only) - #C94104 4.95 (22%) - #BB3C03 5.58 (100%)
+ *   orange  hover  #D94705 4.33 (0%, edge only) - #BB3C03 5.58 (22%) - #A83603 6.58 (100%)
+ *   navy    rest   #163C87 10.35 - #12357A 11.57 - #0E2A62 13.76
+ *   navy    hover  #12357A 11.57 - #102F70 12.63 - #0B2453 15.09
+ *   danger  rest   #D92D20  4.83 - #C4261A  5.77 - #B32219  6.65
+ *   danger  hover  #C4261A  5.77 - #B32219  6.65 - #9E1D15  7.95
+ *
+ * The gradients sit on `background-image`, so each variant's `bg-*` colour stays underneath as the
+ * fallback for forced-colors mode and for anything that drops background images.
+ */
+
+:root {
+  /*
+   * THE ONE EXCEPTION to the three-duration scale (150 / 250 / 350ms). A shine is not a state
+   * change, it is a travelling highlight: it has to cross the whole width of the button, and under
+   * ~500ms it reads as a flicker rather than a sweep. It is hover-only, runs exactly once per
+   * pointer-enter, never loops, and is removed entirely under prefers-reduced-motion — so it buys
+   * its length honestly. Do not reach for it for anything else; use the three tokens.
+   */
+  --duration-shine: 560ms;
+}
+
+@utility duration-shine {
+  transition-duration: var(--duration-shine);
+  animation-duration: var(--duration-shine);
+}
+
+/* ── Fill gradients. Within-hue only; see the contrast table above. ── */
+@utility btn-fill-orange {
+  background-image: linear-gradient(180deg, #e8520a 0%, #c94104 22%, #bb3c03 100%);
+  &:hover {
+    background-image: linear-gradient(180deg, #d94705 0%, #bb3c03 22%, #a83603 100%);
+  }
+}
+@utility btn-fill-navy {
+  background-image: linear-gradient(180deg, #163c87 0%, #12357a 26%, #0e2a62 100%);
+  &:hover {
+    background-image: linear-gradient(180deg, #12357a 0%, #102f70 26%, #0b2453 100%);
+  }
+}
+@utility btn-fill-danger {
+  background-image: linear-gradient(180deg, #d92d20 0%, #c4261a 22%, #b32219 100%);
+  &:hover {
+    background-image: linear-gradient(180deg, #c4261a 0%, #b32219 22%, #9e1d15 100%);
+  }
+}
+
+/*
+ * ── The shine ──
+ * A soft diagonal band of translucent white that crosses the button ONCE when the pointer enters.
+ *
+ * Two deliberate mechanics:
+ *  1. It travels on `background-position`, not `transform`, and lives on the ::after's own rounded
+ *     background box. That means no `overflow: hidden` on the button (which would clip anything a
+ *     call site absolutely positions inside one) and no transform/filter/clip-path on the button
+ *     itself — the containing-block trap this codebase has been bitten by twice.
+ *  2. `isolation: isolate` + `z-index: -1` paints the band above the fill and BELOW the label, so
+ *     the sweep can never lower the contrast of the text it passes under.
+ * Fine pointers only: on a touch screen `:hover` sticks after a tap and the band would freeze
+ * mid-button.
+ */
+@utility btn-shine {
+  isolation: isolate;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background-image: linear-gradient(105deg, transparent 38%, rgb(255 255 255 / 0.28) 50%, transparent 62%);
+    background-repeat: no-repeat;
+    background-size: 220% 100%;
+    /* Parked off the left edge: with an image wider than the box, a larger % moves it further left. */
+    background-position: 120% 0;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    &:hover::after {
+      animation: btn-shine var(--duration-shine) var(--ease-out-soft) 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &:hover::after {
+      animation: none;
+    }
+  }
+}
+
+@keyframes btn-shine {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -20% 0;
+  }
+}
+
+/*
+ * ── Micro-interactions ──
+ * `btn-micro` owns the whole transition for a button (it replaces the old blanket `transition
+ * duration-micro`), so the cascade has exactly one owner: press scale, the trailing-icon nudge,
+ * and its own reduced-motion escape. Disabled and loading buttons carry `pointer-events: none`,
+ * so :hover and :active never fire on them — the lift and the shine switch themselves off.
+ */
+@utility btn-micro {
+  transition-property: color, background-color, background-image, border-color, box-shadow, transform, opacity;
+  transition-duration: var(--duration-micro);
+  transition-timing-function: var(--ease-out-soft);
+  &:active {
+    transform: scale(0.97);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    &:hover [data-btn-trail] {
+      transform: translateX(2px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &:hover,
+    &:active {
+      transform: none;
+    }
+    & [data-btn-trail] {
+      transform: none;
+    }
+  }
+}
+
+/*
+ * The 1px hover lift, with the e2 elevation. Separate from btn-micro because the `link` variant has
+ * no box to raise — a floating underline would read as a rendering bug. On press the button settles
+ * back down: the scale from btn-micro replaces the lift (same property, later rule wins) and the
+ * shadow drops, so a click reads as push-in rather than push-in-while-floating.
+ */
+@utility btn-lift {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-e2);
+    }
+    /* Repeats btn-micro's press on purpose: a desktop click is :hover AND :active at once, and this
+       rule follows the lift inside the same utility, so the push-in wins without depending on the
+       order Tailwind happens to emit the two utilities in. */
+    &:active {
+      transform: scale(0.97);
+      box-shadow: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &:hover {
+      transform: none;
+    }
+  }
+}
+
+@layer components {
+  /* The wrapper Button/ButtonLink put around `rightIcon`; btn-micro nudges it 2px on hover. */
+  [data-btn-trail] {
+    display: inline-flex;
+    align-items: center;
+    transition: transform var(--duration-micro) var(--ease-out-soft);
+  }
+}
+
+/* ═════════════ MARQUEE ═════════════
+ * The announcement topbar's ticker. The track holds TWO identical copies of the content and
+ * translates by -50%, so the loop is seamless; `--marquee-duration` lets the topbar tune the speed
+ * to the length of its content (longer content needs a longer duration to keep the same px/second).
+ * Default 40s.
+ *
+ * Only the inner TRACK may carry this — never the topbar, the header or any ancestor of a
+ * position:fixed element, because an animated transform makes that element the containing block.
+ *
+ * WCAG 2.2.2 (Pause, Stop, Hide): motion stops on hover and on keyboard focus inside the track, a
+ * `.marquee-paused` class on the track or any ancestor stops it outright (for an explicit pause
+ * control), and prefers-reduced-motion removes the animation altogether.
+ */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@utility animate-marquee {
+  animation: marquee var(--marquee-duration, 40s) linear infinite;
+}
+
+/* Unlayered so these always outrank the utility above, whatever order Tailwind emits them in. */
+.animate-marquee:hover,
+.animate-marquee:focus-within,
+.animate-marquee.marquee-paused,
+.marquee-paused .animate-marquee,
+.group:hover .animate-marquee,
+.group:focus-within .animate-marquee {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* ═════════════ LONG-FORM ARTICLE ═════════════
+ * The three pieces the blog's reading experience needs that `prose-content` cannot express on
+ * its own: the permalink beside a heading, the table-of-contents rail, and the scroll-progress
+ * strip. Nothing here is blog-specific in its markup — any long-form page can use them.
+ *
+ * Note on smooth scrolling: `html { scroll-behavior: smooth }` is already set in the base layer
+ * above, and the unlayered reduced-motion backstop overrides it to `auto !important`. Anchor
+ * jumps from the TOC therefore already glide, and already stop gliding for anyone who asked
+ * the OS for less motion. Do not re-declare it.
+ */
+
+/*
+ * The quiet `#` permalink the Markdown renderer puts inside every heading.
+ *
+ * Hidden until the heading is hovered or the link itself is focused, so an article reads as
+ * prose and not as a wiki. It is a real focusable link, never aria-hidden — keyboard users get
+ * it via focus-visible, which the opacity rule below honours.
+ *
+ * `max-md:hidden` on purpose: on a phone there is no hover to reveal it, the glyph would sit
+ * permanently beside every heading as visual noise, and copying a URL fragment is not a phone
+ * gesture. The ::after box widens the pointer target on the pointers that DO get it, so the
+ * 44px rule is met without the glyph itself having to be 44px of orange.
+ */
+@utility heading-anchor {
+  @apply ring-focus relative ml-2 align-middle text-orange no-underline opacity-0 transition-opacity duration-micro max-md:hidden focus-visible:opacity-100 motion-reduce:transition-none;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: -0.75rem;
+  }
+}
+
+/* Unlayered so it always outranks the `opacity-0` inside the utility above, whatever order
+   Tailwind emits the two in — the same reason the marquee pause rules are unlayered. */
+h2:hover > .heading-anchor,
+h3:hover > .heading-anchor,
+h4:hover > .heading-anchor {
+  opacity: 1;
+}
+
+/*
+ * One row of the table of contents. The left border is the active indicator: transparent at
+ * rest, hairline on hover, orange when `aria-current="true"` — a moving bar rather than a
+ * colour swap, so the current section is findable at a glance in a list of fifteen.
+ *
+ * `flex min-h-11 items-center` rather than a plain block: these are the densest tap targets on
+ * the article page and they still have to clear 44px, while a heading long enough to wrap keeps
+ * its lines centred against the indicator.
+ */
+@utility toc-link {
+  @apply ring-focus flex min-h-11 items-center rounded-sm border-l-2 border-transparent py-1.5 pl-3 text-body-sm text-muted transition-colors duration-micro hover:border-line hover:text-navy motion-reduce:transition-none;
+  &[aria-current="true"] {
+    @apply border-orange font-semibold text-navy;
+  }
+}
+
+/*
+ * Reading-progress strip. Two utilities, and the split is not cosmetic:
+ *
+ *   <div class="reading-progress"><span class="reading-progress-bar" style="--reading-progress:.42"/></div>
+ *
+ * `reading-progress` is the fixed 3px rail and carries NO transform. `reading-progress-bar` is
+ * the inner track and is the only thing scaled. This codebase has been bitten three times by a
+ * transform on an ancestor turning that ancestor into the containing block for its
+ * position:fixed descendants (the mobile menu, the admin Fab, the `animate-page` wrapper) —
+ * scaling the rail itself would make the rail its own containing block and, worse, invite the
+ * same mistake one level up. Never move the transform outwards.
+ *
+ * Scaling (not animating `width`) keeps every scroll frame on the compositor. z-drawer, not
+ * z-header, so the strip is above the sticky site header without depending on DOM order, and
+ * still below dialogs, sheets and toasts. `pointer-events: none` so it can never swallow a
+ * click meant for the header underneath it.
+ */
+@utility reading-progress {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  z-index: var(--z-drawer);
+  pointer-events: none;
+}
+@utility reading-progress-bar {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: 0 50%;
+  /* 0 → 1. The island writes the custom property; CSS does the painting. */
+  transform: scaleX(var(--reading-progress, 0));
+  background-color: var(--color-orange);
+  will-change: transform;
 }

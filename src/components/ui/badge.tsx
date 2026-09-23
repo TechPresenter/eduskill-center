@@ -30,6 +30,9 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   PENDING: "warning",
   DRAFT: "neutral",
   PUBLISHED: "success",
+  // Derived, never stored: a blog post that is PUBLISHED with a future publishedAt. Info-toned
+  // because it is neither done (success) nor a problem (warning) — it is simply waiting.
+  SCHEDULED: "info",
   ARCHIVED: "neutral",
   // applications
   SUBMITTED: "info",

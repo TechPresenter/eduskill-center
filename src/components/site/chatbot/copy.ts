@@ -11,12 +11,25 @@ import type { ChatErrorKind, ChatLang } from "./types";
 export interface ChatCopy {
   /** Panel heading, built from the Foundation's own short name (DB-driven branding). */
   title: (name: string) => string;
-  subtitle: string;
+  /**
+   * Header status line shown while nothing is in flight. It is a presence claim about the service,
+   * not a live connection check — the typing/streaming state replaces it the moment a reply starts.
+   */
+  statusIdle: string;
   close: string;
   clear: string;
+  /** Short label beside the footer pill's icon (the full `clear` string stays the accessible name). */
+  clearShort: string;
   languageLabel: string;
   logLabel: string;
   greetingFallback: string;
+  /** Hero heading of the empty state, shown before the visitor has asked anything. */
+  emptyTitle: string;
+  /**
+   * Exactly three capability chips. They are labels, not questions — the tappable prompts are the
+   * suggestions from the server — and a fourth wraps the row on a 360px phone.
+   */
+  capabilities: string[];
   suggestionsLabel: string;
   placeholder: string;
   send: string;
@@ -42,12 +55,15 @@ export interface ChatCopy {
 
 const en: ChatCopy = {
   title: (name) => (name ? `${name} Assistant` : "Assistant"),
-  subtitle: "Courses, centres & admissions",
+  statusIdle: "Online — quick replies",
   close: "Close chat",
   clear: "Clear chat",
+  clearShort: "Clear",
   languageLabel: "Language",
   logLabel: "Conversation",
   greetingFallback: "Hello! Ask me about our courses, training centres, admissions or scholarships.",
+  emptyTitle: "How can I help?",
+  capabilities: ["Courses & fees", "Centres near you", "Admissions & scholarships"],
   suggestionsLabel: "Suggested questions",
   placeholder: "Type your question…",
   send: "Send message",
@@ -78,12 +94,15 @@ const en: ChatCopy = {
 
 const hi: ChatCopy = {
   title: (name) => (name ? `${name} सहायक` : "सहायक"),
-  subtitle: "कोर्स, केंद्र, प्रवेश और अधिक",
+  statusIdle: "ऑनलाइन — तुरंत उत्तर",
   close: "चैट बंद करें",
   clear: "चैट साफ़ करें",
+  clearShort: "साफ़ करें",
   languageLabel: "भाषा",
   logLabel: "बातचीत",
   greetingFallback: "नमस्ते! हमारे कोर्स, प्रशिक्षण केंद्र, प्रवेश या छात्रवृत्ति के बारे में पूछें।",
+  emptyTitle: "मैं कैसे मदद करूँ?",
+  capabilities: ["कोर्स और फ़ीस", "आस-पास के केंद्र", "प्रवेश और छात्रवृत्ति"],
   suggestionsLabel: "सुझाए गए प्रश्न",
   placeholder: "अपना प्रश्न लिखें…",
   send: "संदेश भेजें",
@@ -119,4 +138,9 @@ export const LAUNCHER_COPY = {
   open: "Open the chat assistant",
   close: "Close the chat assistant",
   unread: "New message",
+  /**
+   * Visible text of the desktop pill form of the launcher. It stays generic rather than naming the
+   * Foundation because the branding `name` is a prop of ChatPanel, not of ChatLauncher.
+   */
+  label: "Ask a question",
 } as const;

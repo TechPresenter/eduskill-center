@@ -164,7 +164,19 @@ export async function getCmsPage(id: string) {
   return { ...page, isFixed: isFixedPageSlug(page.slug) };
 }
 
-async function uniqueSlug(model: "cmsPage" | "program" | "blog" | "event" | "campaign", base: string, excludeId?: string) {
+/**
+ * Slugs that are real route segments under `/blog`. Next resolves a static segment before the
+ * `[slug]` catch-all, so a post slugged "category" would be permanently unreachable — the URL
+ * would render the category archive instead. Treating these roots as already taken pushes such
+ * a post to "category-2", which is ugly but visitable.
+ */
+const RESERVED_BLOG_SLUGS = new Set(["category", "tag", "author", "preview", "page", "feed", "rss", "rss.xml"]);
+
+async function uniqueSlug(
+  model: "cmsPage" | "program" | "blog" | "event" | "campaign" | "blogCategory" | "blogAuthor" | "blogTag",
+  base: string,
+  excludeId?: string
+) {
   const root = slugify(base) || "item";
   let slug = root;
   let i = 1;
@@ -176,11 +188,18 @@ async function uniqueSlug(model: "cmsPage" | "program" | "blog" | "event" | "cam
       case "program":
         return db.program.findFirst({ where, select: { id: true } });
       case "blog":
+        if (RESERVED_BLOG_SLUGS.has(s)) return { id: "reserved" };
         return db.blog.findFirst({ where, select: { id: true } });
       case "event":
         return db.event.findFirst({ where, select: { id: true } });
       case "campaign":
         return db.campaign.findFirst({ where, select: { id: true } });
+      case "blogCategory":
+        return db.blogCategory.findFirst({ where, select: { id: true } });
+      case "blogAuthor":
+        return db.blogAuthor.findFirst({ where, select: { id: true } });
+      case "blogTag":
+        return db.blogTag.findFirst({ where, select: { id: true } });
     }
   };
   while (await exists(slug)) slug = `${root}-${++i}`;

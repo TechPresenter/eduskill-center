@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  Award, BarChart3, Bell, BookOpen, Building2, CalendarDays, ClipboardCheck, ClipboardList, Coins, CreditCard, FileText, GraduationCap, HandCoins, HelpCircle,
-  History, Image as ImageIcon, KeyRound, LayoutDashboard, LifeBuoy, Map, Menu, Newspaper, School, Settings, ShieldCheck, TrendingUp, UserCheck, UserCog, UsersRound,
+  Award, BarChart3, Bell, BookOpen, Building2, CalendarDays, ClipboardCheck, ClipboardList, Coins, CreditCard, FileText, FolderTree, GraduationCap, HandCoins, HelpCircle,
+  History, Image as ImageIcon, KeyRound, LayoutDashboard, LifeBuoy, Map, Menu, Newspaper, School, Settings, ShieldCheck, Tags, TrendingUp, UserCheck, UserCog, UserPen, UsersRound,
 } from "lucide-react";
 import type { NavGroup, NavItem } from "@/components/portal/shell";
 
@@ -50,6 +50,12 @@ export const ADMIN_NAV: NavGroup[] = [
       { label: "Content (CMS)", href: "/admin/cms", icon: Newspaper, permission: "cms.view" },
       { label: "Gallery", href: "/admin/gallery", icon: ImageIcon, permission: "cms.view" },
       { label: "Blog", href: "/admin/blog", icon: FileText, permission: "cms.view" },
+      // The three blog taxonomy screens. They are reachable from the blog list too, but a tag
+      // typo or a missing author is the kind of thing somebody goes looking for from the menu,
+      // not from inside a post. All three read and write through `cms.view` / `cms.update`.
+      { label: "Blog categories", href: "/admin/blog/categories", icon: FolderTree, permission: "cms.view" },
+      { label: "Blog authors", href: "/admin/blog/authors", icon: UserPen, permission: "cms.view" },
+      { label: "Blog tags", href: "/admin/blog/tags", icon: Tags, permission: "cms.view" },
       { label: "Events", href: "/admin/events", icon: CalendarDays, permission: "cms.view" },
       { label: "FAQs", href: "/admin/faqs", icon: HelpCircle, permission: "cms.view" },
       { label: "Donations", href: "/admin/donations", icon: HandCoins, permission: "donations.view" },

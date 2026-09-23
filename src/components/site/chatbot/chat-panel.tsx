@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, ArrowDown, Sparkles, Volume2, VolumeX, X } from "lucide-react";
+import { AlertCircle, ArrowDown, Volume2, VolumeX, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFocusTrap, useMediaQuery, useScrollLock, useVisualViewport } from "@/lib/hooks";
 import { UI_COPY } from "./copy";
 import { ChatBubble, GreetingBubble } from "./chat-message";
 import { ChatComposer } from "./chat-composer";
+import { ChatEmptyState } from "./chat-empty-state";
+import { AssistantAvatar, CONVERSATION_SURFACE, HEADER_ACCENT, HEADER_GLOW, HEADER_SHELL, ICON_BTN_ON_NAVY } from "./chat-theme";
 import { useSpeechOutput } from "./use-speech";
 import type { ChatController } from "./use-chat";
 import { detectLang, type ChatConfig, type ChatLang } from "./types";
@@ -28,10 +30,17 @@ export interface ChatPanelProps {
 }
 
 /**
- * The conversation surface: a near-full-height sheet on phones, a 380×560 card pinned above the
- * launcher on desktop. It is a dialog in both cases (focus trapped, Escape closes, focus returns to
- * the launcher) but only phones lock body scroll, because the desktop card deliberately leaves the
- * page usable behind it.
+ * The conversation surface: a near-full-height sheet on phones, a 400px (420px from `lg`) × 620px
+ * card pinned above the launcher on desktop. It is a dialog in both cases (focus trapped, Escape
+ * closes, focus returns to the launcher) but only phones lock body scroll, because the desktop card
+ * deliberately leaves the page usable behind it.
+ *
+ * LAYOUT CONTRACT: this element is `position: fixed`, and so is the phone backdrop beside it. No
+ * ancestor may acquire a transform, filter, backdrop-filter, clip-path or will-change — which is why
+ * `chat-widget.tsx` returns a bare fragment — and no DESCENDANT of the panel may become `fixed`
+ * either. The jump-to-latest button is `absolute` inside the `relative` conversation wrapper for
+ * exactly that reason. The one `filter` in the whole widget is {@link HEADER_ACCENT}, a childless
+ * `aria-hidden` leaf, so it has nothing to re-parent.
  */
 export function ChatPanel({ panelId, name, config, chat, closing, onClose, voiceOn, onVoiceChange }: ChatPanelProps) {
   const { messages, lang, setLang, status, busy, error, canRetry, send, retry, stop, clear } = chat;
@@ -110,9 +119,22 @@ export function ChatPanel({ panelId, name, config, chat, closing, onClose, voice
   };
 
   const greeting = config.greeting[lang] || t.greetingFallback;
-  // The panel is 380px wide even on desktop, so each chip takes a row: show the first few and leave
-  // the conversation the space. They disappear as soon as the visitor has asked something.
+  // Even at its widest the panel is a single narrow column, so each quick question takes a whole
+  // row: show the first few and leave the conversation the space. They disappear — along with the
+  // whole empty state that hosts them — as soon as the visitor has asked something.
   const suggestions = messages.length === 0 ? config.suggestions.slice(0, 4) : [];
+
+  // Rate limiting is the one error the visitor caused and can simply wait out; everything else is a
+  // fault on our side. Same markup, same `role="alert"`, amber instead of red.
+  //
+  // Both tones use the repo's own tinted-banner pairing from `ui/feedback.tsx` (`bg-warning-light` +
+  // `text-amber-900`, `bg-danger-light` + `text-red-900`) rather than the flat `text-warning` /
+  // `text-danger` dots. That matters here: `text-danger` (#d92d20) is 4.83:1 on WHITE but only
+  // 4.11:1 on `bg-danger-light` (#fde8e6), which fails AA for this 13px sentence. There is no
+  // `--color-danger-dark` token to reach for the way `warning`/`success`/`info` have one, and the
+  // product already answers this exact question with `text-red-900` (8.5:1 here). The amber half
+  // moves with it so the two branches stay one idiom; `text-amber-900` is 8.3:1 on the warning tint.
+  const warn = error === "rateLimit";
 
   // With the on-screen keyboard open, a `bottom: 0` fixed sheet would sit behind it: pin the sheet to
   // the visual viewport instead so the composer stays in view.
@@ -121,12 +143,15 @@ export function ChatPanel({ panelId, name, config, chat, closing, onClose, voice
 
   return (
     <>
-      {/* Phones only: the sheet is modal, desktop deliberately leaves the page visible and clickable. */}
+      {/* Phones only: the sheet is modal, desktop deliberately leaves the page visible and clickable.
+          Deliberately NOT `backdrop-blur`: this would be legal (a childless sibling of the panel), but
+          a full-viewport backdrop-filter is the most expensive paint there is and this audience is on
+          low-end Android. The extra 10% of navy buys the same separation for free. */}
       <div
         aria-hidden
         onClick={onClose}
         className={cn(
-          "fixed inset-0 z-overlay bg-navy/40 sm:hidden",
+          "fixed inset-0 z-overlay bg-navy/50 sm:hidden",
           closing ? "opacity-0 transition-opacity duration-micro motion-reduce:transition-none" : "animate-fade-in motion-reduce:animate-none"
         )}
       />
@@ -141,83 +166,111 @@ export function ChatPanel({ panelId, name, config, chat, closing, onClose, voice
         style={keyboardStyle}
         className={cn(
           "fixed z-overlay flex flex-col overflow-hidden bg-white shadow-e3 outline-none",
-          // phone: near-full-height sheet that clears the notch
+          // phone: near-full-height sheet that clears the notch. `max(1.5rem, safe-area)` rather than
+          // `pt-safe`, because a phone without a notch reports 0 and the sheet would touch the edge.
           "inset-x-0 bottom-0 top-[max(1.5rem,env(safe-area-inset-top))] rounded-t-2xl",
-          // desktop: compact card sitting just above the launcher (1rem offset + 3.5rem button + 0.75rem gap)
-          "sm:inset-x-auto sm:top-auto sm:left-auto sm:right-[max(1rem,env(safe-area-inset-right))] sm:bottom-[calc(var(--bottom-nav-h)+var(--sticky-bar-h)+env(safe-area-inset-bottom,0px)+5.25rem)] sm:h-[600px] sm:max-h-[calc(100dvh-7rem)] sm:w-[380px] sm:rounded-card sm:border sm:border-line",
+          // desktop: compact card sitting just above the launcher (1rem offset + 3.5rem button + 0.75rem gap).
+          // The 5.25rem is arithmetic against the launcher's 56px height — do not touch one without the other.
+          "sm:inset-x-auto sm:top-auto sm:left-auto sm:right-[max(1rem,env(safe-area-inset-right))] sm:bottom-[calc(var(--bottom-nav-h)+var(--sticky-bar-h)+env(safe-area-inset-bottom,0px)+5.25rem)] sm:h-[620px] sm:max-h-[calc(100dvh-7rem)] sm:w-[400px] sm:rounded-card-lg sm:border sm:border-line lg:w-[420px]",
           closing
-            ? "pointer-events-none animate-slide-down sm:animate-none sm:translate-y-2 sm:opacity-0 sm:transition sm:duration-micro sm:ease-in sm:motion-reduce:transition-none"
+            ? "pointer-events-none animate-slide-down motion-reduce:animate-none sm:animate-none sm:translate-y-2 sm:opacity-0 sm:transition sm:duration-micro sm:ease-in sm:motion-reduce:transition-none"
             : "animate-slide-up sm:animate-fade-up motion-reduce:animate-none"
         )}
       >
-        {/* Header */}
-        <div className="flex items-center gap-2.5 bg-navy px-3 py-2.5 text-white">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10" aria-hidden>
-            <Sparkles className="h-4.5 w-4.5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 id={titleId} className="truncate font-heading text-[15px] font-bold text-white">
-              {t.title(name)}
-            </h2>
-            <p className="truncate text-[12px] leading-4 text-white/70">{t.subtitle}</p>
-          </div>
+        {/* The sheet grabber is a visual affordance ONLY — it says "this is a sheet", it is not a drag
+            handle. A swipe-to-dismiss gesture layered over a scrolling log is a real behavioural
+            change, and the sheet already closes via X, Escape and the backdrop. */}
+        <span aria-hidden className="absolute inset-x-0 top-0 z-raised mx-auto mt-1.5 h-1.5 w-10 rounded-full bg-white/40 sm:hidden" />
 
-          <div role="group" aria-label={t.languageLabel} className="flex shrink-0 items-center rounded-full bg-white/10 p-0.5">
-            {(["en", "hi"] as ChatLang[]).map((code) => (
-              <button
-                key={code}
-                type="button"
-                onClick={() => setLang(code)}
-                aria-pressed={lang === code}
-                className={cn(
-                  "min-h-9 rounded-full px-2.5 text-[12px] font-bold transition-colors tap-highlight-none motion-reduce:transition-none max-sm:min-h-11 max-sm:min-w-11",
-                  lang === code ? "bg-white text-navy" : "text-white/75 hover:text-white"
-                )}
-              >
-                {code === "en" ? "EN" : "हिं"}
+        {/* Header. Two decorative aria-hidden leaves under one `overflow-hidden` shell: the depth
+            comes from a layer, never from a filter on the header itself. */}
+        <div className={HEADER_SHELL}>
+          <span aria-hidden className={HEADER_GLOW} />
+          <span aria-hidden className={HEADER_ACCENT} />
+
+          <div className="relative flex items-center gap-2.5 px-3 py-2.5">
+            {/* Hidden on phones: at 390px this 36px mark plus its gap was squeezing the title down
+                to "EduSkill Assis…" and the status to "Online — usually". It is decorative
+                (aria-hidden) and the empty state renders a large one directly below, so nothing is
+                lost by giving the row back to the text. */}
+            <AssistantAvatar size="md" ringTone="navy" className="max-sm:hidden" />
+
+            <div className="min-w-0 flex-1">
+              <h2 id={titleId} className="truncate font-heading text-[15px] font-bold text-white">
+                {t.title(name)}
+              </h2>
+              {/* A status line, not a tagline: the visitor can see at a glance whether a reply is on
+                  its way. Deliberately NOT a live region — the typing indicator already carries
+                  `role="status"`, and two announcements for one event is noise. */}
+              <p className="flex items-center gap-1.5 truncate text-[12px] leading-4 text-white/80">
+                <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
+                {busy ? t.typing : t.statusIdle}
+              </p>
+            </div>
+
+            <div role="group" aria-label={t.languageLabel} className="flex shrink-0 items-center rounded-full bg-white/10 p-0.5">
+              {(["en", "hi"] as ChatLang[]).map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => setLang(code)}
+                  aria-pressed={lang === code}
+                  className={cn(
+                    // `ring-focus-inverse`, not the global `ring-focus`: the standard ring is orange on
+                    // a white offset and is effectively invisible against this navy bar.
+                    "min-h-9 rounded-full px-2.5 text-[12px] font-bold ring-focus-inverse transition-colors duration-micro tap-highlight-none motion-reduce:transition-none max-sm:min-h-11 max-sm:min-w-11",
+                    lang === code ? "bg-white text-navy shadow-e1" : "text-white/80 hover:text-white"
+                  )}
+                >
+                  {code === "en" ? "EN" : "हिं"}
+                </button>
+              ))}
+            </div>
+
+            {voiceAvailable && (
+              <button type="button" onClick={toggleVoice} aria-label={voiceOn ? t.voiceOn : t.voiceOff} aria-pressed={voiceOn} className={ICON_BTN_ON_NAVY}>
+                {voiceOn ? <Volume2 className="h-5 w-5" aria-hidden /> : <VolumeX className="h-5 w-5" aria-hidden />}
               </button>
-            ))}
-          </div>
+            )}
 
-          {voiceAvailable && (
-            <button
-              type="button"
-              onClick={toggleVoice}
-              aria-label={voiceOn ? t.voiceOn : t.voiceOff}
-              aria-pressed={voiceOn}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white/80 transition-colors hover:bg-white/10 hover:text-white tap-highlight-none motion-reduce:transition-none max-sm:h-11 max-sm:w-11"
-            >
-              {voiceOn ? <Volume2 className="h-5 w-5" aria-hidden /> : <VolumeX className="h-5 w-5" aria-hidden />}
+            <button type="button" onClick={onClose} aria-label={t.close} className={ICON_BTN_ON_NAVY}>
+              <X className="h-5 w-5" aria-hidden />
             </button>
-          )}
-
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t.close}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white/80 transition-colors hover:bg-white/10 hover:text-white tap-highlight-none motion-reduce:transition-none max-sm:h-11 max-sm:w-11"
-          >
-            <X className="h-5 w-5" aria-hidden />
-          </button>
+          </div>
         </div>
 
-        {/* Conversation */}
-        <div className="relative min-h-0 flex-1">
+        {/* Conversation. The tint is load-bearing: assistant replies are WHITE cards and would vanish
+            on a white background. `relative` anchors both the scroll layer and the jump button. */}
+        <div className={cn("relative min-h-0 flex-1", CONVERSATION_SURFACE)}>
           <div ref={scrollRef} onScroll={handleScroll} className="absolute inset-0 overflow-y-auto overscroll-contain scrollbar-thin px-4 py-4">
             <div role="log" aria-live="polite" aria-atomic="false" aria-label={t.logLabel} className="flex flex-col gap-3">
-              <GreetingBubble text={greeting} />
-              {messages.map((message) => (
-                <ChatBubble
-                  key={message.id}
-                  message={message}
-                  t={t}
-                  typingLabel={t.typing}
-                  voiceAvailable={voiceAvailable}
-                  speaking={speakingId === message.id}
-                  onSpeak={() => speak(message.id, message.content, voiceLangFor(message))}
-                  onStopSpeaking={stopSpeaking}
-                />
-              ))}
+              {messages.length === 0 ? (
+                // First visit: the greeting becomes a real empty state (identity mark, heading,
+                // capabilities, quick questions). It owns `role="group" aria-label={t.suggestionsLabel}`
+                // now — the panel must not render a second copy.
+                <ChatEmptyState greeting={greeting} suggestions={suggestions} lang={lang} busy={busy} onSelect={send} t={t} />
+              ) : (
+                <>
+                  {/* Once the conversation starts the greeting collapses back to an ordinary bubble, so
+                      it stays part of the transcript instead of disappearing from the log. */}
+                  <GreetingBubble text={greeting} />
+                  {messages.map((message, i) => (
+                    <ChatBubble
+                      key={message.id}
+                      message={message}
+                      t={t}
+                      typingLabel={t.typing}
+                      voiceAvailable={voiceAvailable}
+                      speaking={speakingId === message.id}
+                      // Only the first reply of a consecutive run wears the avatar, so a multi-bubble
+                      // answer reads as one voice rather than three unrelated cards.
+                      showAvatar={messages[i - 1]?.role !== "assistant"}
+                      onSpeak={() => speak(message.id, message.content, voiceLangFor(message))}
+                      onStopSpeaking={stopSpeaking}
+                    />
+                  ))}
+                </>
+              )}
             </div>
           </div>
 
@@ -226,46 +279,32 @@ export function ChatPanel({ panelId, name, config, chat, closing, onClose, voice
               type="button"
               onClick={scrollToLatest}
               aria-label={t.jumpToLatest}
-              className="absolute bottom-3 left-1/2 flex h-9 w-9 -translate-x-1/2 items-center justify-center rounded-full border border-line bg-white text-navy shadow-card transition-colors hover:bg-lavender motion-reduce:transition-none"
+              // `absolute`, never `fixed` — a fixed descendant here would be re-parented the moment any
+              // ancestor gained a transform. 44px below `sm`: it was the last sub-target control left.
+              className="absolute bottom-3 left-1/2 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border border-line bg-white text-navy shadow-e2 ring-focus transition-colors duration-micro ease-soft hover:bg-lavender animate-fade-in motion-reduce:animate-none motion-reduce:transition-none max-sm:h-11 max-sm:w-11"
             >
               <ArrowDown className="h-4 w-4" aria-hidden />
             </button>
           )}
         </div>
 
-        {/* Composer */}
-        <div className="border-t border-line bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          {suggestions.length > 0 && (
-            // `relative` + `overflow-x-auto`: a single very long suggestion scrolls inside the panel
-            // instead of stretching it, and absolutely positioned descendants stay anchored here.
-            <div role="group" aria-label={t.suggestionsLabel} className="relative mb-3 flex flex-wrap gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {suggestions.map((suggestion) => {
-                const label = suggestion[lang] || suggestion.en || suggestion.hi;
-                if (!label) return null;
-                return (
-                  <button
-                    key={suggestion.id}
-                    type="button"
-                    onClick={() => send(label)}
-                    disabled={busy}
-                    className="min-h-11 shrink-0 rounded-full border border-navy-soft bg-lavender/50 px-3.5 py-2 text-left text-[13px] font-medium text-navy transition-colors tap-highlight-none hover:border-navy/30 hover:bg-lavender disabled:opacity-50 motion-reduce:transition-none sm:min-h-10"
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
+        {/* Composer. `shrink-0` so a long reply can never squash the input out of the flex column. */}
+        <div className="shrink-0 border-t border-line bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           {error && (
-            <div role="alert" className="mb-2 flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-light px-3 py-2 text-[13px] leading-5 text-danger">
+            <div
+              role="alert"
+              className={cn(
+                "mb-2 flex items-start gap-2.5 rounded-2xl px-3 py-2.5 text-[13px] leading-5",
+                warn ? "bg-warning-light text-amber-900 ring-1 ring-warning/30" : "bg-danger-light text-red-900 ring-1 ring-danger/30"
+              )}
+            >
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               <span className="min-w-0 flex-1">{t.errors[error]}</span>
               {canRetry && (
                 <button
                   type="button"
                   onClick={retry}
-                  className="min-h-9 shrink-0 rounded-lg px-2 font-semibold text-navy underline-offset-2 transition-colors hover:underline motion-reduce:transition-none max-sm:min-h-11"
+                  className="min-h-9 shrink-0 rounded-lg px-2 font-semibold text-navy underline-offset-2 ring-focus transition-colors duration-micro hover:underline motion-reduce:transition-none max-sm:min-h-11"
                 >
                   {t.retry}
                 </button>
@@ -278,12 +317,15 @@ export function ChatPanel({ panelId, name, config, chat, closing, onClose, voice
           <div className="mt-2 flex items-start justify-between gap-2">
             <p className="text-[12px] leading-4 text-muted">{t.disclaimer}</p>
             {messages.length > 0 && (
+              // The visible label is short so it cannot crowd the disclaimer on a 360px phone; the
+              // full sentence stays as the accessible name.
               <button
                 type="button"
                 onClick={clear}
-                className="min-h-9 shrink-0 rounded-lg px-2 text-[12px] font-semibold text-muted transition-colors hover:bg-surface hover:text-navy tap-highlight-none motion-reduce:transition-none max-sm:min-h-11"
+                aria-label={t.clear}
+                className="inline-flex min-h-9 shrink-0 items-center rounded-full px-2.5 text-[12px] font-semibold text-muted ring-focus transition-colors duration-micro hover:bg-lavender/60 hover:text-navy tap-highlight-none motion-reduce:transition-none max-sm:min-h-11"
               >
-                {t.clear}
+                {t.clearShort}
               </button>
             )}
           </div>

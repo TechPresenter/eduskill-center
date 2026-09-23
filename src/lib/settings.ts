@@ -64,6 +64,27 @@ export const SETTING_DEFAULTS: Record<string, SettingDef> = {
   "social.linkedin": { group: "social", label: "LinkedIn URL", value: "", isPublic: true },
   "social.youtube": { group: "social", label: "YouTube URL", value: "", isPublic: true },
 
+  // Mobile app
+  // There is no native EduSkill app in either store today, and both of these stay empty until there
+  // is one. While they are empty the "Get the app" control installs THIS website instead — it is a
+  // PWA with a manifest and a service worker, so the browser puts a real icon on the home screen.
+  // Filling in a URL that does not resolve to a published listing turns that control into a broken
+  // promise, so leave them blank until the listing is live.
+  "app.playStoreUrl": {
+    group: "app",
+    label: "Google Play listing URL",
+    value: "",
+    isPublic: true,
+    help: 'Only once a real listing is published, e.g. "https://play.google.com/store/apps/details?id=…". Leave empty to offer the website itself as an installable app.',
+  },
+  "app.appStoreUrl": {
+    group: "app",
+    label: "Apple App Store listing URL",
+    value: "",
+    isPublic: true,
+    help: 'Only once a real listing is published, e.g. "https://apps.apple.com/in/app/…". Leave empty and iPhone visitors are shown the Share → Add to Home Screen steps instead.',
+  },
+
   // ID / code formats
   "codes.centerPrefix": { group: "codes", label: "Center code prefix", value: "ESK", isPublic: false },
   "codes.centerFormat": { group: "codes", label: "Center code format", value: "{PREFIX}-{STATE}-{DISTRICT}-{SEQ:4}", isPublic: false, help: "Placeholders: {PREFIX} {STATE} {DISTRICT} {SEQ:n}. Existing codes never change." },
@@ -217,7 +238,8 @@ export const SETTING_DEFAULTS: Record<string, SettingDef> = {
 export const SETTING_GROUPS: { key: string; label: string; description: string }[] = [
   { key: "branding", label: "Branding", description: "Logos, organisation name and tagline used across the website and admin." },
   { key: "contact", label: "Contact", description: "Contact details shown on the website." },
-  { key: "social", label: "Social Media", description: "Social profile links shown in the footer." },
+  { key: "social", label: "Social Media", description: "Social profile links shown in the top bar and the footer." },
+  { key: "app", label: "Mobile App", description: "Store listings for the \"Get the app\" button. While these are empty the button installs the website itself as an app." },
   { key: "codes", label: "ID Formats", description: "Prefixes and formats for center codes, student IDs, trainer IDs and certificates." },
   { key: "admissions", label: "Admissions", description: "Control registrations, applications and uploads." },
   { key: "payments", label: "Payments", description: "Payment gateway and offline payment configuration." },
