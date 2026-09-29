@@ -1,9 +1,13 @@
 import Image from "next/image";
+import { withBasePath } from "@/lib/base-path";
 import { cn } from "@/lib/utils";
 
 /**
  * Fills its (relatively positioned) parent with an image. Same-origin uploads and https
  * URLs go through next/image; anything else falls back to a plain <img>.
+ *
+ * next/image does NOT add the deployment sub-path to a string `src`, so `/media/x.jpg` is prefixed
+ * here: without it the optimiser under `/center` fetches `/media/x.jpg`, gets a 404 and answers 400.
  *
  * Intended parent: `<div class="media media-16x9">` (or `media-4x3` / `media-1x1`), which already
  * supplies position, overflow, the inherited radius and `object-fit: cover` — so one photograph
@@ -12,7 +16,7 @@ import { cn } from "@/lib/utils";
 export function SafeImage({ src, alt, className, sizes = "(max-width: 768px) 100vw, 50vw", priority }: { src: string; alt: string; className?: string; sizes?: string; priority?: boolean }) {
   const optimizable = src.startsWith("/") || src.startsWith("https://");
   if (optimizable) {
-    return <Image src={src} alt={alt} fill sizes={sizes} priority={priority} className={cn("object-cover", className)} />;
+    return <Image src={withBasePath(src)} alt={alt} fill sizes={sizes} priority={priority} className={cn("object-cover", className)} />;
   }
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={src} alt={alt} className={cn("absolute inset-0 h-full w-full object-cover", className)} loading={priority ? "eager" : "lazy"} />;

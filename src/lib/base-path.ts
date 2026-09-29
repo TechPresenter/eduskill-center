@@ -17,7 +17,7 @@
  * ---------------------------------------------
  * Next already applies the base path automatically to:
  *   - `<Link href>` and the `next/navigation` router (`push`/`replace`)
- *   - `<Image src>` / static imports and everything under `/_next/`
+ *   - static image imports (`import pic from "./x.png"`) and everything under `/_next/`
  *   - `headers()`, `redirects()` and `rewrites()` *sources* in next.config.ts
  *   - `NextResponse.redirect(req.nextUrl.clone())` in middleware (NextURL carries the base path)
  * Those must be left alone — prefixing them by hand produces `/center/center/...`.
@@ -25,6 +25,8 @@
  * `withBasePath()` is for RAW STRINGS the framework never sees as routes:
  *   - URLs handed to `fetch()` (see src/lib/api-client.ts)
  *   - `src`/`href` attributes built from a string (uploaded files, `<img src>`, `<a download>`)
+ *   - a STRING `src` on next/image (`<Image src="/media/x.jpg">`): Next leaves it bare, the
+ *     optimiser then fetches `/media/x.jpg` outside the base path, gets a 404 and returns 400
  *   - service-worker registration and the web app manifest
  *   - anything written into the database, a PDF/QR code or an email body
  */

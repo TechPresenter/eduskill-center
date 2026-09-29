@@ -2,6 +2,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
+import { withBasePath } from "@/lib/base-path";
 import { SetMobileHeader } from "@/components/portal/header-context";
 
 export function Avatar({ name, src, size = 40, className }: { name: string; src?: string | null; size?: number; className?: string }) {
@@ -9,7 +10,7 @@ export function Avatar({ name, src, size = 40, className }: { name: string; src?
   const style = { width: size, height: size, fontSize: Math.max(12, Math.round(size / 2.6)) };
   if (src) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={name} width={size} height={size} loading="lazy" decoding="async" style={style} className={cn("shrink-0 rounded-full object-cover", className)} />;
+    return <img src={withBasePath(src)} alt={name} width={size} height={size} loading="lazy" decoding="async" style={style} className={cn("shrink-0 rounded-full object-cover", className)} />;
   }
   return (
     <span style={style} className={cn("inline-flex shrink-0 items-center justify-center rounded-full bg-navy-soft font-bold text-navy", className)} aria-label={name}>

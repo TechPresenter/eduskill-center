@@ -126,7 +126,7 @@ function UploadError({ children }: { children: React.ReactNode }) {
 function FileThumb({ src, alt, image }: { src?: string | null; alt?: string; image: boolean }) {
   if (src) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={alt ?? ""} width={56} height={56} loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded-md border border-line object-cover" />;
+    return <img src={withBasePath(src)} alt={alt ?? ""} width={56} height={56} loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded-md border border-line object-cover" />;
   }
   return (
     <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-lavender text-navy" aria-hidden>

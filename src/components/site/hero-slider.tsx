@@ -5,6 +5,7 @@ import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react
 import { ButtonLink } from "@/components/ui/button";
 import { Highlight } from "@/components/ui/highlight";
 import Image from "next/image";
+import { withBasePath } from "@/lib/base-path";
 import { cn } from "@/lib/utils";
 
 export interface HeroSlideData {
@@ -283,7 +284,7 @@ export function HeroSlider({
                       height; `object-contain` stops the crop distorting at narrow widths. A slide
                       can override the subject from Admin → CMS. */}
                   <Image
-                    src={s.imageUrl || HERO_SUBJECT}
+                    src={withBasePath(s.imageUrl || HERO_SUBJECT)}
                     alt=""
                     fill
                     priority={i === 0}
@@ -311,7 +312,7 @@ export function HeroSlider({
                   style={{ transitionDuration: `${FADE_MS}ms` }}
                 >
                   <Image
-                    src={s.imageUrl || HERO_SUBJECT}
+                    src={withBasePath(s.imageUrl || HERO_SUBJECT)}
                     alt=""
                     fill
                     sizes="(max-width: 1024px) 60vw, 1px"
