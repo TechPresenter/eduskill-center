@@ -125,7 +125,13 @@ export const teacherApplicationSchema = z.object({
    */
   experienceBand: z.enum(TEACHING_EXPERIENCE_BANDS, { message: "Select your teaching experience" }),
   teachingMode: z.enum(TEACHING_MODES, { message: "Select your preferred teaching mode" }),
-  consent: boolish.refine((v) => v, "You must agree before submitting"),
+  /**
+   * An unchecked checkbox sends NOTHING, so the field reaches the route as `""`. `boolish` does not
+   * accept `""`, so without this the union fails and the applicant is told "Invalid input" instead
+   * of what to do about it. Map the absent/empty case to a plain "not agreed" first; anything that
+   * is not an affirmative value still fails the refine, with the message that belongs to it.
+   */
+  consent: z.preprocess((v) => (v === "" || v == null ? "false" : v), boolish).refine((v) => v, "You must agree before submitting"),
 });
 
 export type TeacherApplicationInput = z.infer<typeof teacherApplicationSchema>;
