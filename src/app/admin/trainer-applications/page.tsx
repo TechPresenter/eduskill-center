@@ -99,7 +99,8 @@ export default async function TrainerApplicationsPage({ searchParams }: { search
                     meta={
                       <>
                         <span className="font-mono font-semibold text-navy md:hidden">{a.applicationNo} · </span>
-                        {a.email}
+                        {/* Nullable since the short teacher form does not ask for an email. */}
+                        {a.email ?? <span className="italic">No email given</span>}
                         <span className="block tabular-nums">{a.mobile}</span>
                       </>
                     }

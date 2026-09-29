@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
-import { approveTrainerApplication, assignTrainer, lookupTrainerApplication, resolveTrainerLocation, submitTrainerApplication, transitionTrainerApplication } from "@/server/trainers";
-import { trainerApplicationSchema } from "@/lib/validation/trainers";
-import { ensureAdmin, makeBatch, makeCenter, makeCourse, makeLocation, uid } from "./helpers";
+import { approveTrainerApplication, assignTrainer, lookupTrainerApplication, resolveTrainerLocation, submitTeacherApplication, submitTrainerApplication, transitionTrainerApplication } from "@/server/trainers";
+import { teacherApplicationSchema, trainerApplicationSchema } from "@/lib/validation/trainers";
+import { isPrivateKey, keyFromUrl, validateUpload } from "@/lib/storage";
+import { ensureAdmin, ensureDocumentTypes, makeBatch, makeCenter, makeCourse, makeLocation, uid } from "./helpers";
 
 function baseInput(loc: Awaited<ReturnType<typeof makeLocation>>, level: "BLOCK" | "DISTRICT" | "STATE") {
   const n = String(Math.floor(Math.random() * 1e8)).padStart(8, "0");
@@ -88,5 +89,138 @@ describe("volunteer trainer workflow", () => {
     // assigning to a batch of a different center is rejected
     const other = await makeCenter(admin, loc, [course.id]);
     await expect(assignTrainer({ trainerId: trainer.id, centerId: other.id, batchId: batch.id }, { user: admin })).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+// ───────────────── Short "Apply as a Teacher" form ─────────────────
+
+/** A genuinely valid, minimal PDF — `validateUpload` checks the magic bytes, not just the name. */
+const PDF_BYTES = new TextEncoder().encode("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n");
+
+function teacherInput(districtId: string, over: Partial<Record<string, unknown>> = {}) {
+  const n = String(Math.floor(Math.random() * 1e8)).padStart(8, "0");
+  return {
+    name: `Teacher ${uid()}`,
+    mobile: `93${n}`,
+    email: `${uid("te")}@test.local`,
+    districtId,
+    qualification: "M.Sc. Mathematics",
+    subjects: ["Mathematics", "Physics"],
+    classes: ["CLASS_5_10", "CLASS_11_12"],
+    experienceBand: "YEARS_3_5",
+    teachingMode: "BOTH",
+    consent: "true",
+    ...over,
+  };
+}
+
+async function resume(name = "resume.pdf") {
+  return validateUpload(new File([PDF_BYTES], name, { type: "application/pdf" }), { preset: "resume" });
+}
+
+describe("short teacher application", () => {
+  beforeAll(async () => {
+    await ensureDocumentTypes();
+  });
+
+  it("lands in the TrainerApplication pipeline with the unasked fields NULL and a private resume", async () => {
+    const loc = await makeLocation();
+    // The class groups map onto whatever courses exist in the matching seeded categories.
+    const category = await db.courseCategory.create({ data: { name: "School Education (Class 5–10)", slug: "school-education-class-5-10" } });
+    const course = await makeCourse();
+    await db.course.update({ where: { id: course.id }, data: { categoryId: category.id } });
+
+    const input = teacherApplicationSchema.parse(teacherInput(loc.district.id));
+    const res = await submitTeacherApplication(input, await resume("priya.pdf"));
+    expect(res.applicationNo).toMatch(/^TAP-\d{4}-\d{6}$/);
+    expect(res.district).toBe(`${loc.district.name}, ${loc.state.name}`);
+
+    const app = await db.trainerApplication.findUniqueOrThrow({ where: { id: res.id }, include: { documents: true, statusHistory: true } });
+    // Same workflow, same queue as the 8-step wizard.
+    expect(app.status).toBe("SUBMITTED");
+    // Level and state are DERIVED from the chosen district, never guessed.
+    expect(app.level).toBe("DISTRICT");
+    expect(app.stateId).toBe(loc.state.id);
+    expect(app.districtId).toBe(loc.district.id);
+    expect(app.blockId).toBeNull();
+    // Nothing invented for the fields the form does not ask about.
+    expect(app.dob).toBeNull();
+    expect(app.gender).toBeNull();
+    expect(app.address).toBeNull();
+    expect(app.pincode).toBeNull();
+    expect(app.motivation).toBeNull();
+    expect(app.languages).toEqual([]);
+    // The bands are mapped to their LOWER bound and the choice itself is kept in the timeline.
+    expect(app.teachingExperienceYears).toBe(3);
+    expect(app.trainingMode).toBe("HYBRID");
+    expect(app.skills).toEqual(["Mathematics", "Physics"]);
+    expect(app.preferredCourseIds).toEqual([course.id]);
+    expect(app.statusHistory[0]!.note).toContain("3–5 Years");
+    expect(app.statusHistory[0]!.note).toContain("Class 5–10, Class 11–12");
+
+    // The resume is a real TrainerDocument stored privately.
+    expect(app.documents).toHaveLength(1);
+    const doc = app.documents[0]!;
+    expect(doc.type).toBe("resume");
+    expect(doc.name).toBe("priya.pdf");
+    const key = keyFromUrl(doc.url);
+    expect(key).toBeTruthy();
+    expect(isPrivateKey(key!)).toBe(true);
+    expect(key!.startsWith(`private/trainers/${app.id}/`)).toBe(true);
+  });
+
+  it("accepts an applicant with no email, and still blocks a duplicate mobile", async () => {
+    const loc = await makeLocation();
+    const first = teacherApplicationSchema.parse(teacherInput(loc.district.id, { email: "" }));
+    const a = await submitTeacherApplication(first, await resume());
+    expect((await db.trainerApplication.findUniqueOrThrow({ where: { id: a.id } })).email).toBeNull();
+
+    // A second emailless applicant must NOT collide with the first: `{ email: null }` in an OR
+    // clause means "email IS NULL" and would otherwise match every emailless row.
+    const second = teacherApplicationSchema.parse(teacherInput(loc.district.id, { email: "" }));
+    const b = await submitTeacherApplication(second, await resume());
+    expect(b.id).not.toBe(a.id);
+
+    // The same mobile again is still a conflict.
+    await expect(submitTeacherApplication(first, await resume())).rejects.toMatchObject({ status: 409 });
+  });
+
+  it("rejects an unresolvable city, an oversize resume and a file whose bytes belie its name", async () => {
+    const loc = await makeLocation();
+    await expect(submitTeacherApplication(teacherApplicationSchema.parse(teacherInput("00000000-0000-4000-8000-000000000000")), await resume())).rejects.toMatchObject({
+      status: 422,
+      details: { districtId: expect.stringContaining("could not find") },
+    });
+    // Free-typed text that never resolved arrives as "" and never reaches the service.
+    expect(teacherApplicationSchema.safeParse(teacherInput("")).success).toBe(false);
+    expect(teacherApplicationSchema.safeParse(teacherInput(loc.district.id, { consent: "false" })).success).toBe(false);
+    expect(teacherApplicationSchema.safeParse(teacherInput(loc.district.id, { classes: [] })).success).toBe(false);
+    expect(teacherApplicationSchema.safeParse(teacherInput(loc.district.id, { subjects: [] })).success).toBe(false);
+
+    const oversize = new File([new Uint8Array(6 * 1024 * 1024)], "big.pdf", { type: "application/pdf" });
+    await expect(validateUpload(oversize, { preset: "resume" })).rejects.toMatchObject({ status: 400, message: expect.stringContaining("Maximum size is 5 MB") });
+
+    const renamedExe = new File([new TextEncoder().encode("MZ\u0090\u0000\u0003")], "malware.pdf", { type: "application/pdf" });
+    await expect(validateUpload(renamedExe, { preset: "resume" })).rejects.toMatchObject({ status: 400, message: "File content does not match its extension" });
+
+    const wrongType = new File([PDF_BYTES], "resume.exe", { type: "application/pdf" });
+    await expect(validateUpload(wrongType, { preset: "resume" })).rejects.toMatchObject({ status: 400 });
+  });
+
+  it("approves a short-form application into a trainer account even without an email", async () => {
+    const admin = await ensureAdmin();
+    const loc = await makeLocation();
+    const input = teacherApplicationSchema.parse(teacherInput(loc.district.id, { email: "" }));
+    const { id } = await submitTeacherApplication(input, await resume());
+    await transitionTrainerApplication(id, { to: "UNDER_REVIEW" }, { user: admin });
+    await transitionTrainerApplication(id, { to: "VERIFIED" }, { user: admin });
+    const trainer = await approveTrainerApplication(id, { user: admin });
+    expect(trainer.trainerId).toMatch(/^ESK-TR-\d{4}-\d{5}$/);
+    const user = await db.user.findUniqueOrThrow({ where: { id: trainer.userId } });
+    expect(user.role).toBe("TRAINER");
+    expect(user.email).toBeNull();
+    expect(user.mobile).toBe(input.mobile);
+    // The resume follows the applicant onto the trainer record.
+    expect(await db.trainerDocument.count({ where: { trainerId: trainer.id, type: "resume" } })).toBe(1);
   });
 });

@@ -422,8 +422,22 @@ export function FileUpload({
   );
 }
 
+export interface TagInputProps {
+  value: string[];
+  onChange: (v: string[]) => void;
+  placeholder?: string;
+  className?: string;
+  /**
+   * Id for the INNER text input, so `<Field label htmlFor>` labels the thing that actually takes
+   * focus and an error summary can jump to it. Without it the control is unlabelled.
+   */
+  id?: string;
+  invalid?: boolean;
+  "aria-describedby"?: string;
+}
+
 /** Simple chip list for multi-value text (skills, languages); wears the shared control chrome. */
-export function TagInput({ value, onChange, placeholder = "Type and press Enter", className }: { value: string[]; onChange: (v: string[]) => void; placeholder?: string; className?: string }) {
+export function TagInput({ value, onChange, placeholder = "Type and press Enter", className, id, invalid, "aria-describedby": describedBy }: TagInputProps) {
   const [text, setText] = React.useState("");
   const add = () => {
     const t = text.trim();
@@ -433,7 +447,8 @@ export function TagInput({ value, onChange, placeholder = "Type and press Enter"
   return (
     <div
       className={cn(
-        "flex min-h-11 sm:min-h-10 flex-wrap items-center gap-1.5 rounded-md border border-line bg-white px-2 py-1.5 transition-colors duration-micro focus-within:border-navy focus-within:ring-2 focus-within:ring-navy/20 motion-reduce:transition-none",
+        "flex min-h-11 sm:min-h-10 flex-wrap items-center gap-1.5 rounded-md border bg-white px-2 py-1.5 transition-colors duration-micro focus-within:ring-2 motion-reduce:transition-none",
+        invalid ? "border-danger focus-within:border-danger focus-within:ring-danger/20" : "border-line focus-within:border-navy focus-within:ring-navy/20",
         className
       )}
     >
@@ -451,6 +466,9 @@ export function TagInput({ value, onChange, placeholder = "Type and press Enter"
         </span>
       ))}
       <input
+        id={id}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {

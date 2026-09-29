@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { CalendarClock, FileText, Hash, LogIn, Phone, Search } from "lucide-react";
+import { CalendarClock, FileText, Hash, LogIn, Search } from "lucide-react";
 import { api, ApiClientError } from "@/lib/api-client";
 import { formatDate, formatDateTime, titleCase } from "@/lib/utils";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Field, FormGrid } from "@/components/ui/form";
 import { Alert } from "@/components/ui/feedback";
 import { Badge, StatusBadge } from "@/components/ui/badge";
@@ -103,7 +104,7 @@ export function TrainerStatusForm({ initialNo, documentTypes }: { initialNo: str
                 <Input id="applicationNo" value={applicationNo} onChange={(e) => setApplicationNo(e.target.value.toUpperCase())} leftIcon={<Hash className="h-4 w-4" />} placeholder="TAP-2026-000123" invalid={!!fieldErrors.applicationNo} autoComplete="off" />
               </Field>
               <Field label="Registered mobile number" htmlFor="mobile" required error={fieldErrors.mobile}>
-                <Input id="mobile" inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value)} leftIcon={<Phone className="h-4 w-4" />} placeholder="10-digit mobile" invalid={!!fieldErrors.mobile} autoComplete="tel" />
+                <PhoneInput id="mobile" value={mobile} onChange={setMobile} invalid={!!fieldErrors.mobile} />
               </Field>
             </FormGrid>
             {error && (

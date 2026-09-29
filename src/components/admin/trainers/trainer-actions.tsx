@@ -24,7 +24,7 @@ interface TrainerBasics {
 const FIELDS: FieldDef[] = [
   { key: "name", label: "Full name", type: "text", required: true },
   { key: "email", label: "Email (login)", type: "email", required: true },
-  { key: "mobile", label: "Mobile (login)", type: "text", required: true, placeholder: "10-digit mobile" },
+  { key: "mobile", label: "Mobile (login)", type: "phone", required: true },
   { key: "qualification", label: "Highest qualification", type: "text" },
   { key: "skills", label: "Skills", type: "tags", span: 2 },
   { key: "languages", label: "Languages", type: "tags", span: 2 },

@@ -6,6 +6,7 @@ import { createSession } from "@/lib/auth/session";
 import { getPhoneChannels, notify } from "@/lib/notifications";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { normalizeMobile, type RequestMeta } from "@/server/auth";
+import { parsePhone, samePhone } from "@/lib/phone";
 
 /**
  * Student sign-in by ADMISSION NUMBER + MOBILE NUMBER, proven with a one-time code.
@@ -73,8 +74,11 @@ function maskMobile(mobile: string) {
  */
 async function findAdmittedStudent(admissionNoRaw: string, mobileRaw: string) {
   const admissionNo = admissionNoRaw.trim().toUpperCase();
-  const mobile = normalizeMobile(mobileRaw);
-  if (!admissionNo || !/^[6-9]\d{9}$/.test(mobile)) return null;
+  // Not India-only any more: the number is validated by the selected country's rule, and `mobile`
+  // is the canonical E.164 form used for both the comparison below and the rate-limit key.
+  const parsed = parsePhone(mobileRaw);
+  if (!admissionNo || !parsed.ok) return null;
+  const mobile = parsed.e164;
 
   const admission = await db.admission.findUnique({
     where: { admissionNo },
@@ -92,7 +96,9 @@ async function findAdmittedStudent(admissionNoRaw: string, mobileRaw: string) {
   const user = student?.user;
   if (!student || !user || student.deletedAt || user.deletedAt || user.status !== "ACTIVE" || user.role !== "STUDENT") return null;
 
-  const matches = normalizeMobile(student.mobile) === mobile || (!!user.mobile && normalizeMobile(user.mobile) === mobile);
+  // Compares the phone, not the spelling: the student row may hold bare national digits from before
+  // the country selector shipped while `mobile` is canonical E.164.
+  const matches = samePhone(student.mobile, mobile) || samePhone(user.mobile, mobile);
   return matches ? { user, mobile, admissionNo } : null;
 }
 

@@ -34,7 +34,8 @@ function ScalarField({ field, value, onChange, error, disabled, id }: { field: C
           <Textarea id={id} value={text} onChange={(e) => onChange(e.target.value)} rows={3} invalid={!!error} disabled={disabled} />
           {/\[\[.+?\]\]/.test(text) && (
             <p className="rounded-md bg-surface px-3 py-2 text-body-sm text-navy">
-              Preview: <Highlight text={text} className="font-semibold" />
+              {/* Light surface (bg-surface, admin), so the light-surface accent is the honest preview. */}
+              Preview: <Highlight text={text} className="font-semibold" highlightClassName="text-orange" />
             </p>
           )}
         </Field>

@@ -17,6 +17,7 @@ import { useHideBottomNav } from "@/components/portal/header-context";
 import { useScrollIntoViewOnFocus } from "@/lib/hooks";
 import { api, ApiClientError, errorMessage } from "@/lib/api-client";
 import { cn, formatDate, formatINR, titleCase } from "@/lib/utils";
+import { phoneIssue } from "@/lib/phone";
 import { DocumentsChecklist, type ChecklistDoc } from "@/components/student/documents-checklist";
 import {
   ADDRESS_FIELDS,
@@ -444,8 +445,17 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
     for (const k of PROFILE_REQUIRED) {
       if (fields.includes(k) && !String(form[k] ?? "").trim()) errs[k] = `${PROFILE_LABELS[k]} is required`;
     }
-    if (index === STEP_PERSONAL && form.mobile && !/^(\+?91[\s-]?)?[6-9]\d{9}$/.test(form.mobile.trim())) errs.mobile = "Enter a valid 10-digit Indian mobile number";
-    if (index === STEP_PERSONAL && form.whatsapp && !/^(\+?91[\s-]?)?[6-9]\d{9}$/.test(form.whatsapp.trim())) errs.whatsapp = "Enter a valid 10-digit Indian mobile number";
+    // No input is rendered for these: the wizard carries them forward from the saved profile. The
+    // checks still gate the step, so they must accept a foreign number or a volunteer abroad is
+    // silently stuck here.
+    if (index === STEP_PERSONAL && form.mobile) {
+      const issue = phoneIssue(form.mobile);
+      if (issue) errs.mobile = issue;
+    }
+    if (index === STEP_PERSONAL && form.whatsapp) {
+      const issue = phoneIssue(form.whatsapp);
+      if (issue) errs.whatsapp = issue;
+    }
     if (index === STEP_ADDRESS && form.pincode && !/^[1-9]\d{5}$/.test(form.pincode.trim())) errs.pincode = "Enter a valid 6-digit PIN code";
     return errs;
   };

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FormGrid, FormSection } from "@/components/ui/form";
 import { StickyActionBar } from "@/components/ui/sticky-action-bar";
 import { Input, Textarea, Checkbox } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Select } from "@/components/ui/select";
 import { TagInput } from "@/components/ui/file-upload";
 import { Alert } from "@/components/ui/feedback";
@@ -192,11 +193,11 @@ export function CenterForm({ initial, courses, canVerify, codeFormat }: { initia
           <Field label="Email" htmlFor="cf-email" error={fieldErrors.email}>
             <Input id="cf-email" type="email" value={email} onChange={(e) => { setEmail(e.target.value); clearField("email"); }} invalid={!!fieldErrors.email} />
           </Field>
-          <Field label="Phone" htmlFor="cf-phone" error={fieldErrors.phone} hint="10-digit Indian mobile number">
-            <Input id="cf-phone" value={phone} onChange={(e) => { setPhone(e.target.value); clearField("phone"); }} inputMode="tel" invalid={!!fieldErrors.phone} />
+          <Field label="Phone" htmlFor="cf-phone" error={fieldErrors.phone}>
+            <PhoneInput id="cf-phone" value={phone} onChange={(v) => { setPhone(v); clearField("phone"); }} invalid={!!fieldErrors.phone} />
           </Field>
           <Field label="WhatsApp" htmlFor="cf-wa" error={fieldErrors.whatsapp}>
-            <Input id="cf-wa" value={whatsapp} onChange={(e) => { setWhatsapp(e.target.value); clearField("whatsapp"); }} inputMode="tel" invalid={!!fieldErrors.whatsapp} />
+            <PhoneInput id="cf-wa" value={whatsapp} onChange={(v) => { setWhatsapp(v); clearField("whatsapp"); }} invalid={!!fieldErrors.whatsapp} />
           </Field>
         </FormGrid>
         <Field label="Opening hours" error={fieldErrors.openingHours} hint="One row per day group, e.g. “Mon – Sat” → “10:00 AM – 5:00 PM”.">

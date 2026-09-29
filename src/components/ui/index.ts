@@ -14,6 +14,7 @@
 export * from "./button";
 export * from "./input";
 export * from "./select";
+export * from "./phone-input";
 export * from "./date-input";
 export * from "./form";
 export * from "./error-summary";

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { phoneSchema } from "@/lib/validation/common";
 
 export const loginSchema = z.object({
   identifier: z.string().trim().min(3, "Enter your email or mobile number").max(190),
@@ -9,7 +10,7 @@ export const loginSchema = z.object({
 
 export const registerSchema = z.object({
   name: z.string().trim().min(2, "Enter your full name").max(120),
-  mobile: z.string().trim().regex(/^(\+?91[\s-]?)?[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number"),
+  mobile: phoneSchema,
   email: z.union([z.literal(""), z.email("Enter a valid email address")]).optional(),
   password: z.string().min(8, "Password must be at least 8 characters").max(200),
   confirmPassword: z.string().optional(),
@@ -33,19 +34,18 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8, "Password must be at least 8 characters").max(200),
 });
 
-const indianMobile = z.string().trim().regex(/^(\+?91[\s-]?)?[6-9]\d{9}$/, "Enter the 10-digit mobile number on your admission");
 const admissionNo = z.string().trim().min(3, "Enter your admission number").max(40, "Enter your admission number");
 
 /** Step 1 of admission-number sign-in: which admission, and which phone to text the code to. */
 export const loginOtpRequestSchema = z.object({
   admissionNo,
-  mobile: indianMobile,
+  mobile: phoneSchema,
 });
 
 /** Step 2: the six-digit code from the SMS/WhatsApp. `next` follows the password login's rules. */
 export const loginOtpVerifySchema = z.object({
   admissionNo,
-  mobile: indianMobile,
+  mobile: phoneSchema,
   code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code"),
   next: z.string().max(500).optional(),
 });

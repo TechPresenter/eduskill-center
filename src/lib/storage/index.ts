@@ -195,23 +195,49 @@ const SIGNATURE_COMPAT: Record<string, string[]> = {
   ole: ["doc", "xls"],
 };
 
-export interface SaveUploadOptions {
-  folder: string;
-  visibility: Visibility;
+export interface UploadLimits {
   preset?: UploadPreset;
   allowedExts?: readonly string[];
   maxMb?: number;
 }
 
-/** Validates and stores an uploaded File. Returns the storage key and a URL that goes through the access-controlled files route. */
-export async function saveUpload(file: File, opts: SaveUploadOptions): Promise<StoredFile> {
-  const preset = UPLOAD_PRESETS[opts.preset ?? "document"];
-  const allowed = (opts.allowedExts ?? preset.exts).map((e) => e.toLowerCase());
-  const maxBytes = (opts.maxMb ?? preset.maxMb) * 1024 * 1024;
+export interface SaveUploadOptions extends UploadLimits {
+  folder: string;
+  visibility: Visibility;
+}
+
+/**
+ * An upload that has passed every check (size, extension allow-list, magic bytes) and is holding
+ * its bytes in memory, ready for `storeValidatedUpload` to write.
+ *
+ * Splitting validation from the write lets a caller reject a bad file BEFORE it creates any
+ * database row, so a 6 MB resume or a `.exe` renamed to `.pdf` leaves nothing behind at all.
+ * `saveUpload` remains the one-shot form for the ~25 callers that write first and have nothing
+ * to roll back.
+ */
+export interface ValidatedUpload {
+  buffer: Buffer;
+  /** Sanitised original file name, e.g. `my_resume.pdf`. */
+  name: string;
+  ext: string;
+  mimeType: string;
+  size: number;
+}
+
+/**
+ * Validates an uploaded File without writing it anywhere: size against the preset's cap, the
+ * extension against the preset's allow-list, and the leading bytes against that extension — so a
+ * renamed executable is rejected however its name is spelled.
+ */
+export async function validateUpload(file: File, limits: UploadLimits = {}): Promise<ValidatedUpload> {
+  const preset = UPLOAD_PRESETS[limits.preset ?? "document"];
+  const allowed = (limits.allowedExts ?? preset.exts).map((e) => e.toLowerCase());
+  const maxMb = limits.maxMb ?? preset.maxMb;
+  const maxBytes = maxMb * 1024 * 1024;
 
   if (!file || typeof file.arrayBuffer !== "function") throw Errors.badRequest("No file uploaded");
   if (file.size === 0) throw Errors.badRequest("Uploaded file is empty");
-  if (file.size > maxBytes) throw Errors.badRequest(`File is too large. Maximum size is ${opts.maxMb ?? preset.maxMb} MB`);
+  if (file.size > maxBytes) throw Errors.badRequest(`File is too large. Maximum size is ${maxMb} MB`);
 
   const originalName = (file.name || "file").replace(/[^\w.\- ]+/g, "_").slice(0, 120);
   const ext = originalName.includes(".") ? originalName.split(".").pop()!.toLowerCase() : "";
@@ -226,9 +252,19 @@ export async function saveUpload(file: File, opts: SaveUploadOptions): Promise<S
   if (ext === "svg" || ext === "html" || ext === "js") throw Errors.badRequest("This file type is not allowed");
 
   const mimeType = MIME_BY_EXT[ext] ?? "application/octet-stream";
-  const key = sanitizeKey(`${opts.visibility}/${opts.folder.replace(/^\/+|\/+$/g, "")}/${randomUUID()}.${ext}`);
-  await getDriver().put(key, buffer, mimeType);
-  return { key, url: fileUrl(key), name: originalName, mimeType, size: buffer.length };
+  return { buffer, name: originalName, ext, mimeType, size: buffer.length };
+}
+
+/** Writes an already-validated upload and returns its key plus an access-controlled URL. */
+export async function storeValidatedUpload(v: ValidatedUpload, opts: { folder: string; visibility: Visibility }): Promise<StoredFile> {
+  const key = sanitizeKey(`${opts.visibility}/${opts.folder.replace(/^\/+|\/+$/g, "")}/${randomUUID()}.${v.ext}`);
+  await getDriver().put(key, v.buffer, v.mimeType);
+  return { key, url: fileUrl(key), name: v.name, mimeType: v.mimeType, size: v.size };
+}
+
+/** Validates and stores an uploaded File. Returns the storage key and a URL that goes through the access-controlled files route. */
+export async function saveUpload(file: File, opts: SaveUploadOptions): Promise<StoredFile> {
+  return storeValidatedUpload(await validateUpload(file, opts), opts);
 }
 
 export async function putBuffer(key: string, data: Buffer, mimeType?: string): Promise<StoredFile> {

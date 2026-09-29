@@ -50,6 +50,8 @@ export async function createCenter(input: CenterInput, ctx: Ctx) {
         pincode: input.pincode,
         latitude: input.latitude ?? null,
         longitude: input.longitude ?? null,
+        // `optionalPhone` has already normalised these to E.164 or null. Before that they were
+        // written verbatim, which is why production may hold "+91 98765 43210" in older rows.
         phone: input.phone || null,
         whatsapp: input.whatsapp || null,
         email: input.email || null,

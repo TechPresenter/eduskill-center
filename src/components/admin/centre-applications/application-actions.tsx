@@ -10,6 +10,7 @@ import type { CentreApplicationStatus } from "@/generated/prisma/enums";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Input, Textarea, Checkbox } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Select } from "@/components/ui/select";
 import { Field } from "@/components/ui/form";
 import { Alert } from "@/components/ui/feedback";
@@ -344,7 +345,7 @@ export function CentreApplicationActions({
                 <Input id="ap-cap" type="number" inputMode="numeric" min={0} value={capacity} onChange={(e) => setCapacity(e.target.value)} invalid={!!errors.capacity} />
               </Field>
               <Field label="Contact phone" htmlFor="ap-phone" error={errors.phone}>
-                <Input id="ap-phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} invalid={!!errors.phone} />
+                <PhoneInput id="ap-phone" value={phone} onChange={setPhone} invalid={!!errors.phone} />
               </Field>
             </div>
             <div>

@@ -21,7 +21,9 @@
     "brand:assets": "tsx scripts/generate-brand-assets.ts",
     "media:demo": "tsx scripts/generate-demo-media.ts",
     "media:ai": "tsx scripts/generate-ai-media.ts",
-    "content:shiksha": "tsx scripts/apply-shiksha-mission.ts"
+    "content:shiksha": "tsx scripts/apply-shiksha-mission.ts",
+    "content:education": "tsx scripts/apply-education-categories.ts",
+    "content:course-cover": "tsx scripts/apply-course-cover.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1135.0",

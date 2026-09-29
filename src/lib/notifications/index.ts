@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getSettingsGroup } from "@/lib/settings";
 import { absoluteUrl } from "@/lib/utils";
+import { toDialDigits } from "@/lib/phone";
 import type { NotificationChannel } from "@/generated/prisma/enums";
 
 export type NotifyEvent =
@@ -394,10 +395,13 @@ function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
+/**
+ * Both MSG91 and the WhatsApp Cloud API want the country code with no `+` (`919876543210`), so an
+ * E.164 number just loses its plus. A bare 10-digit row written before the country selector shipped
+ * still gets `91` prepended — keep that branch until the E.164 backfill has run.
+ */
 function normalizeMobile(mobile: string) {
-  const digits = mobile.replace(/\D/g, "");
-  if (digits.length === 10) return `91${digits}`;
-  return digits;
+  return toDialDigits(mobile);
 }
 
 async function sendSms(cfg: CommsConfig, to: string, message: string) {

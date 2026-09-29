@@ -58,6 +58,7 @@ export async function SiteTopbar({ branding }: { branding: Branding }) {
 
   const announcements = (section.announcements ?? []).filter((a): a is Announcement => !!a && typeof a.text === "string" && a.text.trim() !== "");
   const quickLinks = (section.quickLinks ?? []).filter((l) => !!l?.label?.trim() && !!l?.href?.trim());
+  const hasSocial = Object.values(branding.social ?? {}).some((v) => typeof v === "string" && v.trim().length > 0) || !!branding.contact.whatsapp?.trim();
   const phone = branding.contact.phone.trim();
   const email = branding.contact.email.trim();
   const hours = branding.contact.hours.trim();
@@ -83,6 +84,15 @@ export async function SiteTopbar({ branding }: { branding: Branding }) {
         "[@media(display-mode:standalone)]:hidden",
       ].join(" ")}
     >
+      {/*
+        The page's opening brand rule, and the footer's closing one is the same sweep in the same
+        order — orange → navy-light → green, the logo's three hues. It is ABSOLUTE rather than a
+        flow child so the strip stays exactly 40px tall and nothing below it moves. A 2px full-width
+        fill is a graphic, never text, so the flat brand hues are correct here (THE GREEN RULE only
+        constrains green TEXT). No transform or filter — see the header note above.
+      */}
+      <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-orange via-navy-light to-green" />
+
       <div className="mx-auto flex h-10 w-full max-w-[1600px] items-center gap-3 px-4 sm:px-6 lg:gap-4 lg:px-8">
         {/*
           LEFT — quick links and contact. Desktop only; phones get these in the menu and footer.
@@ -133,9 +143,16 @@ export async function SiteTopbar({ branding }: { branding: Branding }) {
           <div className="min-w-0 flex-1" />
         )}
 
-        {/* RIGHT — social, then the app pill. */}
+        {/* RIGHT — "Follow" + social, then the app pill. The quick links that used to sit on the
+            left are gone, so the icons come forward from xl to lg. The label is hidden one step
+            earlier than the icons so the row degrades gracefully rather than wrapping. */}
         <div className="flex shrink-0 items-center gap-3">
-          <SocialLinks social={branding.social} whatsapp={branding.contact.whatsapp} siteName={branding.siteName} size="sm" className="hidden xl:flex" />
+          {hasSocial && (
+            <div className="hidden items-center gap-2 lg:flex">
+              <span className="text-caption font-semibold tracking-wide text-white/60 uppercase xl:inline">Follow</span>
+              <SocialLinks social={branding.social} whatsapp={branding.contact.whatsapp} siteName={branding.siteName} size="sm" />
+            </div>
+          )}
           <DownloadAppButton playStoreUrl={playStoreUrl} appStoreUrl={appStoreUrl} appName={branding.shortName || branding.siteName} />
         </div>
       </div>

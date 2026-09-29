@@ -56,11 +56,17 @@ export function MobileCoursesMenu({
       <div
         id={bodyId}
         inert={!expanded}
-        className={cn("grid transition-[grid-template-rows] duration-element ease-soft motion-reduce:transition-none", expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}
+        className={cn(
+          // grid-cols-[minmax(0,1fr)] is load-bearing: a grid item defaults to min-width:auto, so
+          // without it this column sizes to the widest course description and the body rendered
+          // 654px wide inside a 310px sheet, clipping every row and the CTA.
+          "grid w-full grid-cols-[minmax(0,1fr)] transition-[grid-template-rows] duration-element ease-soft motion-reduce:transition-none",
+          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        )}
       >
         {/* overflow-clip (not hidden): clips the collapsing rows without creating a scroll container. */}
-        <div className="min-h-0 overflow-clip">
-          <div className="pt-2 pb-3 pl-3">
+        <div className="min-h-0 min-w-0 overflow-clip">
+          <div className="min-w-0 pt-2 pr-0.5 pb-3 pl-2">
             {data.feature.ctaLabel && (
               <ButtonLink href={data.feature.ctaHref} fullWidth size="sm" className="sm:h-11" onClick={onNavigate} rightIcon={<ArrowRight className="h-4 w-4" aria-hidden />}>
                 {data.feature.ctaLabel}
@@ -78,8 +84,8 @@ export function MobileCoursesMenu({
 function MobileGroup({ id, title, items, onNavigate }: { id: string; title: string; items: MegaMenuLink[]; onNavigate?: () => void }) {
   if (items.length === 0) return null;
   return (
-    <div className="mt-3">
-      <p id={id} className="px-2.5 pb-1 text-overline text-muted">
+    <div className="mt-2">
+      <p id={id} className="px-2 pb-0.5 text-overline text-muted">
         {title}
       </p>
       <ul aria-labelledby={id} className="space-y-0.5">

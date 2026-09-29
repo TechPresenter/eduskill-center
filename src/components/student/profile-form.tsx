@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Checkbox, Input, RadioCards, Textarea } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Select } from "@/components/ui/select";
 import { Field, FormActions, FormGrid, FormSection } from "@/components/ui/form";
 import { Alert } from "@/components/ui/feedback";
@@ -161,10 +162,10 @@ export function ContactFields({ form, set, errors }: ProfileFieldGroupProps) {
   return (
     <FormGrid cols={3}>
       <Field label="Mobile number" htmlFor="mobile" required error={errors.mobile} hint="Used for login and SMS updates.">
-        <Input id="mobile" inputMode="numeric" autoComplete="tel" value={form.mobile} onChange={(e) => set("mobile", e.target.value)} invalid={!!errors.mobile} />
+        <PhoneInput id="mobile" value={form.mobile} onChange={(v) => set("mobile", v)} invalid={!!errors.mobile} />
       </Field>
       <Field label="WhatsApp number" htmlFor="whatsapp" error={errors.whatsapp} hint="Leave empty if same as mobile.">
-        <Input id="whatsapp" inputMode="numeric" value={form.whatsapp} onChange={(e) => set("whatsapp", e.target.value)} invalid={!!errors.whatsapp} />
+        <PhoneInput id="whatsapp" value={form.whatsapp} onChange={(v) => set("whatsapp", v)} invalid={!!errors.whatsapp} />
       </Field>
       <Field label="Email" htmlFor="email" error={errors.email}>
         <Input id="email" type="email" autoComplete="email" value={form.email} onChange={(e) => set("email", e.target.value)} invalid={!!errors.email} />

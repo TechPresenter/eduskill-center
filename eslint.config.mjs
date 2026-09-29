@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     "src/generated/**",
     "storage/**",
     ".data/**",
+    // Installed agent skills: third-party CommonJS helper scripts, gitignored and not part of the
+    // app. Linting them only reports `require()` in files where `require()` is correct.
+    ".claude/**",
   ]),
 ]);
 

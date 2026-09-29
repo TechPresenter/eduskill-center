@@ -8,6 +8,7 @@ import { getSetting } from "@/lib/settings";
 import { titleCase } from "@/lib/utils";
 import type { StoredFile } from "@/lib/storage";
 import { normalizeEmail, normalizeMobile } from "@/server/auth";
+import { mobileVariants } from "@/lib/phone";
 import { createCenter } from "@/server/centers";
 import type { CentreApplicationInput } from "@/lib/validation/centre-applications";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid, optionalDate } from "@/lib/api/query";
@@ -120,7 +121,7 @@ export async function submitCentreApplication(input: CentreApplicationInput, met
   const mobile = normalizeMobile(input.mobile);
 
   const open = await db.centreApplication.findFirst({
-    where: { OR: [{ email }, { mobile }], status: { notIn: ["REJECTED"] } },
+    where: { OR: [{ email }, { mobile: { in: mobileVariants(mobile) } }], status: { notIn: ["REJECTED"] } },
     select: { applicationNo: true, status: true },
   });
   if (open) {
@@ -213,7 +214,9 @@ export async function attachCentreDocument(applicationId: string, type: string, 
 /** Public status lookup by application number + registered mobile. */
 export async function lookupCentreApplication(applicationNo: string, mobile: string) {
   const app = await db.centreApplication.findFirst({
-    where: { applicationNo: applicationNo.trim().toUpperCase(), mobile: normalizeMobile(mobile) },
+    // Any stored spelling, so an applicant who applied before the country selector shipped can
+    // still track their application with the number they typed then.
+    where: { applicationNo: applicationNo.trim().toUpperCase(), mobile: { in: mobileVariants(mobile) } },
     include: detailInclude,
   });
   if (!app) throw Errors.notFound("Application");

@@ -4,14 +4,14 @@ import { Errors } from "@/lib/api/errors";
 import { generateDonationNo } from "@/lib/ids";
 import { createGatewayOrder, getGatewayConfig, verifyRazorpayCheckoutSignature } from "@/lib/payments";
 import { getBranding } from "@/lib/settings";
-import { emailSchema, mobileSchema } from "@/lib/validation/common";
+import { emailSchema, optionalPhone } from "@/lib/validation/common";
 import { formatINR, toNumber } from "@/lib/utils";
 import { notify, notifyStaff } from "@/lib/notifications";
 
 export const donationInputSchema = z.object({
   donorName: z.string().trim().min(2, "Enter your name").max(120),
   email: z.union([z.literal(""), emailSchema]).optional(),
-  mobile: z.union([z.literal(""), mobileSchema]).optional(),
+  mobile: optionalPhone,
   amount: z.coerce.number().int("Enter a whole rupee amount").min(100, "Minimum donation is ₹100").max(10_000_000, "Please contact us for donations above ₹1 crore"),
   campaignId: z.union([z.literal(""), z.string().uuid()]).optional(),
   message: z.string().trim().max(1000).optional(),
@@ -60,7 +60,9 @@ export async function createDonation(input: DonationInput): Promise<CreateDonati
     if (!campaign) throw Errors.validation("Please correct the highlighted fields.", { campaignId: "This campaign is no longer active" });
   }
 
-  const mobile = input.mobile ? input.mobile.replace(/[\s-]/g, "").replace(/^\+?91/, "") : null;
+  // Already canonical E.164 from `optionalPhone`, which is also the shape Razorpay's
+  // `prefill.contact` wants — no second, divergent normaliser here.
+  const mobile = input.mobile ?? null;
   const donation = await db.$transaction(async (tx) => {
     const donationNo = await generateDonationNo(tx);
     return tx.donation.create({

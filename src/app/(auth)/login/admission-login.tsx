@@ -2,13 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { IdCard, MessageSquareText, Pencil, Smartphone } from "lucide-react";
+import { IdCard, MessageSquareText, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Field } from "@/components/ui/form";
 import { Alert } from "@/components/ui/feedback";
 import { api, ApiClientError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
+import { formatPhone } from "@/lib/phone";
 
 interface OtpRequestResult {
   message: string;
@@ -19,14 +21,6 @@ interface OtpRequestResult {
 type Step = "details" | "code";
 
 const onlyDigits = (v: string) => v.replace(/\D/g, "");
-
-/** 10 digits for display: drops a leading +91 / 91 / 0 the way the server's normalizeMobile does. */
-function tenDigits(v: string) {
-  const d = onlyDigits(v);
-  if (d.length === 12 && d.startsWith("91")) return d.slice(2);
-  if (d.length === 11 && d.startsWith("0")) return d.slice(1);
-  return d;
-}
 
 function formatCountdown(sec: number) {
   const m = Math.floor(sec / 60);
@@ -148,7 +142,8 @@ export function AdmissionLogin({ next, onUsePassword }: { next?: string; onUsePa
     window.setTimeout(() => admissionRef.current?.focus(), 0);
   };
 
-  const mobileDisplay = tenDigits(mobile);
+  // Grouped for the "we texted this number" row; any country, not just +91.
+  const mobileDisplay = formatPhone(mobile);
 
   return (
     <div>
@@ -201,21 +196,7 @@ export function AdmissionLogin({ next, onUsePassword }: { next?: string; onUsePa
           </Field>
 
           <Field label="Mobile number" htmlFor="admissionMobile" required hint="The mobile number given at admission." error={fieldErrors.mobile}>
-            <Input
-              id="admissionMobile"
-              name="mobile"
-              type="tel"
-              inputMode="numeric"
-              autoComplete="tel-national"
-              value={mobile}
-              onChange={(e) => setMobile(e.target.value.replace(/[^\d+\s-]/g, ""))}
-              placeholder="10-digit mobile number"
-              maxLength={16}
-              leftIcon={<Smartphone className="h-4 w-4" />}
-              invalid={!!fieldErrors.mobile}
-              className="tabular-nums"
-              required
-            />
+            <PhoneInput id="admissionMobile" name="mobile" value={mobile} onChange={setMobile} invalid={!!fieldErrors.mobile} required />
           </Field>
 
           <Button type="submit" size="lg" fullWidth loading={sending}>
@@ -239,7 +220,7 @@ export function AdmissionLogin({ next, onUsePassword }: { next?: string; onUsePa
               <MessageSquareText className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold text-ink tabular-nums">{mobileDisplay.length === 10 ? `+91 ${mobileDisplay.slice(0, 5)} ${mobileDisplay.slice(5)}` : mobile}</p>
+              <p className="truncate font-semibold text-ink tabular-nums">{mobileDisplay}</p>
               <p className="text-body-sm truncate text-muted">{admissionNo.trim()}</p>
             </div>
             <Button variant="ghost" size="sm" onClick={editDetails} leftIcon={<Pencil className="h-4 w-4" />} className="shrink-0">

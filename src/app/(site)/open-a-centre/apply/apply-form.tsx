@@ -10,6 +10,8 @@ import { Alert } from "@/components/ui/feedback";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Checkbox, CheckboxCards, Input, RadioCards, Textarea } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { phoneIssue } from "@/lib/phone";
 import { DateInput } from "@/components/ui/date-input";
 import { Select } from "@/components/ui/select";
 import { Field, FormGrid, FormSection } from "@/components/ui/form";
@@ -138,7 +140,6 @@ const GENDERS: Option[] = [
   { value: "OTHER", label: "Other" },
 ];
 
-const MOBILE_RE = /^(\+?91[\s-]?)?[6-9]\d{9}$/;
 const PIN_RE = /^[1-9]\d{5}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DRAFT_KEY = "esk.centreApplication.draft";
@@ -156,8 +157,10 @@ function validateStep(step: number, f: FormState): Record<string, string> {
   const e: Record<string, string> = {};
   if (step === 0) {
     if (f.applicantName.trim().length < 2) e.applicantName = "Enter your full name";
-    if (!MOBILE_RE.test(f.mobile.trim())) e.mobile = "Enter a valid 10-digit Indian mobile number";
-    if (f.whatsapp.trim() && !MOBILE_RE.test(f.whatsapp.trim())) e.whatsapp = "Enter a valid 10-digit WhatsApp number";
+    const mobileIssue = phoneIssue(f.mobile);
+    if (mobileIssue) e.mobile = mobileIssue;
+    const whatsappIssue = f.whatsapp.trim() ? phoneIssue(f.whatsapp) : null;
+    if (whatsappIssue) e.whatsapp = whatsappIssue;
     if (!EMAIL_RE.test(f.email.trim())) e.email = "Enter a valid email address";
     if (f.dob && new Date(f.dob) > new Date()) e.dob = "Date of birth cannot be in the future";
     if (f.qualification.trim().length < 2) e.qualification = "Enter your highest qualification";
@@ -614,11 +617,11 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
                     <Field label="Full name" required error={errors.applicantName} className="sm:col-span-2">
                       <Input value={form.applicantName} onChange={(e) => set("applicantName", e.target.value)} invalid={!!errors.applicantName} autoComplete="name" />
                     </Field>
-                    <Field label="Mobile number" required error={errors.mobile} hint="10-digit Indian mobile. Used to track the application.">
-                      <Input inputMode="numeric" value={form.mobile} onChange={(e) => set("mobile", e.target.value)} invalid={!!errors.mobile} autoComplete="tel" />
+                    <Field label="Mobile number" required error={errors.mobile} hint="Used to track the application. Pick your country if it is not India.">
+                      <PhoneInput value={form.mobile} onChange={(v) => set("mobile", v)} invalid={!!errors.mobile} />
                     </Field>
                     <Field label="WhatsApp number" error={errors.whatsapp} hint="Leave blank if it is the same as your mobile.">
-                      <Input inputMode="numeric" value={form.whatsapp} onChange={(e) => set("whatsapp", e.target.value)} invalid={!!errors.whatsapp} />
+                      <PhoneInput value={form.whatsapp} onChange={(v) => set("whatsapp", v)} invalid={!!errors.whatsapp} />
                     </Field>
                     <Field label="Email address" required error={errors.email}>
                       <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} invalid={!!errors.email} autoComplete="email" />

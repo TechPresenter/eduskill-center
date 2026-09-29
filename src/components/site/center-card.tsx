@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Armchair, BadgeCheck, GraduationCap, MapPin, Navigation, Users } from "lucide-react";
 import { ButtonLink, buttonClasses } from "@/components/ui/button";
-import { initials } from "@/lib/utils";
+import { SafeImage } from "@/components/site/safe-image";
+import { cn, initials } from "@/lib/utils";
 
 export interface CenterCardData {
   id: string;
@@ -26,6 +27,11 @@ export interface CenterCardData {
   availableSeats: number;
 }
 
+/** Seeded placeholder art under /media/centers, as opposed to a cover a human uploaded. */
+function isGeneratedCover(url: string) {
+  return url.startsWith("/media/centers/");
+}
+
 export function centerUrl(c: { slug: string; state: { slug: string }; district: { slug: string } }) {
   return `/training-centers/${c.state.slug}/${c.district.slug}/${c.slug}`;
 }
@@ -35,12 +41,24 @@ export function directionsUrl(c: { latitude: number | null; longitude: number | 
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
 }
 
-/** One compact stat. Kept tiny so four cards fit comfortably across a desktop row. */
-function Stat({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: number }) {
+/**
+ * One compact stat. Kept tiny so four cards fit comfortably across a desktop row.
+ *
+ * `tone="brand"` is for the one stat a visitor is actually shopping for — free seats — and it obeys
+ * THE GREEN RULE: the icon is `text-green` (4.38:1, a graphic, over the 3:1 floor) and the number is
+ * `text-green-dark` (6.61:1), because flat green never writes. A centre with no seats left falls
+ * back to the default tone: green there would promise something that is not on offer.
+ */
+function Stat({ icon: Icon, label, value, tone = "default" }: { icon: typeof Users; label: string; value: number; tone?: "default" | "brand" }) {
+  const brand = tone === "brand";
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <Icon className="h-4 w-4 text-orange" aria-hidden />
-      <span className="font-heading text-base leading-none font-extrabold text-navy tabular-nums">{value}</span>
+      <Icon className={brand ? "h-4 w-4 text-green" : "h-4 w-4 text-navy-light"} aria-hidden />
+      <span className={brand ? "font-heading text-base leading-none font-extrabold text-green-dark tabular-nums" : "font-heading text-base leading-none font-extrabold text-navy tabular-nums"}>
+        {/* A newly opened centre genuinely has no trainers or students yet. A bare "0" reads as a
+            broken statistic to a visitor, so an em dash says "nothing here yet" without overstating. */}
+        {value > 0 ? value : <span aria-label="none yet">—</span>}
+      </span>
       <span className="text-caption font-semibold tracking-wide text-muted uppercase">{label}</span>
     </div>
   );
@@ -51,7 +69,8 @@ function Stat({ icon: Icon, label, value }: { icon: typeof Users; label: string;
  *
  * Sized for a four-across desktop grid, so everything earns its place: the banner carries the
  * identity (initials, code, verification) and nothing else, and the name, address and code each
- * appear exactly once.
+ * appear exactly once. It keeps `p-4` rather than the family's `card-p` because four of these share
+ * a desktop row — and because the loading skeleton on the listing page mirrors this padding.
  */
 export function CenterCard({ center, applyHref }: { center: CenterCardData; applyHref: string }) {
   const url = centerUrl(center);
@@ -62,12 +81,22 @@ export function CenterCard({ center, applyHref }: { center: CenterCardData; appl
 
   return (
     <article className="group card card-hover relative flex h-full flex-col overflow-hidden">
-      {/* Identity banner. The generated cover art is nothing but the centre name and code rendered
-          into a gradient, so at this size it only ghosts through behind the chips and repeats the
-          heading — the banner is drawn instead, and the artwork is left to the detail page. */}
-      {/* A fixed-height identity strip, deliberately not a `media` frame: it carries initials, never a photo. */}
+      {/* Identity banner. A cover uploaded in Admin → Centres → Cover image shows through here,
+          dimmed hard so the code and the Verified badge stay legible over any photograph. With no
+          cover it falls back to the drawn gradient, which is also what the seeded placeholder art
+          deserves — that art is only the centre name and code rendered into a gradient, so at this
+          size it would ghost behind the chips and repeat the heading. */}
       <div className="relative h-24 overflow-hidden bg-navy">
-        <span aria-hidden className="absolute inset-0 bg-linear-to-br from-navy via-navy to-navy-dark" />
+        {center.coverImage && !isGeneratedCover(center.coverImage) && (
+          <>
+            <SafeImage src={center.coverImage} alt="" sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw" />
+            <span aria-hidden className="absolute inset-0 bg-navy/65" />
+          </>
+        )}
+        {/* Two stops, not three: the old `via-navy` repeated the start colour. The lightest stop is
+            the brand blue itself (white on it 8.49:1), so the code and the mark stay AAA wherever
+            the diagonal puts them. */}
+        <span aria-hidden className={cn("absolute inset-0 bg-linear-to-br from-navy to-navy-dark", center.coverImage && !isGeneratedCover(center.coverImage) && "opacity-0")} />
         <span
           aria-hidden
           className="absolute inset-0 opacity-[0.18]"
@@ -78,13 +107,17 @@ export function CenterCard({ center, applyHref }: { center: CenterCardData; appl
         <span aria-hidden className="absolute -top-12 -left-8 h-32 w-32 rounded-full bg-[radial-gradient(closest-side,rgb(255_255_255/0.12),transparent)]" />
 
         <div className="relative flex h-full items-center gap-3 px-4">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white/12 font-heading text-sm font-extrabold text-white ring-1 ring-white/25">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/12 font-heading text-sm font-extrabold text-white ring-1 ring-white/25">
             {mark}
           </span>
           <span className="min-w-0">
             <span className="block truncate font-mono text-caption font-semibold tracking-wider text-white/85">{center.code}</span>
             {center.isVerified && (
-              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-caption font-bold tracking-wide text-white uppercase ring-1 ring-white/25">
+              /* Verification is the trust signal on this card, so it is the one that goes brand
+                 green. Filled with green-on-navy and written in navy: 4.51:1, the same measured
+                 pair the token was cut for, read the other way round. A white-on-navy chip said
+                 exactly as much as the code beside it. */
+              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-green-on-navy px-2 py-0.5 text-caption font-bold tracking-wide text-navy uppercase">
                 <BadgeCheck className="h-3 w-3" aria-hidden /> Verified
               </span>
             )}
@@ -94,18 +127,23 @@ export function CenterCard({ center, applyHref }: { center: CenterCardData; appl
 
       <div className="flex flex-1 flex-col p-4">
         <h3 className="text-h4 text-navy">
-          <Link href={url} className="transition-colors after:absolute after:inset-0 hover:text-orange focus-visible:text-orange">
+          {/* At 17px the title is not "large text", so the old orange hover (3.72:1) failed AA here.
+              `ring-focus` as well, because a navy → navy-light shift is not a focus indicator. */}
+          <Link
+            href={url}
+            className="ring-focus transition-colors duration-micro ease-soft after:absolute after:inset-0 hover:text-navy-light focus-visible:text-navy-light motion-reduce:transition-none"
+          >
             {center.name}
           </Link>
         </h3>
 
         <p className="mt-1.5 flex items-start gap-1.5 text-body-sm text-muted">
-          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange" aria-hidden />
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-navy-light" aria-hidden />
           <span className="min-w-0">
             <span className="block font-medium text-ink">
               {center.block.name}, {center.district.name}
             </span>
-            <span className="block truncate text-xs">
+            <span className="block truncate text-caption">
               {center.state.name} · {center.pincode}
             </span>
           </span>
@@ -114,7 +152,9 @@ export function CenterCard({ center, applyHref }: { center: CenterCardData; appl
         {shown.length > 0 && (
           <ul className="mt-3 flex flex-wrap gap-1" aria-label="Courses offered">
             {shown.map((c) => (
-              <li key={c.id} className="inline-flex rounded-full bg-lavender px-2 py-0.5 text-caption font-semibold text-navy">
+              /* Same pale blue as the course card's category badge (`Badge tone="navy"`), so a
+                 course name looks the same wherever the family shows one. Navy on it is 6.68:1. */
+              <li key={c.id} className="inline-flex rounded-full bg-navy-soft px-2 py-0.5 text-caption font-semibold text-navy">
                 {c.name}
               </li>
             ))}
@@ -122,14 +162,14 @@ export function CenterCard({ center, applyHref }: { center: CenterCardData; appl
           </ul>
         )}
 
-        <dl className="mt-auto grid grid-cols-3 gap-1 border-t border-line pt-3 pb-3">
+        <dl className="mt-auto grid grid-cols-3 gap-1 border-t border-line pt-4">
           <Stat icon={GraduationCap} label="Trainers" value={center.trainerCount} />
           <Stat icon={Users} label="Students" value={center.studentCount} />
-          <Stat icon={Armchair} label="Seats" value={center.availableSeats} />
+          <Stat icon={Armchair} label="Seats" value={center.availableSeats} tone={center.availableSeats > 0 ? "brand" : "default"} />
         </dl>
 
         {/* Raised above the title's stretched link so both remain clickable. */}
-        <div className="relative z-10 grid grid-cols-2 gap-2">
+        <div className="relative z-raised mt-4 grid grid-cols-2 gap-2">
           <ButtonLink href={applyHref} size="sm" className="col-span-2">
             Apply Now
           </ButtonLink>
@@ -142,7 +182,7 @@ export function CenterCard({ center, applyHref }: { center: CenterCardData; appl
             rel="noopener noreferrer"
             className={buttonClasses({ variant: "outline", size: "sm" })}
           >
-            <Navigation className="h-3.5 w-3.5 text-orange" aria-hidden /> Directions
+            <Navigation className="h-4 w-4 text-navy-light" aria-hidden /> Directions
           </a>
         </div>
       </div>
@@ -184,7 +224,9 @@ export function CenterCardCompact({ center }: { center: CenterRailItem }) {
           <p className="mt-0.5 flex items-center gap-1.5 text-caption text-muted">
             <span className="font-mono">{center.code}</span>
             {center.verified && (
-              <span className="inline-flex items-center gap-0.5 font-semibold text-success-dark">
+              /* Brand green, not `success` green: verified means "this is one of ours", not
+                 "an operation succeeded". green-dark is 6.61:1 on white — flat green never writes. */
+              <span className="inline-flex items-center gap-0.5 font-semibold text-green-dark">
                 <BadgeCheck className="size-3.5" aria-hidden /> Verified
               </span>
             )}
@@ -192,13 +234,13 @@ export function CenterCardCompact({ center }: { center: CenterRailItem }) {
         </div>
       </div>
       <p className="mt-3 flex items-start gap-1.5 text-body-sm text-muted">
-        <MapPin className="mt-0.5 size-4 shrink-0 text-orange" aria-hidden />
+        <MapPin className="mt-0.5 size-4 shrink-0 text-navy-light" aria-hidden />
         <span className="line-clamp-2">{center.location}</span>
       </p>
       {shown.length > 0 && (
         <ul className="mt-auto flex flex-wrap gap-1 pt-3" aria-label="Courses offered">
           {shown.map((name) => (
-            <li key={name} className="max-w-full truncate rounded-full bg-lavender px-2 py-0.5 text-caption font-semibold text-navy">
+            <li key={name} className="max-w-full truncate rounded-full bg-navy-soft px-2 py-0.5 text-caption font-semibold text-navy">
               {name}
             </li>
           ))}

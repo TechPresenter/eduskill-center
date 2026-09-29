@@ -39,16 +39,16 @@ export function MegaMenuRow({
       onClick={onNavigate}
       data-mega-item=""
       className={cn(
-        "group flex items-center gap-3 rounded-md ring-focus tap-highlight-none transition-colors duration-micro motion-reduce:transition-none",
-        mobile ? "min-h-14 px-2.5 py-2 active:bg-surface" : "min-h-14 px-2.5 py-2 hover:bg-surface focus-visible:bg-surface"
+        "group flex min-w-0 items-center gap-2.5 rounded-md ring-focus tap-highlight-none transition-colors duration-micro motion-reduce:transition-none",
+        mobile ? "min-h-12 px-2 py-1.5 active:bg-surface" : "min-h-14 px-2.5 py-2 hover:bg-surface focus-visible:bg-surface"
       )}
     >
       {/* rounded-md: the reference tiles are rounded squares; IconTile's own sm radius (20px on 40px) reads as a circle. */}
       <IconTile icon={item.icon} size="sm" className={cn("rounded-md", TONE_TILE[item.tone])} />
       <span className="min-w-0 flex-1">
-        <span className={cn("block truncate font-semibold text-navy", mobile ? "text-[15px] leading-5" : "text-[14px] leading-5 group-hover:text-navy-dark")}>{item.title}</span>
+        <span className={cn("block truncate font-semibold text-navy", mobile ? "text-[14px] leading-5" : "text-[14px] leading-5 group-hover:text-navy-dark")}>{item.title}</span>
         {item.subtitle && (
-          <span className="mt-0.5 block truncate text-[13px] leading-[18px] text-muted" title={item.subtitle}>
+          <span className="mt-0.5 block truncate text-[12px] leading-4 text-muted" title={item.subtitle}>
             {item.subtitle}
           </span>
         )}

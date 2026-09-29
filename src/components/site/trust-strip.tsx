@@ -12,11 +12,19 @@ export function TrustStrip({ section, partners }: { section: { heading?: string;
 
   return (
     <section className="relative overflow-x-clip bg-lavender section-y" aria-label="Partners and supporters">
+      {/* A hairline of the logo's blue→green sweep, closing the seam with the navy hero above: the
+          hero's swoosh runs off its bottom edge and this picks the same two hues back up. A 4px
+          decorative fill, so no contrast floor applies to it — and no layout, so the band is
+          unchanged for anything that cannot paint it. */}
+      <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-navy via-navy-light to-green" />
       <SectionBg variant="dots" className="opacity-60" />
       <div className="container-x relative z-10 flex flex-col items-center gap-10 lg:flex-row lg:justify-between lg:gap-12">
         <div className="max-w-xl text-center lg:text-left">
           {section.heading && <p className="text-h2 text-navy">{section.heading}</p>}
-          {section.subheading && <p className="mt-3 text-body-lg text-muted">{section.subheading}</p>}
+          {/* Not `text-muted`: #667085 on lavender is 4.15:1, and text-body-lg is 17px regular, which
+              is not "large text" — it needs the full 4.5. `text-ink/65` composites to #606777 for
+              4.73:1 and still reads as the quieter line beside the navy heading. */}
+          {section.subheading && <p className="mt-3 text-body-lg text-ink/65">{section.subheading}</p>}
         </div>
         {partners.length > 0 && (
           <ul className="flex flex-wrap items-center justify-center gap-4">

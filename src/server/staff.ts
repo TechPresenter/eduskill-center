@@ -8,8 +8,9 @@ import { generateEmployeeCode } from "@/lib/ids";
 import { hashPassword, passwordIssue } from "@/lib/auth/password";
 import { revokeAllSessions } from "@/lib/auth/session";
 import { normalizeEmail, normalizeMobile } from "@/server/auth";
+import { mobileVariants } from "@/lib/phone";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid } from "@/lib/api/query";
-import { emailSchema, mobileSchema } from "@/lib/validation/common";
+import { emailSchema, optionalPhone } from "@/lib/validation/common";
 import { assertPermissionKeys, ensurePermissionRows } from "@/server/roles";
 
 export interface Ctx {
@@ -25,7 +26,7 @@ const optionalText = z.string().trim().max(120).optional().nullable();
 export const staffCreateSchema = z.object({
   name: z.string().trim().min(2, "Enter the full name").max(120),
   email: emailSchema,
-  mobile: z.union([z.literal(""), mobileSchema]).optional().nullable(),
+  mobile: optionalPhone,
   designation: optionalText,
   department: optionalText,
   roleId: z.union([z.literal(""), z.string().uuid()]).optional().nullable(),
@@ -38,7 +39,7 @@ export type StaffCreateInput = z.infer<typeof staffCreateSchema>;
 export const staffUpdateSchema = z.object({
   name: z.string().trim().min(2, "Enter the full name").max(120),
   email: emailSchema,
-  mobile: z.union([z.literal(""), mobileSchema]).optional().nullable(),
+  mobile: optionalPhone,
   designation: optionalText,
   department: optionalText,
 });
@@ -89,7 +90,8 @@ async function assertUniqueContact(email: string, mobile: string | null, exclude
   const emailDupe = await db.user.findFirst({ where: { email, ...(excludeUserId ? { id: { not: excludeUserId } } : {}) }, select: { id: true } });
   if (emailDupe) throw Errors.validation("Please correct the highlighted fields.", { email: "An account with this email already exists" });
   if (mobile) {
-    const mobileDupe = await db.user.findFirst({ where: { mobile, ...(excludeUserId ? { id: { not: excludeUserId } } : {}) }, select: { id: true } });
+    // Every stored spelling: a staff mobile is a login identifier like any other.
+    const mobileDupe = await db.user.findFirst({ where: { mobile: { in: mobileVariants(mobile) }, ...(excludeUserId ? { id: { not: excludeUserId } } : {}) }, select: { id: true } });
     if (mobileDupe) throw Errors.validation("Please correct the highlighted fields.", { mobile: "An account with this mobile number already exists" });
   }
 }

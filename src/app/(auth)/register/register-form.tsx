@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { CalendarClock } from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Checkbox, Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Field, FormGrid } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/feedback";
 import { ErrorSummary } from "@/components/ui/error-summary";
 import { PasswordInput, PasswordRules } from "@/components/shared/password-input";
 import { api, ApiClientError } from "@/lib/api-client";
+import { phoneIssue } from "@/lib/phone";
 import { AuthCard } from "../auth-card";
 
 export function RegisterForm({ open }: { open: boolean }) {
@@ -123,18 +125,8 @@ export function RegisterForm({ open }: { open: boolean }) {
             </Field>
 
             <FormGrid>
-              <Field label="Mobile number" htmlFor="mobile" required error={errors.mobile} hint="10-digit Indian mobile. Used for login and updates.">
-                <Input
-                  id="mobile"
-                  inputMode="numeric"
-                  autoComplete="tel"
-                  placeholder="98XXXXXXXX"
-                  value={form.mobile}
-                  onChange={(e) => set("mobile", e.target.value)}
-                  onBlur={() => checkField("mobile")}
-                  invalid={!!errors.mobile}
-                  required
-                />
+              <Field label="Mobile number" htmlFor="mobile" required error={errors.mobile} hint="Used for login and updates. Pick your country if it is not India.">
+                <PhoneInput id="mobile" value={form.mobile} onChange={(v) => set("mobile", v)} onBlur={() => checkField("mobile")} invalid={!!errors.mobile} required />
               </Field>
               <Field label="Email (optional)" htmlFor="email" error={errors.email}>
                 <Input id="email" type="email" autoComplete="email" value={form.email} onChange={(e) => set("email", e.target.value)} onBlur={() => checkField("email")} invalid={!!errors.email} />
@@ -214,7 +206,7 @@ const SUMMARY_ORDER = ["name", "mobile", "email", "password", "confirmPassword",
 function validateField(k: "name" | "mobile" | "email", raw: string): string | null {
   const v = raw.trim();
   if (k === "name") return v.length >= 2 ? null : "Enter your full name";
-  if (k === "mobile") return /^(\+?91[\s-]?)?[6-9]\d{9}$/.test(v) ? null : "Enter a 10-digit mobile number starting with 6, 7, 8 or 9";
+  if (k === "mobile") return phoneIssue(v);
   return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : "Enter a valid email address, or leave it empty";
 }
 

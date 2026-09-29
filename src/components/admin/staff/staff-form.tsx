@@ -7,6 +7,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Field, FormGrid, FormSection } from "@/components/ui/form";
 import { StickyActionBar } from "@/components/ui/sticky-action-bar";
 import { Input, RadioCards } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Select } from "@/components/ui/select";
 import { Modal } from "@/components/ui/modal";
 import { Alert } from "@/components/ui/feedback";
@@ -124,8 +125,8 @@ export function StaffCreateForm({ roles }: { roles: RoleOption[] }) {
           <Field label="Email (login)" htmlFor="sf-email" required error={fieldErrors.email}>
             <Input id="sf-email" type="email" value={email} onChange={(e) => { setEmail(e.target.value); clearField("email"); }} required invalid={!!fieldErrors.email} autoComplete="off" />
           </Field>
-          <Field label="Mobile" htmlFor="sf-mobile" error={fieldErrors.mobile} hint="Optional · 10-digit Indian number, can also be used to log in.">
-            <Input id="sf-mobile" value={mobile} onChange={(e) => { setMobile(e.target.value); clearField("mobile"); }} inputMode="tel" invalid={!!fieldErrors.mobile} />
+          <Field label="Mobile" htmlFor="sf-mobile" error={fieldErrors.mobile} hint="Optional · can also be used to log in.">
+            <PhoneInput id="sf-mobile" value={mobile} onChange={(v) => { setMobile(v); clearField("mobile"); }} invalid={!!fieldErrors.mobile} />
           </Field>
           <Field label="Designation" htmlFor="sf-desig" error={fieldErrors.designation}>
             <Input id="sf-desig" value={designation} onChange={(e) => setDesignation(e.target.value)} maxLength={120} placeholder="e.g. Admissions Officer" />

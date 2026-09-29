@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { dateString, mobileSchema, optionalEmail, optionalString, pincodeSchema, uuid } from "@/lib/validation/common";
+import { dateString, mobileSchema, optionalEmail, optionalPhone, optionalString, pincodeSchema, uuid } from "@/lib/validation/common";
 
 export const studentProfileSchema = z.object({
   name: z.string().trim().min(2, "Enter your full name").max(120),
@@ -8,7 +8,7 @@ export const studentProfileSchema = z.object({
   dob: dateString,
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   mobile: mobileSchema,
-  whatsapp: z.union([z.literal(""), mobileSchema]).optional().nullable(),
+  whatsapp: optionalPhone,
   email: optionalEmail,
   photoUrl: optionalString,
   stateId: uuid,

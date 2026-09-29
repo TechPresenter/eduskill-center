@@ -48,18 +48,57 @@
  *            child silently clamps to it (this broke the mobile menu and the
  *            admin Fab). A finished `fill-mode: both` animation still counts.
  *
+ *  COLOUR    three brand hues, matched to the logo: navy (its blue), orange, green.
+ *            Two rules decide which token, and both are about contrast, not taste:
+ *            GREEN — `green` fills and draws, `green-dark` writes. TEXT never uses
+ *            flat green (4.38:1); a green button uses `btn-fill-green`.
+ *            ON NAVY — coloured text or a thin icon on a navy band uses
+ *            `text-orange-on-navy` / `text-green-on-navy`; plain `text-orange`
+ *            measures 2.28:1 there. Eyebrows on navy: `eyebrow-on-navy`.
+ *            Full reasoning and every measured ratio live in the @theme block below.
+ *
  *  FOCUS     `ring-focus` everywhere; `ring-focus-inverse` on navy/orange.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 @theme {
-  --color-navy: #12357a;
-  --color-navy-dark: #102f70;
-  --color-navy-light: #1d4aa3;
-  --color-navy-soft: #dbe3f5;
-  --color-orange: #e8520a;
+  /*
+   * ═══ BRAND COLOUR ═══
+   * Sampled from the Foundation's own logo — 52.5% blue, 31.5% orange, 15.9% green — so the site
+   * and the mark are finally the same three colours. Navy IS the logo's blue now, and green was
+   * promoted from "we don't have one" to a full third brand colour (it is NOT `success`; success
+   * means "this worked", green means "this is us").
+   *
+   * Every ratio in this block was measured, not estimated. If you change a hex, re-measure it in
+   * the same edit or these AA claims quietly become lies.
+   */
+  --color-navy: #004c96; /* the logo blue. white on navy 8.49 AAA · navy on white 8.49 AAA */
+  --color-navy-dark: #01305f; /* white on it 13.21 AAA — pressed navy, deep bands, footer */
+  --color-navy-light: #0b66b8; /* white on it 5.82 AA — gradient end and large text, not a 13px label */
+  --color-navy-soft: #d6e6f7; /* pale band tint; navy text on it 6.68 AA */
+  --color-orange: #e8520a; /* UNCHANGED. white on it 3.72 — large text and big fills only */
   --color-orange-hover: #d94705;
-  --color-orange-light: #fdece3;
-  --color-lavender: #e8eaf6;
+  --color-orange-light: #fdece3; /* navy on it 7.39 AAA · ink on it 14.16 AAA */
+  /*
+   * ── The two "-on-navy" accents, and why deleting them as duplicates would break the site ──
+   * `text-orange` on a navy band measures 2.28:1 against this blue. It already failed on the old
+   * navy at 3.11:1, so this is an inherited bug being fixed here, not one the rebrand introduced.
+   * Any orange or green TEXT — and any thin icon stroke — drawn directly on navy, navy-dark or a
+   * navy gradient must use these instead. A solid bg-orange BUTTON on navy is still fine: that is
+   * a large fill and its label sits on the orange, not on the navy.
+   */
+  --color-orange-on-navy: #f4ae8c; /* 4.56 on navy AA — orange accent text/icons on navy bands */
+  --color-green-on-navy: #9dc89b; /* 4.51 on navy AA — green accent text/icons on navy bands */
+  /*
+   * ── THE GREEN RULE: `green` FILLS, `green-dark` TEXTS ──
+   * Exactly the split `success` / `success-dark` uses below, for exactly the same reason: green is
+   * 4.38:1 on white, which is right for a bar, a tile, an icon or a big fill and wrong for a
+   * sentence. Never set body copy in text-green, and never put small white text on a flat
+   * bg-green — that is what `btn-fill-green` at the bottom of this file exists for.
+   */
+  --color-green: #2f8a2a; /* white on it 4.38 — fills and graphics */
+  --color-green-dark: #1f6b1c; /* 6.61 on white AA — the one for green TEXT */
+  --color-green-light: #e7f6e6; /* green-dark on it 5.89 AA */
+  --color-lavender: #e8eaf6; /* navy on it 7.09 AAA */
   --color-surface: #f8f8fc;
   --color-ink: #172033;
   --color-muted: #667085;
@@ -303,9 +342,12 @@
   :focus-visible {
     @apply outline-none ring-2 ring-orange ring-offset-2 ring-offset-white;
   }
+  /* Was a pair of literal hexes, which is how a rebrand leaves one surface on the old palette.
+     The tokens are the same two values today and stay right whatever they become tomorrow;
+     ink on orange-light measures 14.16, so selected text is never the thing that gets harder to read. */
   ::selection {
-    background: #fdece3;
-    color: #172033;
+    background: var(--color-orange-light);
+    color: var(--color-ink);
   }
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button {
@@ -560,7 +602,12 @@
     outline-offset: 2px;
   }
 }
-/* On navy, orange or any photo — the orange ring disappears there. */
+/*
+ * On navy, orange or any photo — the orange ring disappears there. Now with a number on it:
+ * orange is 3.72:1 on white, comfortably over the 3:1 floor a focus indicator has to clear, but
+ * only 2.28:1 on the brand blue. A focus ring that cannot be seen is the same as no focus ring,
+ * so every control that sits on a navy band uses this one.
+ */
 @utility ring-focus-inverse {
   &:focus-visible {
     outline: 2px solid #fff;
@@ -573,17 +620,23 @@
  * washes, no blur, no animation, no extra element, no bytes. Sets only
  * background-image, so it composes with bg-white / bg-surface / bg-navy.
  */
+/*
+ * Both washes read the tokens through color-mix() instead of the literal channels they used to
+ * carry — a hard-coded rgb(18 53 122) is exactly how a hero band keeps the old blue for a year
+ * after the logo changed. An engine too old for color-mix() drops the declaration and gets a flat
+ * band: this is decoration, so degrading to nothing costs a little depth and no information.
+ */
 @utility surface-tint {
   background-image:
-    radial-gradient(42rem 26rem at 8% -12%, rgb(18 53 122 / 0.1), transparent 68%),
-    radial-gradient(36rem 22rem at 96% 4%, rgb(232 82 10 / 0.07), transparent 66%);
+    radial-gradient(42rem 26rem at 8% -12%, color-mix(in srgb, var(--color-navy) 10%, transparent), transparent 68%),
+    radial-gradient(36rem 22rem at 96% 4%, color-mix(in srgb, var(--color-orange) 7%, transparent), transparent 66%);
   background-repeat: no-repeat;
 }
 /* Same idea on navy bands, where the light tint would be invisible. */
 @utility surface-tint-dark {
   background-image:
     radial-gradient(44rem 28rem at 12% -14%, rgb(255 255 255 / 0.1), transparent 66%),
-    radial-gradient(34rem 22rem at 94% 8%, rgb(232 82 10 / 0.22), transparent 64%);
+    radial-gradient(34rem 22rem at 94% 8%, color-mix(in srgb, var(--color-orange) 22%, transparent), transparent 64%);
   background-repeat: no-repeat;
 }
 
@@ -631,6 +684,15 @@
 @utility eyebrow {
   @apply inline-flex items-center gap-2 text-overline text-orange;
 }
+/*
+ * The same eyebrow on a navy band. Its own utility rather than `cn("eyebrow", "text-orange-on-navy")`
+ * because tailwind-merge does not know `eyebrow`, so it keeps both classes and whichever one Tailwind
+ * happens to emit last wins — a coin flip on an accessibility fix. Size, weight and tracking are
+ * identical; only the hue changes, from 2.28:1 on navy to 4.56:1.
+ */
+@utility eyebrow-on-navy {
+  @apply inline-flex items-center gap-2 text-overline text-orange-on-navy;
+}
 
 /*
  * THE card. One border (`border-line` at full opacity — the decided 1px hairline), one radius,
@@ -659,9 +721,11 @@
   @apply text-h2 text-navy;
 }
 
+/* The thumb was a fixed blue-grey mixed against the OLD navy, so it drifted off-hue the moment the
+   blue changed. A 30% tint of the token keeps it in the family and keeps tracking it from now on. */
 @utility scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: #cbd2e0 transparent;
+  scrollbar-color: color-mix(in srgb, var(--color-navy) 30%, #fff) transparent;
 }
 
 @utility prose-content {
@@ -700,8 +764,15 @@
   & li {
     @apply mb-1;
   }
+  /*
+   * Article links are the one place orange could not stay. A link is small body text, and
+   * text-orange is 3.72:1 on white — under the 4.5:1 floor, and it was under it before the rebrand
+   * too. The brand blue is 8.49:1 and is now a real link-blue, so the underline plus the hue both
+   * carry the affordance; hover lightens to navy-light, still 5.82:1. Orange keeps the blockquote
+   * rule and the heading anchor, where it is a graphic and 3.72 is over the 3:1 floor for those.
+   */
   & a {
-    @apply text-orange underline underline-offset-2;
+    @apply text-navy underline underline-offset-2 hover:text-navy-light;
   }
   & strong {
     @apply font-semibold text-navy;
@@ -1079,17 +1150,21 @@
  * or rainbow gradient.
  *
  * CONTRAST IS THE CONSTRAINT, not an afterthought. White on the brand orange #E8520A measures
- * 3.72:1 — already under the 4.5:1 AA floor for normal-size text, and button labels (13-16px
- * semibold) do not qualify as large text. So every fill gradient DEEPENS downward and reaches its
- * AA-passing stop by 22-26% of the button height, which is above the cap height of the label at
- * every size in the scale (the tightest case, a 32px `xs` button with 13px text, puts the top of
- * the glyphs at ~35%). The brand orange therefore only ever lights the top edge, where no glyph
- * sits, and the label always rests on >= 4.95:1. Measured, white against each stop:
+ * 3.72:1 and on the brand green #2F8A2A 4.38:1 — both under the 4.5:1 AA floor for normal-size
+ * text, and button labels (13-16px semibold) do not qualify as large text. So every fill gradient
+ * DEEPENS downward and reaches its AA-passing stop by 22-26% of the button height, which is above
+ * the cap height of the label at every size in the scale (the tightest case, a 32px `xs` button
+ * with 13px text, puts the top of the glyphs at ~35%). The brand hue therefore only ever lights
+ * the top edge, where no glyph sits, and the label always rests on >= 4.95:1. This is also why
+ * `btn-fill-green` exists at all: a flat bg-green button would seat white on 4.38 and fail.
+ * Measured, white against each stop:
  *
  *   orange  rest   #E8520A 3.72 (0%, edge only) - #C94104 4.95 (22%) - #BB3C03 5.58 (100%)
  *   orange  hover  #D94705 4.33 (0%, edge only) - #BB3C03 5.58 (22%) - #A83603 6.58 (100%)
- *   navy    rest   #163C87 10.35 - #12357A 11.57 - #0E2A62 13.76
- *   navy    hover  #12357A 11.57 - #102F70 12.63 - #0B2453 15.09
+ *   green   rest   #2F8A2A 4.38 (0%, edge only) - #278024 5.00 (22%) - #1F6B1C 6.61 (100%)
+ *   green   hover  #278024 5.00 - #1F6B1C 6.61 (22%) - #195816 8.58 (100%)
+ *   navy    rest   #0559A9  6.98 - #004C96  8.49 (26%) - #003A73 11.33
+ *   navy    hover  #004C96  8.49 - #01305F 13.21 (26%) - #012449 15.56
  *   danger  rest   #D92D20  4.83 - #C4261A  5.77 - #B32219  6.65
  *   danger  hover  #C4261A  5.77 - #B32219  6.65 - #9E1D15  7.95
  *
@@ -1120,10 +1195,20 @@
     background-image: linear-gradient(180deg, #d94705 0%, #bb3c03 22%, #a83603 100%);
   }
 }
+/* Rebuilt around the logo blue — the old stops were three shades of the retired #12357A and would
+   have left every primary-navy button on the previous brand. */
 @utility btn-fill-navy {
-  background-image: linear-gradient(180deg, #163c87 0%, #12357a 26%, #0e2a62 100%);
+  background-image: linear-gradient(180deg, #0559a9 0%, #004c96 26%, #003a73 100%);
   &:hover {
-    background-image: linear-gradient(180deg, #12357a 0%, #102f70 26%, #0b2453 100%);
+    background-image: linear-gradient(180deg, #004c96 0%, #01305f 26%, #012449 100%);
+  }
+}
+/* Green's own fill, same technique as orange's: the 4.38:1 brand green lights the top edge only and
+   the label rests on 5.00 or deeper. Use this on any green button — never a flat bg-green. */
+@utility btn-fill-green {
+  background-image: linear-gradient(180deg, #2f8a2a 0%, #278024 22%, #1f6b1c 100%);
+  &:hover {
+    background-image: linear-gradient(180deg, #278024 0%, #1f6b1c 22%, #195816 100%);
   }
 }
 @utility btn-fill-danger {
@@ -1382,4 +1467,49 @@ h4:hover > .heading-anchor {
   transform: scaleX(var(--reading-progress, 0));
   background-color: var(--color-orange);
   will-change: transform;
+}
+
+/* ───────────── Developer credit strip (src/components/site/footer.tsx) ─────────────
+ *
+ * An animated gradient wash across the credit wordmark. The stops are deliberately all LIGHT —
+ * white through the on-navy orange and back — so however the band is positioned the text stays
+ * above 4.5:1 on navy-dark. A gradient that dipped to a mid tone would flicker below contrast as
+ * it travelled, which is why this is not the usual brand-blue-to-orange ramp.
+ *
+ * `background-clip: text` needs a transparent fill, so the colour is carried entirely by the
+ * gradient; `background-size: 200%` gives the band somewhere to travel.
+ */
+@utility credit-sheen {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-white) 0%,
+    var(--color-white) 30%,
+    var(--color-orange-on-navy) 50%,
+    var(--color-white) 70%,
+    var(--color-white) 100%
+  );
+  background-size: 200% 100%;
+  background-position: 0% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: credit-sheen 6s var(--ease-out-soft) infinite;
+}
+
+@keyframes credit-sheen {
+  0%,
+  100% {
+    background-position: 0% 0;
+  }
+  50% {
+    background-position: 100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .credit-sheen {
+    animation: none;
+    /* Park on a solid, fully legible stop rather than a mid-sweep frame. */
+    background-position: 0% 0;
+  }
 }

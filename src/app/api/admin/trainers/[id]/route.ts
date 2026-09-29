@@ -5,6 +5,7 @@ import { Errors } from "@/lib/api/errors";
 import { audit } from "@/lib/audit";
 import { getTrainerDetail } from "@/server/trainers";
 import { normalizeEmail, normalizeMobile } from "@/server/auth";
+import { mobileVariants } from "@/lib/phone";
 import { emailSchema, mobileSchema, stringList } from "@/lib/validation/common";
 
 export const GET = apiHandler<{ id: string }>({ permission: "trainers.view" }, async ({ params }) => getTrainerDetail(params.id));
@@ -29,7 +30,8 @@ export const PATCH = apiHandler<{ id: string }>({ permission: "trainers.update" 
   const errors: Record<string, string> = {};
   const [emailTaken, mobileTaken] = await Promise.all([
     db.user.findFirst({ where: { email, id: { not: trainer.userId } }, select: { id: true } }),
-    db.user.findFirst({ where: { mobile, id: { not: trainer.userId } }, select: { id: true } }),
+    // Every stored spelling: this is the trainer's login identifier.
+    db.user.findFirst({ where: { mobile: { in: mobileVariants(mobile) }, id: { not: trainer.userId } }, select: { id: true } }),
   ]);
   if (emailTaken) errors.email = "Another account already uses this email";
   if (mobileTaken) errors.mobile = "Another account already uses this mobile number";

@@ -1069,6 +1069,17 @@ async function main() {
     log(`Shiksha Mission catalogue skipped: ${err instanceof Error ? err.message : String(err)} (run "npm run content:shiksha" later)`);
   }
 
+  // The catalogue above Class 1–4 (School Education, Senior Secondary, Competitive Exam
+  // Training) — also real programme data. It must run AFTER the Shiksha Mission block, which
+  // deactivates every ACTIVE course outside Class 1–4.
+  try {
+    const { applyEducationCategories } = await import("../scripts/apply-education-categories");
+    const r = await applyEducationCategories({ quiet: true });
+    log(`Class 5+ catalogue ready (${r.categories} categories, ${r.courses} courses, ${r.centersLinked} centres)`);
+  } catch (err) {
+    log(`Class 5+ catalogue skipped: ${err instanceof Error ? err.message : String(err)} (run "npm run content:education" later)`);
+  }
+
   if (SEED_DEMO) {
     // Generates the branded cover art and the sample document files the demo rows point at,
     // so no demo screen ever shows a missing image or a broken "view document" link.

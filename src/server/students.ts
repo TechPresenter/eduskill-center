@@ -6,6 +6,7 @@ import type { StoredFile } from "@/lib/storage";
 import { toNumber } from "@/lib/utils";
 import type { StudentProfileInput } from "@/lib/validation/students";
 import { normalizeEmail, normalizeMobile } from "@/server/auth";
+import { mobileVariants, samePhone } from "@/lib/phone";
 import { reconsiderAfterDocuments } from "@/server/applications";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid, optionalDate } from "@/lib/api/query";
 import { z } from "zod";
@@ -29,10 +30,11 @@ export async function updateStudentProfile(studentId: string, input: StudentProf
   if (!block) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Block must belong to the selected district and state" });
   const mobile = normalizeMobile(input.mobile);
   const email = input.email ? normalizeEmail(input.email) : null;
-  const clash = await db.user.findFirst({ where: { id: { not: student.userId }, OR: [{ mobile }, ...(email ? [{ email }] : [])] }, select: { mobile: true, email: true } });
+  // Every stored spelling, or this check misses an older row and the save hits the DB unique instead.
+  const clash = await db.user.findFirst({ where: { id: { not: student.userId }, OR: [{ mobile: { in: mobileVariants(mobile) } }, ...(email ? [{ email }] : [])] }, select: { mobile: true, email: true } });
   if (clash) {
     const details: Record<string, string> = {};
-    if (clash.mobile === mobile) details.mobile = "This mobile number is used by another account";
+    if (samePhone(clash.mobile, mobile)) details.mobile = "This mobile number is used by another account";
     if (email && clash.email === email) details.email = "This email is used by another account";
     throw Errors.validation("Please correct the highlighted fields.", details);
   }

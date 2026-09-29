@@ -4,6 +4,7 @@ import * as React from "react";
 import { Bold, Heading2, Italic, Link as LinkIcon, Link2, List, ListOrdered, Quote, X } from "lucide-react";
 import { Input, Textarea, Checkbox } from "@/components/ui/input";
 import { Select, type SelectOption } from "@/components/ui/select";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Field, FormGrid } from "@/components/ui/form";
 import { FileUpload, TagInput } from "@/components/ui/file-upload";
 import { DynamicIcon } from "@/components/ui/icon";
@@ -31,6 +32,8 @@ interface Base {
 export type FieldDef = Base &
   (
     | { type: "text" | "url" | "email" | "number" | "date" | "datetime" }
+    /** Country selector + national number; the value is stored as E.164. */
+    | { type: "phone" }
     | { type: "textarea"; rows?: number; markdown?: boolean }
     | { type: "boolean"; description?: string }
     | { type: "select"; options: SelectOption[]; placeholder?: string }
@@ -320,6 +323,9 @@ export function FormFields({ fields, values, onChange, errors = {}, disabled, co
             break;
           case "icon":
             control = <IconPicker id={id} value={str(values[f.key])} onChange={(v) => set(f.key, v)} disabled={dis} />;
+            break;
+          case "phone":
+            control = <PhoneInput id={id} value={str(values[f.key])} onChange={(v) => set(f.key, v)} invalid={!!err} disabled={dis} required={f.required} />;
             break;
           case "slug": {
             const current = str(values[f.key]);

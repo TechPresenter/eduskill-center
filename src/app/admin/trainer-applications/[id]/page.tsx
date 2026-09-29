@@ -32,6 +32,14 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
   const docName = new Map(docTypes.map((d) => [d.key, d.name]));
   const location = [app.block?.name, app.district?.name, app.state.name].filter(Boolean).join(", ");
   const age = calcAge(app.dob);
+  /**
+   * The six columns the short teacher form does not collect are nullable. A reviewer must be able
+   * to tell "the form never asked" from "the applicant left it blank", so every one of them falls
+   * back to this instead of an empty cell. `dob` is the reliable marker: only the 8-step wizard
+   * asks for it, and it requires it.
+   */
+  const shortForm = app.dob === null;
+  const notAsked = <span className="text-muted italic">Not asked on this form</span>;
   const history = [...app.statusHistory].reverse();
   const verifiedDocs = app.documents.filter((d) => d.status === "VERIFIED").length;
   const pendingDocs = app.documents.filter((d) => d.status === "PENDING").length;
@@ -73,7 +81,7 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
               <Phone className="h-3.5 w-3.5" /> {app.mobile}
             </span>
             <span className="inline-flex items-center gap-1">
-              <Mail className="h-3.5 w-3.5" /> {app.email}
+              <Mail className="h-3.5 w-3.5" /> {app.email ?? "No email given"}
             </span>
             <span className="inline-flex items-center gap-1">
               <MapPin className="h-3.5 w-3.5" /> {location}
@@ -106,16 +114,20 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
           )}
 
           <Card>
-            <CardHeader title="Personal details" />
+            {/* An application from the short teacher form carries no DOB, gender, address, PIN or
+                motivation — those columns are nullable. Each renders "Not asked on this form"
+                rather than a blank, so a reviewer can tell "we never asked" from "they left it
+                empty". */}
+            <CardHeader title="Personal details" description={shortForm ? "Submitted through the short teacher form, which asks for fewer personal details." : undefined} />
             <CardBody className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 md:grid-cols-3">
               <KeyValue label="Full name" value={app.name} />
-              <KeyValue label="Date of birth" value={`${formatDate(app.dob)}${age !== null ? ` (${age} yrs)` : ""}`} />
-              <KeyValue label="Gender" value={titleCase(app.gender)} />
+              <KeyValue label="Date of birth" value={app.dob ? `${formatDate(app.dob)}${age !== null ? ` (${age} yrs)` : ""}` : notAsked} />
+              <KeyValue label="Gender" value={app.gender ? titleCase(app.gender) : notAsked} />
               <KeyValue label="Mobile" value={app.mobile} />
               <KeyValue label="WhatsApp" value={app.whatsapp ?? "—"} />
-              <KeyValue label="Email" value={app.email} />
-              <KeyValue label="Address" value={app.address} className="sm:col-span-2" />
-              <KeyValue label="PIN code" value={app.pincode} />
+              <KeyValue label="Email" value={app.email ?? notAsked} />
+              <KeyValue label="Address" value={app.address ?? notAsked} className="sm:col-span-2" />
+              <KeyValue label="PIN code" value={app.pincode ?? notAsked} />
             </CardBody>
           </Card>
 
@@ -138,26 +150,34 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
               <KeyValue label="Preferred training mode" value={titleCase(app.trainingMode)} />
               <KeyValue label="Availability" value={app.availability ?? "—"} className="sm:col-span-2" />
               <KeyValue
-                label="Skills"
+                label={shortForm ? "Subjects they can teach" : "Skills"}
                 value={
-                  <span className="flex flex-wrap gap-1">
-                    {app.skills.map((s) => (
-                      <Badge key={s}>{s}</Badge>
-                    ))}
-                  </span>
+                  app.skills.length ? (
+                    <span className="flex flex-wrap gap-1">
+                      {app.skills.map((s) => (
+                        <Badge key={s}>{s}</Badge>
+                      ))}
+                    </span>
+                  ) : (
+                    "—"
+                  )
                 }
                 className="sm:col-span-2 md:col-span-3"
               />
               <KeyValue
                 label="Languages"
                 value={
-                  <span className="flex flex-wrap gap-1">
-                    {app.languages.map((s) => (
-                      <Badge key={s} tone="info">
-                        {s}
-                      </Badge>
-                    ))}
-                  </span>
+                  app.languages.length ? (
+                    <span className="flex flex-wrap gap-1">
+                      {app.languages.map((s) => (
+                        <Badge key={s} tone="info">
+                          {s}
+                        </Badge>
+                      ))}
+                    </span>
+                  ) : (
+                    notAsked
+                  )
                 }
                 className="sm:col-span-2 md:col-span-3"
               />
@@ -184,7 +204,11 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
           <Card>
             <CardHeader title="Motivation" description="Why the applicant wants to volunteer with the Foundation." />
             <CardBody>
-              <p className="text-body-sm leading-relaxed whitespace-pre-line text-ink">{app.motivation}</p>
+              {app.motivation ? (
+                <p className="text-body-sm leading-relaxed whitespace-pre-line text-ink">{app.motivation}</p>
+              ) : (
+                <p className="text-body-sm text-muted italic">Not asked on this form. The short teacher application collects subjects, classes and a resume instead.</p>
+              )}
             </CardBody>
           </Card>
 

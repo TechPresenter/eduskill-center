@@ -58,6 +58,28 @@ enum CourseStatus {
   ARCHIVED
 }
 
+/// Curriculum tree depth labels. One recursive `CourseNode` table carries all four levels.
+enum CourseNodeKind {
+  MODULE
+  CHAPTER
+  TOPIC
+  LESSON
+}
+
+/// How a course is priced on the public site. Drives `formatCourseFee()` in src/lib/course-pricing.ts.
+enum CourseFeeType {
+  FREE
+  ONE_TIME
+  MONTHLY
+  CUSTOM
+}
+
+/// Repeatable course image sets. Single-slot images (thumbnail/banner/instructor/video) live on Course.
+enum CourseMediaKind {
+  GALLERY
+  PROMOTIONAL
+}
+
 enum CenterStatus {
   PENDING
   ACTIVE
@@ -654,6 +676,11 @@ model Course {
   description            String?
   image                  String?
   icon                   String?
+  /// CMS media slots (all nullable, all stored paths from src/lib/storage - never base64).
+  bannerImage            String?      @map("banner_image")
+  instructorImage        String?      @map("instructor_image")
+  promoVideoUrl          String?      @map("promo_video_url")
+  videoThumbnail         String?      @map("video_thumbnail")
   durationText           String       @map("duration_text")
   durationWeeks          Int          @default(0) @map("duration_weeks")
   level                  CourseLevel  @default(BEGINNER)
@@ -693,9 +720,143 @@ model Course {
   studyMaterials     StudyMaterial[]
   successStories     SuccessStory[]
 
+  feePlan    CourseFeePlan?
+  nodes      CourseNode[]
+  offers     CourseOffer[]
+  faqs       CourseFaq[]
+  mediaItems CourseMedia[]
+
   @@index([status, isFeatured])
   @@index([categoryId])
   @@map("courses")
+}
+
+// ──────────────────────── COURSE CMS (curriculum / fees / offers / FAQ / media) ────────────────────────
+
+/// One recursive curriculum tree per course: MODULE -> CHAPTER -> TOPIC -> LESSON.
+/// A single self-referencing table instead of four parallel tables - see src/server/course-cms.ts.
+/// The lesson payload columns are nullable and only meaningful on LESSON rows.
+model CourseNode {
+  id               String         @id @default(uuid(7)) @db.Uuid
+  courseId         String         @map("course_id") @db.Uuid
+  parentId         String?        @map("parent_id") @db.Uuid
+  kind             CourseNodeKind @default(MODULE)
+  title            String
+  description      String?
+  /// Dense 1..n ordering within (courseId, parentId). Rewritten wholesale by reorderCourseNodes().
+  sortOrder        Int            @default(0) @map("sort_order")
+  videoUrl         String?        @map("video_url")
+  documentUrl      String?        @map("document_url")
+  studyMaterialUrl String?        @map("study_material_url")
+  durationText     String?        @map("duration_text")
+  durationMinutes  Int?           @map("duration_minutes")
+  isFreePreview    Boolean        @default(false) @map("is_free_preview")
+  isActive         Boolean        @default(true) @map("is_active")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  deletedAt        DateTime?      @map("deleted_at")
+
+  course   Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  parent   CourseNode?  @relation("CourseNodeTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children CourseNode[] @relation("CourseNodeTree")
+
+  @@index([courseId, parentId, sortOrder])
+  @@index([parentId])
+  @@map("course_nodes")
+}
+
+/// Public-facing price presentation for a course. Deliberately SEPARATE from the transactional
+/// Course.courseFee / registrationFee / examFee / certificateFee columns that Application, Payment
+/// and Admission read - nothing here changes what a student is actually billed.
+model CourseFeePlan {
+  id              String        @id @default(uuid(7)) @db.Uuid
+  courseId        String        @unique @map("course_id") @db.Uuid
+  feeType         CourseFeeType @default(ONE_TIME) @map("fee_type")
+  currency        String        @default("INR") @db.VarChar(3)
+  /// Headline amount. For MONTHLY this is the per-month amount; ignored when feeType is FREE or CUSTOM.
+  baseFee         Decimal       @default(0) @map("base_fee") @db.Decimal(12, 2)
+  /// Standing discount. When lower than baseFee the site renders the struck-through original.
+  discountedFee   Decimal?      @map("discounted_fee") @db.Decimal(12, 2)
+  /// Campaign price set on the plan itself. A live CourseOffer overrides it at query time.
+  offerPrice      Decimal?      @map("offer_price") @db.Decimal(12, 2)
+  /// One-off joining charge shown alongside the headline price.
+  enrolmentFee    Decimal       @default(0) @map("enrolment_fee") @db.Decimal(12, 2)
+  paymentRequired Boolean       @default(true) @map("payment_required")
+  /// Rendered verbatim when feeType is CUSTOM, e.g. "Fee decided per batch".
+  customLabel     String?       @map("custom_label")
+  note            String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  deletedAt       DateTime?     @map("deleted_at")
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("course_fee_plans")
+}
+
+/// Time-boxed promotion. Expiry is a QUERY-TIME date condition (activeOfferWhere in
+/// src/server/course-cms.ts), never a cron job and never a flag someone must remember to flip.
+model CourseOffer {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  courseId        String    @map("course_id") @db.Uuid
+  title           String
+  description     String?
+  discountPercent Int?      @map("discount_percent")
+  originalPrice   Decimal?  @map("original_price") @db.Decimal(12, 2)
+  offerPrice      Decimal?  @map("offer_price") @db.Decimal(12, 2)
+  couponCode      String?   @map("coupon_code")
+  bannerImage     String?   @map("banner_image")
+  /// NULL means no lower bound / no upper bound.
+  startsAt        DateTime? @map("starts_at")
+  endsAt          DateTime? @map("ends_at")
+  isActive        Boolean   @default(true) @map("is_active")
+  sortOrder       Int       @default(0) @map("sort_order")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, isActive, startsAt, endsAt])
+  @@map("course_offers")
+}
+
+/// Per-course FAQ. The site-wide Faq model is untouched and keeps serving /faq.
+model CourseFaq {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  courseId  String    @map("course_id") @db.Uuid
+  question  String
+  answer    String
+  sortOrder Int       @default(0) @map("sort_order")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, sortOrder])
+  @@map("course_faqs")
+}
+
+/// Repeatable image sets (gallery / promotional). url is a stored path from src/lib/storage.
+model CourseMedia {
+  id        String          @id @default(uuid(7)) @db.Uuid
+  courseId  String          @map("course_id") @db.Uuid
+  kind      CourseMediaKind @default(GALLERY)
+  url       String
+  alt       String?
+  caption   String?
+  sortOrder Int             @default(0) @map("sort_order")
+  isActive  Boolean         @default(true) @map("is_active")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  deletedAt DateTime?       @map("deleted_at")
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, kind, sortOrder])
+  @@map("course_media")
 }
 
 // ───────────────────────────── BATCHES ─────────────────────────────
@@ -749,15 +910,20 @@ model TrainerApplication {
   photoUrl                String?                  @map("photo_url")
   mobile                  String
   whatsapp                String?
-  email                   String
-  dob                     DateTime                 @db.Date
-  gender                  Gender
+  /// Nullable: the short "Apply as a Teacher" form (/become-a-trainer/teach) does not ask for it.
+  email                   String?
+  /// Nullable: not asked by the short teacher form. Never defaulted - a missing DOB stays NULL.
+  dob                     DateTime?                @db.Date
+  /// Nullable: not asked by the short teacher form.
+  gender                  Gender?
   level                   TrainerLevel
   stateId                 String                   @map("state_id") @db.Uuid
   districtId              String?                  @map("district_id") @db.Uuid
   blockId                 String?                  @map("block_id") @db.Uuid
-  address                 String
-  pincode                 String
+  /// Nullable: not asked by the short teacher form (which collects City/District only).
+  address                 String?
+  /// Nullable: not asked by the short teacher form.
+  pincode                 String?
   qualification           String
   skills                  String[]                 @default([])
   experienceYears         Int                      @default(0) @map("experience_years")
@@ -766,7 +932,8 @@ model TrainerApplication {
   languages               String[]                 @default([])
   availability            String?
   trainingMode            CourseMode               @default(OFFLINE) @map("training_mode")
-  motivation              String
+  /// Nullable: not asked by the short teacher form.
+  motivation              String?
   status                  TrainerApplicationStatus @default(SUBMITTED)
   reviewNotes             String?                  @map("review_notes")
   rejectionReason         String?                  @map("rejection_reason")

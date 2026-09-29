@@ -67,11 +67,18 @@ export function PageHero({
         )}
         {eyebrow && (
           <div className="hidden lg:block">
-            <p className={cn("eyebrow mb-3 text-orange", align === "center" && "justify-center")}>{eyebrow}</p>
+            {/* The band this sits on is navy (solid below lg, a navy→navy-dark gradient from lg), so
+                the accent is `eyebrow-on-navy` — one utility, never `eyebrow` plus a colour, because
+                tailwind-merge knows neither name and would keep both. Plain text-orange measures
+                2.28:1 against the brand blue at 12px/700; on-navy orange is 4.56:1. */}
+            <p className={cn("eyebrow-on-navy mb-3", align === "center" && "justify-center")}>{eyebrow}</p>
           </div>
         )}
         <h1 className={cn("max-w-4xl text-h2 text-balance text-white lg:text-h1", align === "center" && "lg:mx-auto")}>
-          <Highlight text={title} />
+          {/* Same navy band, same reason: the [[…]] word is coloured TEXT on navy, so it takes the
+              on-navy orange. This hero is shared by 33 pages under (site) — /about "Creating Change",
+              /courses "Livelihoods", /contact "Help" — so the prop is the widest-reaching one here. */}
+          <Highlight text={title} highlightClassName="text-orange-on-navy" />
         </h1>
         {description && (
           <p className={cn("mt-1 max-w-2xl text-body-sm text-white/75 max-lg:line-clamp-1 lg:mt-4 lg:text-body-lg lg:text-white/80", align === "center" && "lg:mx-auto")}>

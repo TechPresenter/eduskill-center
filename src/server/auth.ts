@@ -7,13 +7,26 @@ import { audit } from "@/lib/audit";
 import { notify, notifyStaff } from "@/lib/notifications";
 import { absoluteUrl } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
+import { mobileVariants, parsePhone, samePhone, toE164 } from "@/lib/phone";
 
 const MAX_FAILED_LOGINS = 5;
 const LOCK_MINUTES = 15;
 
+/**
+ * The one canonical form of a phone number for storage and comparison: **E.164** (`+919876543210`).
+ *
+ * Returns `""` for anything that is not a phone number — an email address, `""`, junk — because
+ * `login()` and `requestPasswordReset()` call it on whatever the user typed into the single
+ * "email or mobile" box, and must not throw on an email.
+ *
+ * **Idempotent**, and that is load-bearing: `login-otp.ts` decides whether a typed number belongs to
+ * an admission by normalising both sides and comparing. `tests/phone.test.ts` asserts it.
+ *
+ * Reading a stored number still works whatever spelling it is in, because every exact-match query
+ * goes through `mobileVariants()` rather than comparing against this directly.
+ */
 export function normalizeMobile(mobile: string) {
-  const digits = mobile.replace(/\D/g, "");
-  return digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
+  return toE164(mobile);
 }
 
 export function normalizeEmail(email: string) {
@@ -28,9 +41,12 @@ export interface RequestMeta {
 export async function login(input: { identifier: string; password: string; remember?: boolean } & RequestMeta) {
   const raw = input.identifier.trim();
   const email = normalizeEmail(raw);
-  const mobile = normalizeMobile(raw);
+  // One free-text box for "email or mobile", so both readings are tried. `mobileVariants` is empty
+  // when the input is not a phone number at all, and matches a stored number in any spelling —
+  // E.164 for anything written since the country selector shipped, bare digits for older rows.
+  const mobiles = mobileVariants(raw);
   const user = await db.user.findFirst({
-    where: { deletedAt: null, OR: [{ email }, ...(mobile.length >= 10 ? [{ mobile }] : [])] },
+    where: { deletedAt: null, OR: [{ email }, ...(mobiles.length ? [{ mobile: { in: mobiles } }] : [])] },
   });
 
   const record = (success: boolean, reason?: string) =>
@@ -88,14 +104,20 @@ export async function registerStudent(
   const issue = passwordIssue(input.password);
   if (issue) throw Errors.validation("Please correct the highlighted fields.", { password: issue });
 
-  const mobile = normalizeMobile(input.mobile);
-  if (!/^[6-9]\d{9}$/.test(mobile)) throw Errors.validation("Please correct the highlighted fields.", { mobile: "Enter a valid 10-digit Indian mobile number" });
+  // `registerSchema` has already validated and normalised this per selected country; re-checking the
+  // shape here is belt and braces for the service's other callers, and must not assume India.
+  const parsed = parsePhone(input.mobile);
+  if (!parsed.ok) throw Errors.validation("Please correct the highlighted fields.", { mobile: parsed.message });
+  const mobile = parsed.e164;
   const email = input.email ? normalizeEmail(input.email) : null;
 
-  const clash = await db.user.findFirst({ where: { OR: [{ mobile }, ...(email ? [{ email }] : [])] }, select: { email: true, mobile: true } });
+  // Duplicate detection FAILS OPEN if this misses: a second account for a phone that already has
+  // one, which `User.mobile @unique` cannot catch while a number can be stored in two spellings.
+  // Hence every spelling, not just the canonical one.
+  const clash = await db.user.findFirst({ where: { OR: [{ mobile: { in: mobileVariants(mobile) } }, ...(email ? [{ email }] : [])] }, select: { email: true, mobile: true } });
   if (clash) {
     const details: Record<string, string> = {};
-    if (clash.mobile === mobile) details.mobile = "An account with this mobile number already exists";
+    if (samePhone(clash.mobile, mobile)) details.mobile = "An account with this mobile number already exists";
     if (email && clash.email === email) details.email = "An account with this email already exists";
     throw Errors.validation("Account already exists. Please log in.", details);
   }
@@ -131,8 +153,8 @@ function hashResetToken(token: string) {
 export async function requestPasswordReset(identifier: string, meta: RequestMeta = {}) {
   const raw = identifier.trim();
   const email = normalizeEmail(raw);
-  const mobile = normalizeMobile(raw);
-  const user = await db.user.findFirst({ where: { deletedAt: null, status: "ACTIVE", OR: [{ email }, ...(mobile.length >= 10 ? [{ mobile }] : [])] } });
+  const mobiles = mobileVariants(raw);
+  const user = await db.user.findFirst({ where: { deletedAt: null, status: "ACTIVE", OR: [{ email }, ...(mobiles.length ? [{ mobile: { in: mobiles } }] : [])] } });
   // Always respond identically to avoid account enumeration.
   if (!user) return;
   const token = randomBytes(32).toString("base64url");

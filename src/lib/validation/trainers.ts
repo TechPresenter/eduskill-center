@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { dateString, emailSchema, mobileSchema, optionalString, pincodeSchema, stringList, uuid } from "@/lib/validation/common";
+import { boolish, dateString, emailSchema, mobileSchema, optionalEmail, optionalPhone, optionalString, pincodeSchema, stringList, uuid } from "@/lib/validation/common";
 
 export const trainerLevelSchema = z.enum(["BLOCK", "DISTRICT", "STATE"]);
 
@@ -7,7 +7,7 @@ export const trainerApplicationSchema = z
   .object({
     name: z.string().trim().min(2, "Enter your full name").max(120),
     mobile: mobileSchema,
-    whatsapp: z.union([z.literal(""), mobileSchema]).optional().nullable(),
+    whatsapp: optionalPhone,
     email: emailSchema,
     dob: dateString,
     gender: z.enum(["MALE", "FEMALE", "OTHER"]),
@@ -39,6 +39,96 @@ export const trainerApplicationSchema = z
   });
 
 export type TrainerApplicationInput = z.infer<typeof trainerApplicationSchema>;
+
+// ───────────────────────── Short "Apply as a Teacher" form ─────────────────────────
+//
+// Feeds the SAME TrainerApplication pipeline as the 8-step wizard above — same model, same
+// TrainerApplicationStatus workflow, same Admin → Trainer Applications queue — but asks only what
+// an initial teacher screening needs. Everything it does not ask for stays NULL (see the migration
+// 20260929120000_trainer_application_optional_fields); nothing is invented to fill a column.
+
+/** Class groups on the short form, mapped to real course-category slugs by the service. */
+export const TEACHING_CLASS_BANDS = ["CLASS_1_4", "CLASS_5_10", "CLASS_11_12", "COMPETITIVE_EXAMS"] as const;
+export type TeachingClassBand = (typeof TEACHING_CLASS_BANDS)[number];
+
+/** The course category each class group maps to. Slugs are the seeded categories (prisma/seed-data). */
+export const TEACHING_CLASS_CATEGORY_SLUG: Record<TeachingClassBand, string> = {
+  CLASS_1_4: "normal-education-class-1-4",
+  CLASS_5_10: "school-education-class-5-10",
+  CLASS_11_12: "senior-secondary-class-11-12",
+  COMPETITIVE_EXAMS: "competitive-exam-training",
+};
+
+export const TEACHING_CLASS_LABEL: Record<TeachingClassBand, string> = {
+  CLASS_1_4: "Class 1–4",
+  CLASS_5_10: "Class 5–10",
+  CLASS_11_12: "Class 11–12",
+  COMPETITIVE_EXAMS: "Competitive Exams",
+};
+
+export const TEACHING_EXPERIENCE_BANDS = ["FRESHER", "YEARS_1_2", "YEARS_3_5", "YEARS_5_PLUS"] as const;
+export type TeachingExperienceBand = (typeof TEACHING_EXPERIENCE_BANDS)[number];
+
+/**
+ * Band → the number of years stored in `teachingExperienceYears`. Each value is the band's LOWER
+ * bound, which is the only thing the band actually tells us.
+ */
+export const TEACHING_EXPERIENCE_YEARS: Record<TeachingExperienceBand, number> = {
+  FRESHER: 0,
+  YEARS_1_2: 1,
+  YEARS_3_5: 3,
+  YEARS_5_PLUS: 5,
+};
+
+export const TEACHING_EXPERIENCE_LABEL: Record<TeachingExperienceBand, string> = {
+  FRESHER: "Fresher",
+  YEARS_1_2: "1–2 Years",
+  YEARS_3_5: "3–5 Years",
+  YEARS_5_PLUS: "5+ Years",
+};
+
+export const TEACHING_MODES = ["ONLINE", "OFFLINE", "BOTH"] as const;
+export type TeachingMode = (typeof TEACHING_MODES)[number];
+
+/** Teaching mode → the `CourseMode` stored on the application. "Both" is the existing HYBRID. */
+export const TEACHING_MODE_COURSE_MODE: Record<TeachingMode, "ONLINE" | "OFFLINE" | "HYBRID"> = {
+  ONLINE: "ONLINE",
+  OFFLINE: "OFFLINE",
+  BOTH: "HYBRID",
+};
+
+export const TEACHING_MODE_LABEL: Record<TeachingMode, string> = {
+  ONLINE: "Online",
+  OFFLINE: "Offline",
+  BOTH: "Both",
+};
+
+export const teacherApplicationSchema = z.object({
+  name: z.string().trim().min(2, "Enter your full name").max(120),
+  mobile: mobileSchema,
+  /** Optional on purpose — the brief does not mark Email Address as required. */
+  email: optionalEmail,
+  /**
+   * A REAL District row, chosen from the type-ahead. The applicant types a city or district name;
+   * the client resolves it against the district table and submits the id. A free-typed value that
+   * never resolved arrives as "" and fails here, which is exactly the intent: an unresolvable
+   * location is a validation error shown to the applicant, never a guess.
+   */
+  districtId: z.string().trim().uuid("Pick your city or district from the list"),
+  qualification: z.string().trim().min(2, "Enter your highest qualification").max(200),
+  subjects: stringList.min(1, "Add at least one subject you can teach"),
+  classes: z.array(z.enum(TEACHING_CLASS_BANDS)).min(1, "Select at least one class group").max(TEACHING_CLASS_BANDS.length),
+  /**
+   * Required even though the brief shows no asterisk: `teaching_experience_years` and
+   * `training_mode` are NOT NULL columns whose defaults (0 and OFFLINE) would otherwise be stored
+   * as if the applicant had claimed "Fresher" and "Offline". Both are a single tap.
+   */
+  experienceBand: z.enum(TEACHING_EXPERIENCE_BANDS, { message: "Select your teaching experience" }),
+  teachingMode: z.enum(TEACHING_MODES, { message: "Select your preferred teaching mode" }),
+  consent: boolish.refine((v) => v, "You must agree before submitting"),
+});
+
+export type TeacherApplicationInput = z.infer<typeof teacherApplicationSchema>;
 
 export const trainerStatusLookupSchema = z.object({
   applicationNo: z.string().trim().min(5).max(40),

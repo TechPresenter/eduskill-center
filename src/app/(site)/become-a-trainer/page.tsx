@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ArrowRight, Building2, Landmark, Map, Search } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { DynamicIcon } from "@/components/ui/icon";
@@ -50,8 +51,9 @@ export default async function BecomeTrainerPage() {
       <PageHero eyebrow="Volunteer with us" title={section.title} description={section.description} breadcrumbs={[{ label: "Home", href: "/" }, { label: "Become a Trainer" }]}>
         <div className="flex flex-col gap-3 sm:flex-row">
           {open !== false ? (
-            <ButtonLink href="/become-a-trainer/apply" size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
-              Apply Now
+            // The short screening form is the default route in: most applicants only need that one.
+            <ButtonLink href="/become-a-trainer/teach" size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
+              Apply as a Teacher
             </ButtonLink>
           ) : (
             <span className="inline-flex min-h-12 items-center rounded-md bg-white/10 px-6 text-sm font-semibold text-white ring-1 ring-white/20">Applications are currently closed</span>
@@ -60,6 +62,15 @@ export default async function BecomeTrainerPage() {
             Track application
           </ButtonLink>
         </div>
+        {open !== false && (
+          <p className="mt-4 text-body-sm text-white/80">
+            Volunteering at block or state level, or want to add your photo, languages and documents up front?{" "}
+            <Link href="/become-a-trainer/apply" className="ring-focus-inverse rounded-xs font-semibold text-white underline underline-offset-4 hover:text-orange-light">
+              Use the full volunteer application
+            </Link>
+            .
+          </p>
+        )}
       </PageHero>
 
       {(section.benefits ?? []).length > 0 && (
@@ -134,7 +145,12 @@ export default async function BecomeTrainerPage() {
         </div>
       </section>
 
-      <CtaBand title="Ready to [[teach]]?" description="Applications take about 10 minutes. Keep your resume, qualification certificate and an ID document handy." primary={open !== false ? { label: "Apply Now", href: "/become-a-trainer/apply" } : undefined} secondary={{ label: "Track application", href: "/become-a-trainer/status" }} />
+      <CtaBand
+        title="Ready to [[teach]]?"
+        description="The short teacher application takes about two minutes — keep your resume handy. The full volunteer application asks for your documents and photo as well."
+        primary={open !== false ? { label: "Apply as a Teacher", href: "/become-a-trainer/teach" } : undefined}
+        secondary={{ label: "Track application", href: "/become-a-trainer/status" }}
+      />
     </>
   );
 }

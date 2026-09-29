@@ -1,12 +1,9 @@
-import { ArrowRight, TrendingUp } from "lucide-react";
-import { ButtonLink } from "@/components/ui/button";
-import { HeroPattern } from "@/components/site/page-hero";
-import { HeroIllustration } from "@/components/site/hero-illustration";
-import { HeroFinderCard } from "@/components/site/hero-finder-card";
-import { HeroSlider, HeroTitle, type HeroSlideData } from "@/components/site/hero-slider";
-import { SafeImage } from "@/components/site/safe-image";
-import { CountUp } from "@/components/site/count-up";
-import type { ImpactStatValue } from "@/server/public";
+import { MessageCircle, Phone } from "lucide-react";
+import { Blob, GlowOrb, SectionBg } from "@/components/site/decor";
+import { HeroEnquiryForm, type HeroChipData } from "@/components/site/hero-enquiry-form";
+import { HeroSlider, type HeroSlideData } from "@/components/site/hero-slider";
+import type { CourseOption } from "@/components/site/course-select";
+
 
 export interface HeroSection {
   eyebrow?: string;
@@ -14,6 +11,9 @@ export interface HeroSection {
   /** Optional short title for phones (≤ 2 lines). Falls back to the first line of `title`. */
   mobileTitle?: string;
   subtitle?: string;
+  pillText?: string;
+  emphasis?: string;
+  programLine?: string;
   primaryLabel?: string;
   primaryHref?: string;
   secondaryLabel?: string;
@@ -22,9 +22,12 @@ export interface HeroSection {
   tertiaryHref?: string;
   imageUrl?: string;
   imageAlt?: string;
-  badgeLabel?: string;
-  badgeValueKey?: string;
-  cardTitle?: string;
+  /** Enquiry card. */
+  formHeading?: string;
+  formCtaLabel?: string;
+  formNote?: string;
+  consentText?: string;
+  chips?: HeroChipData[];
   /** Extra slides added in Admin → CMS. Empty means the hero renders as a single static banner. */
   slides?: HeroSlideData[];
 }
@@ -32,110 +35,164 @@ export interface HeroSection {
 /**
  * The homepage hero.
  *
- * Below lg it is an app's compact header: eyebrow, a two-line title at the h1 step, one line of support
- * and nothing else — the search bar and quick actions the page renders right under it overlap its
- * bottom edge, so the first phone screen is actionable. The artwork, badge, finder card and CTA
- * buttons are desktop-only (their jobs are the quick-action tiles on phones).
+ * LAYOUT. Three parts on one dark band, after the reference the Foundation asked for: editorial copy
+ * on the left (headline → pill → offer line → programme line → CTA), the cut-out subject in the
+ * middle, and a working admission-enquiry card on the right. Below lg it is a single column —
+ * copy then the card, so the form is the first thing under the headline rather than the last
+ * thing on a long page.
  *
- * From lg it is the website hero: copy on seven columns, artwork and the finder card on five, the
- * title at a size that keeps the seeded three CMS lines to three lines.
+ * WHAT REPLACED WHAT. The right-hand column used to hold `HeroFinderCard` ("Find a Training
+ * Center"); it now holds the enquiry form, and only one of the two is ever rendered. Finding a
+ * centre is still on this page — `home.centerSearch` further down owns that job, with the full
+ * state/district/block cascade the hero never had room for.
+ *
+ * HONESTY. The hero states no figures at all now — the impact numbers live in the dedicated band
+ * to positive values by `getImpactStats`), and the stat strip renders nothing at all when there is
+ * nothing true to show. No learner counts, no discounts, no accreditations.
  */
-export function Hero({ section, impact }: { section: HeroSection; impact: ImpactStatValue[] }) {
-  const badgeStat = section.badgeValueKey ? impact.find((s) => s.key === section.badgeValueKey) : undefined;
 
-  const badge =
-    badgeStat && section.badgeLabel ? (
-      <div className="animate-fade-up absolute top-6 -left-4 flex items-center gap-3 rounded-2xl bg-white p-3 pr-5 text-navy shadow-float motion-reduce:animate-none" style={{ animationDelay: "250ms" }}>
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-light text-orange">
-          <TrendingUp className="h-5 w-5" aria-hidden />
-        </span>
-        <span className="leading-tight">
-          <span className="block font-heading text-xl font-extrabold text-navy">
-            <CountUp value={badgeStat.value} suffix={badgeStat.suffix} />
-          </span>
-          <span className="block text-xs font-semibold text-muted">{section.badgeLabel}</span>
-        </span>
-      </div>
-    ) : null;
+/**
+ * The dark bed: navy-dark, a faint line grid, one huge soft orange shape bleeding off the left edge,
+ * and a cool glow on the right. All four come from the shared decor system rather than one-off CSS,
+ * so a repaint of the palette reaches the hero too.
+ *
+ * Contrast budget: white on navy-dark is 13.21:1 undecorated. The orange blob's densest composite
+ * over it is ~#524140, where white still measures 10.0:1 and the on-navy orange accent 5.4:1, so no
+ * piece of copy in the hero depends on the art staying where it is.
+ */
+function HeroBackdrop() {
+  return (
+    <>
+      <SectionBg variant="grid" tone="navy" className="opacity-70" />
+      <Blob tone="orange" shape={2} size="xl" opacity={0.34} className="top-[-12%] left-[-22%] h-168 w-168 blur-3xl sm:h-208 sm:w-208" />
+      <GlowOrb tone="navy-light" size="xl" className="-right-24 bottom-[-18%]" />
+    </>
+  );
+}
 
-  const finderCard = <HeroFinderCard title={section.cardTitle || "Find a Training Center"} />;
+/**
+ * The reference's white accreditation card, in our terms: three checkable claims about this
+ * Foundation. A 3-up grid at every width — hairline-divided columns inside one white card from sm,
+ * and the same three columns without the dividers on a phone, where 108px each is enough for a mark
+ * and a short line but not for a rule between them.
+ */
 
-  // The first slide is the section's own fields, so existing CMS content keeps rendering exactly as
-  // before and the slider only appears once the Foundation adds a second slide in Admin → CMS.
-  const extra = (section.slides ?? []).filter((s) => s && s.title?.trim());
-  if (extra.length > 0) {
-    const slides: HeroSlideData[] = [
-      {
-        eyebrow: section.eyebrow,
-        title: section.title,
-        mobileTitle: section.mobileTitle,
-        subtitle: section.subtitle,
-        primaryLabel: section.primaryLabel,
-        primaryHref: section.primaryHref,
-        secondaryLabel: section.secondaryLabel,
-        secondaryHref: section.secondaryHref,
-        tertiaryLabel: section.tertiaryLabel,
-        tertiaryHref: section.tertiaryHref,
-        imageUrl: section.imageUrl,
-        imageAlt: section.imageAlt,
-      },
-      ...extra,
-    ];
-    return (
-      <section className="relative overflow-hidden bg-linear-to-br from-navy via-navy to-navy-dark text-white">
-        <HeroPattern />
-        <HeroSlider slides={slides} badge={badge} finderCard={finderCard} />
-        <div className="hidden h-16 lg:block" aria-hidden />
-      </section>
-    );
-  }
+/**
+ * `null` for anything that is not a real Indian mobile we could actually connect a visitor to.
+ *
+ * The seeded default for `contact.phone` is the placeholder "+91 00000 00000", so "is the setting
+ * non-empty" is the wrong question — a button that dials ten zeros is worse than no button. Ten
+ * identical digits and anything outside the 6–9 prefix are treated as not configured.
+ */
+function usableMobile(raw: string | undefined | null): { tel: string; wa: string } | null {
+  const digits = (raw ?? "").replace(/\D/g, "");
+  if (digits.length < 10) return null;
+  const local = digits.slice(-10);
+  if (/^(\d)\1{9}$/.test(local) || !/^[6-9]\d{9}$/.test(local)) return null;
+  return { tel: `+91${local}`, wa: `91${local}` };
+}
+
+/**
+ * The reference's floating right-edge call / WhatsApp tabs.
+ *
+ * Only shown from 1400px, and that number is not arbitrary: `container-x` caps at 1280, so 1400 is
+ * the first width where the viewport gutter (60px) can hold a 44px rail without touching the
+ * enquiry card. Below that the same two numbers are already one tap away in the topbar and footer.
+ *
+ * It is a SIBLING of the hero section, not a child: the section sets `overflow-x-clip` and the
+ * backdrop uses `blur-3xl`, and a `position: fixed` element inside either would be clipped or
+ * re-parented. Each button renders only if its setting holds a number we can really dial.
+ */
+function HeroContactRail({ phone, whatsapp }: { phone?: string; whatsapp?: string }) {
+  const tel = usableMobile(phone);
+  const wa = usableMobile(whatsapp);
+  if (!tel && !wa) return null;
+  return (
+    <div className="fixed top-1/2 right-3 z-sticky hidden -translate-y-1/2 flex-col items-end gap-2 min-[1400px]:flex">
+      {tel && (
+        <a
+          href={`tel:${tel.tel}`}
+          aria-label={`Call ${tel.tel}`}
+          className="ring-focus grid h-12 w-12 place-items-center rounded-full bg-orange text-white shadow-e3 transition-colors duration-micro hover:bg-orange-hover motion-reduce:transition-none"
+        >
+          <Phone className="h-5 w-5" aria-hidden />
+        </a>
+      )}
+      {wa && (
+        <a
+          href={`https://wa.me/${wa.wa}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          // btn-fill-green is the project's answer to "white label on flat green": see globals.css.
+          className="ring-focus flex h-12 items-center gap-2 rounded-full bg-green px-4 text-body-sm font-bold text-white shadow-e3 transition-colors duration-micro hover:bg-green-dark motion-reduce:transition-none"
+        >
+          <MessageCircle className="h-5 w-5 shrink-0" aria-hidden />
+          Chat
+        </a>
+      )}
+    </div>
+  );
+}
+
+export function Hero({
+  section,
+  courses,
+  contact,
+}: {
+  section: HeroSection;
+  /** Active courses for the enquiry card's select. Server-loaded: no fetch on first paint. */
+  courses: CourseOption[];
+  contact?: { phone?: string; whatsapp?: string };
+}) {
+  // `getImpactStats` already drops anything null, non-finite or ≤ 0, so an absent or zero statistic
+  // never reaches the strip — it simply has fewer entries, or none, and then renders nothing.
+
+  const form = (
+    <HeroEnquiryForm
+      heading={section.formHeading || "Enquire about admission"}
+      consentText={section.consentText || "I authorise EduSkill India Foundation to contact me about admission on the number I have given."}
+      ctaLabel={section.formCtaLabel || "Send enquiry"}
+      note={section.formNote}
+      courses={courses}
+    />
+  );
+
+  // The first slide IS the section's own flat fields, so existing CMS content keeps rendering
+  // exactly as before and a Foundation editor only sees a slideshow once they add a second slide in
+  // Admin → CMS. With one slide the slider drops its carousel semantics, dots and autoplay
+  // entirely (see `HeroSlider`), which is the "single static banner" this hero has always been.
+  const slides: HeroSlideData[] = [
+    {
+      eyebrow: section.eyebrow,
+      title: section.title,
+      mobileTitle: section.mobileTitle,
+      subtitle: section.subtitle,
+      pillText: section.pillText,
+      emphasis: section.emphasis,
+      programLine: section.programLine,
+      primaryLabel: section.primaryLabel,
+      primaryHref: section.primaryHref,
+      secondaryLabel: section.secondaryLabel,
+      secondaryHref: section.secondaryHref,
+      tertiaryLabel: section.tertiaryLabel,
+      tertiaryHref: section.tertiaryHref,
+      imageUrl: section.imageUrl,
+      imageAlt: section.imageAlt,
+    },
+    ...(section.slides ?? []).filter((s) => s && s.title?.trim()),
+  ];
 
   return (
-    <section className="relative overflow-hidden bg-linear-to-br from-navy via-navy to-navy-dark text-white">
-      <HeroPattern />
-      <div className="container-x relative grid items-center gap-8 pt-6 pb-14 sm:pt-10 sm:pb-16 lg:grid-cols-12 lg:py-24">
-        <div className="animate-fade-up motion-reduce:animate-none lg:col-span-7">
-          {section.eyebrow && <p className="eyebrow mb-2 text-orange lg:mb-4">{section.eyebrow}</p>}
-          <HeroTitle title={section.title} mobileTitle={section.mobileTitle} />
-          {section.subtitle && <p className="mt-2 line-clamp-3 max-w-xl text-body-sm text-white/80 sm:text-body lg:mt-6 lg:line-clamp-none lg:text-body-lg">{section.subtitle}</p>}
-          <div className="mt-8 hidden gap-3 lg:flex lg:items-center">
-            {section.primaryLabel && section.primaryHref && (
-              <ButtonLink href={section.primaryHref} size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
-                {section.primaryLabel}
-              </ButtonLink>
-            )}
-            {section.secondaryLabel && section.secondaryHref && (
-              <ButtonLink href={section.secondaryHref} size="lg" variant="white">
-                {section.secondaryLabel}
-              </ButtonLink>
-            )}
-          </div>
-          {section.tertiaryLabel && section.tertiaryHref && (
-            <ButtonLink href={section.tertiaryHref} variant="link" className="mt-5 hidden text-white hover:text-orange lg:inline-flex" rightIcon={<ArrowRight className="h-4 w-4" />}>
-              {section.tertiaryLabel}
-            </ButtonLink>
-          )}
-        </div>
-
-        <div className="relative hidden lg:col-span-5 lg:block">
-          <div className="relative">
-            <div className="relative aspect-square overflow-hidden rounded-2xl">
-              {section.imageUrl ? (
-                <SafeImage src={section.imageUrl} alt={section.imageAlt || "EduSkill student"} priority sizes="(max-width: 1024px) 1px, 520px" className="rounded-2xl" />
-              ) : (
-                <HeroIllustration className="h-full w-full" />
-              )}
-            </div>
-
-            {badge}
-
-            <div className="animate-fade-up absolute right-0 -bottom-6 flex justify-end motion-reduce:animate-none" style={{ animationDelay: "150ms" }}>
-              {finderCard}
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="hidden h-16 lg:block" aria-hidden />
-    </section>
+    <>
+      {/*
+        `overflow-x-clip`, never `overflow-hidden`: the blob and the figure are meant to overhang,
+        and `overflow-hidden` would also clip them vertically — which is what bit this hero before.
+      */}
+      <section className="relative overflow-x-clip bg-navy-dark text-white">
+        <HeroBackdrop />
+        <HeroSlider slides={slides} form={form} />
+      </section>
+      <HeroContactRail phone={contact?.phone} whatsapp={contact?.whatsapp} />
+    </>
   );
 }

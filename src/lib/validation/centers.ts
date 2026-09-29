@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { mobileSchema, optionalEmail, optionalString, pincodeSchema, stringList, uuid } from "@/lib/validation/common";
+import { optionalEmail, optionalPhone, optionalString, pincodeSchema, stringList, uuid } from "@/lib/validation/common";
 
 export const centerInputSchema = z.object({
   name: z.string().trim().min(3, "Enter the center name").max(160),
@@ -12,8 +12,8 @@ export const centerInputSchema = z.object({
   pincode: pincodeSchema,
   latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
   longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
-  phone: z.union([z.literal(""), mobileSchema]).optional().nullable(),
-  whatsapp: z.union([z.literal(""), mobileSchema]).optional().nullable(),
+  phone: optionalPhone,
+  whatsapp: optionalPhone,
   email: optionalEmail,
   openingHours: z.record(z.string(), z.string()).optional().nullable(),
   capacity: z.coerce.number().int().min(0).max(100000).default(0),

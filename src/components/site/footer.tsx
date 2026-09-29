@@ -81,7 +81,10 @@ function FooterColumn({ id, title, links }: { id: string; title: string; links: 
   return (
     <div className="group max-md:border-t max-md:border-white/10">
       <input id={toggleId} type="checkbox" className="peer sr-only md:hidden" aria-controls={listId} />
-      <h3 className="rounded-lg text-overline font-heading text-white peer-focus-visible:ring-2 peer-focus-visible:ring-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-navy-dark">
+      {/* White ring, not orange: this is the `ring-focus-inverse` rule spelled out by hand, because
+          the indicator is driven by the peer checkbox's focus and not by this element's own. Orange
+          is 3.55:1 on navy-dark — over the 3:1 floor but visibly dim; white is 13.21:1. */}
+      <h3 className="rounded-lg text-overline font-heading text-white peer-focus-visible:ring-2 peer-focus-visible:ring-white peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-navy-dark">
         <label htmlFor={toggleId} className="flex min-h-12 cursor-pointer items-center justify-between gap-3 select-none md:pointer-events-none md:min-h-0 md:cursor-default">
           <span>{title}</span>
           <ChevronDown
@@ -90,13 +93,29 @@ function FooterColumn({ id, title, links }: { id: string; title: string; links: 
           />
         </label>
       </h3>
-      <span className="mt-3 hidden h-0.5 w-7 rounded-full bg-orange md:block" aria-hidden />
+      {/* 2px rule under the heading. A hairline is a THIN graphic on navy, which is exactly the case
+          the on-navy tokens exist for: flat orange measures 3.55:1 here, orange-on-navy 7.10:1. */}
+      <span className="mt-3 hidden h-0.5 w-7 rounded-full bg-orange-on-navy md:block" aria-hidden />
       <ul id={listId} className="max-md:hidden max-md:pb-3 max-md:group-has-[:checked]:block md:mt-3.5">
         {links.map((l) => (
           <li key={l.href + l.label}>
-            <Link href={l.href} className="group/link flex min-h-11 items-center gap-2.5 text-body text-white/75 transition-colors duration-micro hover:text-white active:text-white motion-reduce:transition-none md:min-h-8">
-              <span className="size-1.5 shrink-0 rounded-full bg-orange transition-transform duration-micro ease-soft group-hover/link:translate-x-1 motion-reduce:transition-none" aria-hidden />
-              <span>{l.label}</span>
+            <Link
+              href={l.href}
+              className="group/link flex min-h-11 items-center gap-2.5 text-body text-white/75 transition-colors duration-micro hover:text-white active:text-white motion-reduce:transition-none md:min-h-8"
+            >
+              {/* 6px dot — the smallest mark in the footer, so it needs the brighter on-navy orange
+                  (7.10:1) rather than the 3.55:1 flat brand hue. It grows into a short bar on hover
+                  so the row reads as one gesture with the label. */}
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-on-navy transition-all duration-micro ease-soft group-hover/link:w-4 group-focus-visible/link:w-4 motion-reduce:transition-none"
+                aria-hidden
+              />
+              {/* The label slides with the dot and draws an orange underline from left to right.
+                  `bg-[length:0%_2px]` → `100%` animates the gradient's width, which is the only way
+                  to animate an underline without a pseudo-element and without shifting the text. */}
+              <span className="bg-linear-to-r from-orange-on-navy to-orange-on-navy bg-[length:0%_2px] bg-[position:0_100%] bg-no-repeat transition-[background-size,transform] duration-element ease-soft group-hover/link:translate-x-0.5 group-hover/link:bg-[length:100%_2px] group-focus-visible/link:bg-[length:100%_2px] motion-reduce:transition-none">
+                {l.label}
+              </span>
             </Link>
           </li>
         ))}
@@ -109,7 +128,9 @@ function FooterColumn({ id, title, links }: { id: string; title: string; links: 
 function ContactRow({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
   return (
     <div className="flex items-start gap-3">
-      <IconTile icon={Icon} tone="white" size="sm" className="text-orange" />
+      {/* The glyph is a 1.5px lucide stroke sitting on a white/12 chip over navy-dark. Flat orange
+          on that composite is 2.51:1 — under the 3:1 a graphic owes; orange-on-navy is 5.01:1. */}
+      <IconTile icon={Icon} tone="white" size="sm" className="text-orange-on-navy" />
       <div className="min-w-0 pt-0.5">
         <dt className="text-overline text-white/70">{label}</dt>
         <dd className="mt-1 text-body text-white/85">{children}</dd>
@@ -135,7 +156,10 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
       <SectionBg tone="navy" variant="grid" className="opacity-50" />
 
       <div className="relative z-10">
-        <div className="h-1 bg-linear-to-r from-orange via-orange to-navy-light" aria-hidden />
+        {/* The page's closing brand rule. A 4px full-width fill is the one place all three logo hues
+            can sit at full strength — it is a big fill, not text, so THE GREEN RULE is satisfied and
+            green finally appears in the chrome. The topbar opens the page with the same sweep. */}
+        <div className="h-1 bg-linear-to-r from-orange via-navy-light to-green" aria-hidden />
         <h2 id="site-footer-heading" className="sr-only">
           Footer
         </h2>
@@ -144,13 +168,17 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
           <div className="grid gap-10 lg:grid-cols-12 lg:gap-10">
             {/* Brand lockup, tagline, social */}
             <div className="lg:col-span-4">
-              <Link href="/" aria-label={`${branding.siteName} – home`} className="inline-flex min-h-11 items-center rounded-xl">
+              {/* These links had no ring utility at all, only the UA default. ring-focus-inverse is
+                  the one for a navy band — the orange ring measures 3.55:1 on navy-dark and 2.28:1
+                  on the logo blue, white 13.21:1 — and it is what the legal row already uses. */}
+              <Link href="/" aria-label={`${branding.siteName} – home`} className="inline-flex min-h-11 items-center rounded-xl ring-focus-inverse">
                 <BrandMark branding={branding} variant="footer" light />
               </Link>
 
               {branding.tagline && (
                 <p className="mt-6 flex items-start gap-3">
-                  <span className="mt-1 h-4 w-1 shrink-0 rounded-full bg-orange" aria-hidden />
+                  {/* 4px-wide rule beside the tagline — thin enough to need the on-navy orange (7.10:1). */}
+                  <span className="mt-1 h-4 w-1 shrink-0 rounded-full bg-orange-on-navy" aria-hidden />
                   <span className="text-overline font-heading text-white">{branding.tagline}</span>
                 </p>
               )}
@@ -184,7 +212,7 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
               <dl className="grid grid-cols-2 gap-x-6 gap-y-7 md:gap-x-10 lg:grid-cols-4 lg:gap-x-0 lg:[&>*]:px-6 lg:[&>*+*]:border-l lg:[&>*+*]:border-white/10 lg:[&>*:first-child]:pl-0 lg:[&>*:last-child]:pr-0">
                 {branding.contact.email && (
                   <ContactRow icon={Mail} label="Email">
-                    <a href={`mailto:${branding.contact.email}`} className="inline-flex min-h-11 items-center break-all transition-colors hover:text-white motion-reduce:transition-none">
+                    <a href={`mailto:${branding.contact.email}`} className="ring-focus-inverse inline-flex min-h-11 items-center rounded-sm break-all transition-colors hover:text-white motion-reduce:transition-none">
                       {branding.contact.email}
                     </a>
                   </ContactRow>
@@ -192,7 +220,7 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
                 {branding.contact.phone && (
                   <ContactRow icon={Phone} label="Phone">
                     {phoneHref ? (
-                      <a href={phoneHref} className="inline-flex min-h-11 items-center transition-colors hover:text-white motion-reduce:transition-none">
+                      <a href={phoneHref} className="ring-focus-inverse inline-flex min-h-11 items-center rounded-sm transition-colors hover:text-white motion-reduce:transition-none">
                         {branding.contact.phone}
                       </a>
                     ) : (
@@ -203,7 +231,7 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
                         href={waHref}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1 flex min-h-11 w-fit items-center text-body-sm font-semibold text-white underline decoration-orange decoration-2 underline-offset-4"
+                        className="ring-focus-inverse mt-1 flex min-h-11 w-fit items-center rounded-sm text-body-sm font-semibold text-white underline decoration-orange-on-navy decoration-2 underline-offset-4"
                       >
                         WhatsApp
                       </a>
@@ -228,7 +256,9 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
               can already end with a full CtaBand, and two of those in a row read as a mistake. */}
           <Reveal className="mt-10 lg:mt-12">
             <div className="relative overflow-hidden rounded-2xl bg-white/5 ring-1 ring-inset ring-white/10">
-              <span className="absolute inset-y-0 left-0 w-1 bg-orange" aria-hidden />
+              {/* Echo of the 4px rule at the top of the footer, turned on its side: a fill, so both
+                  brand hues are used at full strength, and it ties the closing card to that seam. */}
+              <span className="absolute inset-y-0 left-0 w-1 bg-linear-to-b from-orange to-green" aria-hidden />
               <div className="flex flex-col gap-5 p-5 pl-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:py-4">
                 <div className="flex items-start gap-3.5">
                   <IconTile icon={Compass} tone="white" size="sm" className="max-sm:hidden" />
@@ -240,13 +270,17 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
                 <div className="flex shrink-0 flex-col gap-2.5 sm:flex-row">
                   <Link
                     href="/training-centers"
-                    className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-white/10 px-5 text-body font-semibold text-white ring-1 ring-inset ring-white/20 transition duration-micro ease-soft hover:bg-white/20 active:scale-[0.98] motion-reduce:transition-none sm:h-11"
+                    className="ring-focus-inverse inline-flex h-12 items-center justify-center gap-2 rounded-md bg-white/10 px-5 text-body font-semibold text-white ring-1 ring-inset ring-white/20 transition duration-micro ease-soft hover:bg-white/20 active:scale-[0.98] motion-reduce:transition-none sm:h-11"
                   >
                     Find a Center
                   </Link>
+                  {/* Hand-rolled twin of the primary Button, so it needs the same fix: white on flat
+                      #e8520a is 3.72:1 and a 16px semibold label is not "large text". btn-fill-orange
+                      deepens the fill past 4.95:1 by 22% of the height, above the cap line; bg-orange
+                      stays underneath as the forced-colors fallback. */}
                   <Link
                     href="/register"
-                    className="group/cta inline-flex h-12 items-center justify-center gap-2 rounded-md bg-orange px-5 text-body font-semibold text-white transition duration-micro ease-soft hover:bg-orange-hover active:scale-[0.98] motion-reduce:transition-none sm:h-11"
+                    className="group/cta btn-fill-orange ring-focus-inverse inline-flex h-12 items-center justify-center gap-2 rounded-md bg-orange px-5 text-body font-semibold text-white transition duration-micro ease-soft hover:bg-orange-hover active:scale-[0.98] motion-reduce:transition-none sm:h-11"
                   >
                     Apply Now
                     <ArrowUpRight className="size-4 transition-transform duration-micro group-hover/cta:-translate-y-0.5 group-hover/cta:translate-x-0.5 motion-reduce:transition-none" aria-hidden />
@@ -261,8 +295,30 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
         <div className="border-t border-white/10 bg-navy-dark/60">
           <div className="container-x flex flex-col gap-3 py-5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
             <div className="text-body-sm text-white/70">
-              <p>
-                © {year} {branding.siteName}. All Rights Reserved.
+              {/* Copyright and the developer credit share one line; the credit only wraps on a
+                  phone if there is genuinely no room. `btn-shine` is the codebase's existing
+                  one-pass hover sweep, reused so there is one shine implementation, not two. */}
+              <p className="flex flex-wrap items-center gap-x-1.5">
+                <span>
+                  © {year} {branding.siteName}. All Rights Reserved.
+                </span>
+                <span className="text-white/35" aria-hidden>
+                  ·
+                </span>
+                <span className="text-white/55">Developed by</span>
+                <a
+                  href="https://appsgain.in"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-shine ring-focus-inverse group/credit relative inline-flex items-center rounded-md px-1 py-0.5 font-semibold"
+                >
+                  <span className="credit-sheen">Appsgain Technologies</span>
+                  {/* Underline sweeps in from the left on hover and on keyboard focus. */}
+                  <span
+                    aria-hidden
+                    className="absolute inset-x-1 bottom-0.5 h-px origin-left scale-x-0 bg-orange-on-navy transition-transform duration-element ease-soft group-hover/credit:scale-x-100 group-focus-visible/credit:scale-x-100 motion-reduce:transition-none"
+                  />
+                </a>
               </p>
               {legalLine && <p className="mt-1">{legalLine}</p>}
             </div>

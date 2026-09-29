@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { BadgeCheck, CalendarClock, FileText, Hash, Phone, RefreshCw, Search } from "lucide-react";
+import { BadgeCheck, CalendarClock, FileText, Hash, RefreshCw, Search } from "lucide-react";
 import { api, ApiClientError } from "@/lib/api-client";
 import { formatDate, formatDateTime, titleCase } from "@/lib/utils";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Alert, type AlertTone } from "@/components/ui/feedback";
 import { Badge, type BadgeTone, StatusBadge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Field, FormGrid, FormSection } from "@/components/ui/form";
 import { KeyValue, Timeline, type TimelineItem } from "@/components/ui/misc";
 import { FileUpload, type UploadedFile } from "@/components/ui/file-upload";
@@ -148,15 +149,7 @@ export function CentreStatusForm({ initialNo, steps, classes }: CentreStatusForm
                 />
               </Field>
               <Field label="Registered mobile number" required error={fieldErrors.mobile}>
-                <Input
-                  inputMode="numeric"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                  leftIcon={<Phone className="h-4 w-4" />}
-                  placeholder="10-digit mobile"
-                  invalid={!!fieldErrors.mobile}
-                  autoComplete="tel"
-                />
+                <PhoneInput value={mobile} onChange={setMobile} invalid={!!fieldErrors.mobile} />
               </Field>
             </FormGrid>
             {error && (

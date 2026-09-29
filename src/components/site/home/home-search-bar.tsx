@@ -31,11 +31,19 @@ export function HomeSearchBar({ className }: { className?: string }) {
         if (ev.defaultPrevented) e.preventDefault();
       }}
       className={cn(
-        "press ring-focus flex h-13 w-full items-center gap-3 rounded-xl border border-line bg-white px-4 text-left shadow-e2 tap-highlight-none",
+        "press ring-focus flex h-13 w-full items-center gap-3 rounded-xl border border-line bg-white py-0 pr-4 pl-2 text-left shadow-e2 tap-highlight-none hover:border-navy/30",
         className
       )}
     >
-      <Search className="size-5 shrink-0 text-navy" aria-hidden />
+      {/*
+        The glyph sits in a pale-blue chip rather than loose on the white: the bar lands on the seam
+        under the navy hero, and the chip is what carries the logo's blue down into it. navy on
+        navy-soft is 6.68, so the mark stays legible even though a 20px icon only owes 3:1.
+      */}
+      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-navy-soft text-navy" aria-hidden>
+        <Search className="size-5" />
+      </span>
+      {/* 16px on phones (text-body), so the row reads at the same size as the field it stands in for. */}
       <span className="min-w-0 flex-1 truncate text-body text-muted">Search courses, centres, PIN code</span>
     </Link>
   );

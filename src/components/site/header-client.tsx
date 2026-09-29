@@ -245,16 +245,21 @@ export function HeaderClient({
     window.dispatchEvent(new CustomEvent(SITE_SEARCH_STATE_EVENT, { detail: { open: searchOpen } }));
   }, [searchOpen]);
 
+  // The active item used to be `text-orange`: 3.72:1 on white, and a 13px semibold label is nowhere
+  // near "large text", so the one item the row most needs to read was the only one failing AA. It is
+  // now the logo blue on a pale-blue pill (6.68:1) — the same navy-soft chip the card family uses —
+  // with the orange rule below it kept as the accent, where it sits on white at 3.72:1 and is a
+  // graphic, not text. The pill is background-only, so the measured width budget above is unchanged.
   const linkClass = (active: boolean) =>
     cn(
       "relative inline-flex h-10 items-center rounded-lg px-2.5 text-[13px] font-semibold whitespace-nowrap transition-colors",
-      active ? "text-orange" : "text-navy hover:bg-surface hover:text-navy-dark"
+      active ? "bg-navy-soft text-navy" : "text-navy hover:bg-surface hover:text-navy-dark"
     );
 
   return (
     <header className={cn("sticky top-0 z-header bg-white transition-shadow duration-element motion-reduce:transition-none pt-safe", scrolled ? "shadow-[0_4px_24px_-8px_rgba(16,24,40,0.18)]" : "shadow-[0_1px_0_0_rgba(228,231,236,1)]")}>
       <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center gap-1 px-4 sm:gap-3 sm:px-6 lg:h-[72px] lg:gap-2 lg:px-8 xl:gap-3">
-        <Link href="/" aria-label={`${siteName} – home`} className="inline-flex min-h-11 shrink-0 items-center rounded-lg">
+        <Link href="/" aria-label={`${siteName} – home`} className="inline-flex min-h-11 shrink-0 items-center rounded-lg ring-focus">
           <span className="hidden sm:block">{logo}</span>
           <span className="sm:hidden">{logoMobile}</span>
         </Link>
@@ -300,11 +305,13 @@ export function HeaderClient({
                       const idx = INLINE_AT_LG + i;
                       return (
                         <li key={item.href} className={idx < INLINE_AT_XL ? "xl:hidden" : ""} role="none">
+                          {/* orange on orange-light was 3.24:1 and this 14px label failed AA; the
+                              navy-soft pill matches the inline active item above, at 6.68:1. */}
                           <Link
                             role="menuitem"
                             href={item.href}
                             onClick={() => setMoreOpen(false)}
-                            className={cn("flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold", active ? "bg-orange-light text-orange" : "text-navy hover:bg-surface")}
+                            className={cn("flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold", active ? "bg-navy-soft text-navy" : "text-navy hover:bg-surface")}
                           >
                             {item.label}
                             <ChevronRight className="h-4 w-4 text-muted" aria-hidden />
@@ -349,7 +356,10 @@ export function HeaderClient({
               {/* App-bar pill (below lg): a 36px orange pill inside a 44px hit box. "Apply" alone on
                   phones buys the room for the search icon at 381-412px. */}
               <Link href="/register" className="group inline-flex h-11 shrink-0 items-center tap-highlight-none outline-none lg:hidden">
-                <span className="inline-flex h-9 items-center rounded-full bg-orange px-3.5 text-[13px] font-bold text-white shadow-e1 transition duration-micro ease-soft group-hover:bg-orange-hover group-active:scale-95 group-focus-visible:ring-2 group-focus-visible:ring-orange group-focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:group-active:scale-100 sm:px-4 sm:text-sm">
+                {/* btn-fill-orange for the same reason ui/button.tsx pairs it with bg-orange: white
+                    on flat #e8520a is 3.72:1, and a 13px bold label is not large text. The gradient
+                    reaches 4.95:1 by 22% of the 36px height, above the cap line of the glyphs. */}
+                <span className="btn-fill-orange inline-flex h-9 items-center rounded-full bg-orange px-3.5 text-[13px] font-bold text-white shadow-e1 transition duration-micro ease-soft group-hover:bg-orange-hover group-active:scale-95 group-focus-visible:ring-2 group-focus-visible:ring-orange group-focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:group-active:scale-100 sm:px-4 sm:text-sm">
                   <span className="sm:hidden">Apply</span>
                   <span className="hidden sm:inline">Apply Now</span>
                 </span>
@@ -485,7 +495,9 @@ function MobileMenu({
             type="button"
             onClick={onClose}
             aria-label="Close menu"
-            className="touch-target inline-flex items-center justify-center rounded-xl text-navy tap-highlight-none active:bg-surface"
+            /* The only control in this sheet that was relying on the UA's default ring; every other
+               icon button in the header carries the shared orange one. */
+            className="touch-target inline-flex items-center justify-center rounded-xl text-navy tap-highlight-none active:bg-surface ring-focus"
           >
             <X className="h-6 w-6" />
           </button>
@@ -514,15 +526,20 @@ function MobileMenu({
                         onClick={onClose}
                         className={cn(
                           "flex min-h-12 items-center gap-3 rounded-xl px-2.5 py-2 text-[15px] font-semibold transition-colors tap-highlight-none active:bg-surface",
-                          active ? "bg-orange-light text-orange" : "text-navy"
+                          active ? "bg-navy-soft text-navy" : "text-navy"
                         )}
                       >
-                        <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", active ? "bg-orange text-white" : "bg-lavender text-navy")}>
+                        {/* Soft tint vs solid mark, the same pair IconTile draws: the resting chip is
+                            navy on navy-soft (6.68:1) and the active one inverts to white on navy
+                            (8.49:1). The row itself was orange on orange-light, 3.24:1 at 15px. */}
+                        <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", active ? "bg-navy text-white" : "bg-navy-soft text-navy")}>
                           <Icon className="h-4.5 w-4.5" aria-hidden />
                         </span>
                         <span className="min-w-0 flex-1 truncate">{item.label}</span>
                         {active ? (
-                          <span aria-hidden className="mr-1 h-2 w-2 shrink-0 rounded-full bg-orange" />
+                          /* On the navy-soft row an orange dot measures 2.93:1, under the 3:1 a
+                             graphic owes; navy is 6.68:1. */
+                          <span aria-hidden className="mr-1 h-2 w-2 shrink-0 rounded-full bg-navy" />
                         ) : (
                           <ChevronRight className="h-4 w-4 shrink-0 text-muted" aria-hidden />
                         )}
@@ -545,7 +562,9 @@ function MobileMenu({
                       href={item.href}
                       onClick={onClose}
                       aria-current={active ? "page" : undefined}
-                      className={cn("flex min-h-11 items-center rounded-lg px-2 text-[13px] font-medium tap-highlight-none active:bg-surface", active ? "text-orange" : "text-muted")}
+                      /* 13px orange on white is 3.72:1 — the same AA failure the home rail's
+                         "See all" link had. Navy is 8.49:1 and still reads as the current page. */
+                      className={cn("flex min-h-11 items-center rounded-lg px-2 text-[13px] font-medium tap-highlight-none active:bg-surface", active ? "text-navy" : "text-muted")}
                     >
                       <span className="truncate">{item.label}</span>
                     </Link>

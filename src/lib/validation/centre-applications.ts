@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { dateString, emailSchema, mobileSchema, optionalString, pincodeSchema, uuid } from "@/lib/validation/common";
+import { dateString, emailSchema, mobileSchema, optionalPhone, optionalString, pincodeSchema, uuid } from "@/lib/validation/common";
 
 /** Classes a Normal Education Centre may run under the EduSkill Shiksha Mission. */
 export const CENTRE_CLASSES = [
@@ -23,7 +23,7 @@ export const centreApplicationSchema = z.object({
   // Step 1 – applicant
   applicantName: z.string().trim().min(2, "Enter your full name").max(120),
   mobile: mobileSchema,
-  whatsapp: z.union([z.literal(""), mobileSchema]).optional().nullable(),
+  whatsapp: optionalPhone,
   email: emailSchema,
   dob: z.union([z.literal(""), dateString]).optional().nullable(),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]).optional().nullable(),
@@ -91,6 +91,6 @@ export const centreApproveSchema = z.object({
   /** Overrides for the centre record; defaults come from the application. */
   centerName: z.string().trim().min(3).max(160).optional(),
   capacity: z.coerce.number().int().min(0).max(100000).optional(),
-  phone: z.union([z.literal(""), mobileSchema]).optional().nullable(),
+  phone: optionalPhone,
   courseIds: z.array(uuid).max(50).optional(),
 });

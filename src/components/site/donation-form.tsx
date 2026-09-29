@@ -6,6 +6,7 @@ import { CheckCircle2, Clock, HandHeart, IndianRupee } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, FormGrid } from "@/components/ui/form";
 import { Checkbox, Input, Textarea } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Select } from "@/components/ui/select";
 import { Alert } from "@/components/ui/feedback";
 import { api, ApiClientError } from "@/lib/api-client";
@@ -196,7 +197,7 @@ export function DonationForm({ campaigns, gateway, bankDetails, initialCampaignI
           <Input id="don-email" type="email" value={form.email} onChange={set("email")} autoComplete="email" invalid={!!errors.email} />
         </Field>
         <Field label="Mobile" htmlFor="don-mobile" error={errors.mobile}>
-          <Input id="don-mobile" type="tel" inputMode="numeric" value={form.mobile} onChange={set("mobile")} autoComplete="tel" invalid={!!errors.mobile} />
+          <PhoneInput id="don-mobile" value={form.mobile} onChange={(v) => setForm((f) => ({ ...f, mobile: v }))} invalid={!!errors.mobile} />
         </Field>
         <Field label="PAN (optional, for tax receipt)" htmlFor="don-pan" error={errors.pan}>
           <Input id="don-pan" value={form.pan} onChange={set("pan")} maxLength={10} className="uppercase" invalid={!!errors.pan} />

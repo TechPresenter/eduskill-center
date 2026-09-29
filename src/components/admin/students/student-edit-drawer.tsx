@@ -5,6 +5,7 @@ import { api } from "@/lib/api-client";
 import { Drawer } from "@/components/ui/modal";
 import { Field, FormGrid, FormSection } from "@/components/ui/form";
 import { Input, Textarea, Checkbox } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { LocationCascade } from "@/components/shared/location-cascade";
@@ -89,10 +90,10 @@ function StudentEditForm({ onClose, studentId, initial }: { onClose: () => void;
       <FormSection title="Contact">
         <FormGrid>
           <Field label="Mobile" htmlFor="se-mobile" required error={err("mobile")}>
-            <Input id="se-mobile" inputMode="numeric" value={v.mobile} onChange={(e) => set("mobile", e.target.value)} invalid={!!err("mobile")} />
+            <PhoneInput id="se-mobile" value={v.mobile} onChange={(val) => set("mobile", val)} invalid={!!err("mobile")} />
           </Field>
           <Field label="WhatsApp" htmlFor="se-whatsapp" error={err("whatsapp")}>
-            <Input id="se-whatsapp" inputMode="numeric" value={v.whatsapp} onChange={(e) => set("whatsapp", e.target.value)} invalid={!!err("whatsapp")} />
+            <PhoneInput id="se-whatsapp" value={v.whatsapp} onChange={(val) => set("whatsapp", val)} invalid={!!err("whatsapp")} />
           </Field>
           <Field label="Email" htmlFor="se-email" error={err("email")} className="sm:col-span-2">
             <Input id="se-email" type="email" value={v.email} onChange={(e) => set("email", e.target.value)} invalid={!!err("email")} />

@@ -200,13 +200,46 @@ export interface CheckboxCardsProps {
   columns?: OptionCardColumns;
   size?: OptionCardSize;
   className?: string;
+  /**
+   * Id on the group itself. A group is not a labelable element, so pair it with `aria-labelledby`
+   * (or `aria-label`); it also gives an error summary something to scroll to and focus, which is
+   * why the group becomes programmatically focusable once an id is set.
+   */
+  id?: string;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
+  "aria-describedby"?: string;
+  invalid?: boolean;
 }
 
 /** Multi-select option cards (same option shape as RadioCards) with a visible check box top-right. */
-export function CheckboxCards({ name, value, onChange, options, columns = 2, size = "md", className }: CheckboxCardsProps) {
+export function CheckboxCards({
+  name,
+  value,
+  onChange,
+  options,
+  columns = 2,
+  size = "md",
+  className,
+  id,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
+  "aria-describedby": ariaDescribedBy,
+  invalid,
+}: CheckboxCardsProps) {
   const toggle = (v: string) => (value.includes(v) ? onChange(value.filter((x) => x !== v)) : onChange([...value, v]));
   return (
-    <div role="group" className={cn("grid grid-cols-1 gap-3", OPTION_COLS[columns], className)}>
+    <div
+      role="group"
+      id={id}
+      tabIndex={id ? -1 : undefined}
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
+      aria-describedby={ariaDescribedBy}
+      // No `aria-invalid`: role="group" does not support it. The error reaches assistive tech
+      // through `aria-describedby` pointing at `<Field error>`, which is `role="alert"`.
+      className={cn("grid grid-cols-1 gap-3 rounded-lg outline-none", invalid && "ring-1 ring-danger/40 ring-offset-4", OPTION_COLS[columns], className)}
+    >
       {options.map((o) => {
         const selected = value.includes(o.value);
         return (

@@ -7,11 +7,20 @@ import { Media } from "@/components/site/safe-image";
 import type { PublicCourseCard } from "@/server/public";
 import { formatINR, titleCase } from "@/lib/utils";
 
+/**
+ * Brand green as a badge, because `Badge` has no green tone yet (see program-card.tsx for the
+ * family rules). The three classes are exactly what a `tone="green"` would set: bg-green-light with
+ * text-green-dark measures 5.89:1, where the orange tone this replaced was 3.24:1 at 12px.
+ * `cn()` inside Badge folds these over the neutral tone's bg/text/border and keeps `text-caption`,
+ * because utils.ts teaches tailwind-merge the type scale.
+ */
+const GREEN_BADGE = "bg-green-light text-green-dark border-green/20";
+
 /** One fact from the course record: an icon, an invisible label and the value. */
 function Fact({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
   return (
     <div className="flex min-w-0 items-center gap-1.5">
-      <Icon className="h-4 w-4 shrink-0 text-orange" aria-hidden />
+      <Icon className="h-4 w-4 shrink-0 text-navy-light" aria-hidden />
       <dt className="sr-only">{label}</dt>
       <dd className="truncate text-body-sm text-muted">{value}</dd>
     </div>
@@ -24,9 +33,14 @@ function Fact({ icon: Icon, label, value }: { icon: typeof Clock; label: string;
  * The cover is a `media media-16x9` frame, the same ratio the detail page uses, so a course
  * photograph is never cropped two different ways — and when there is none (the common case) the
  * branded placeholder fills the identical box, with the course icon laid over it.
+ *
+ * Money carries the card's hierarchy: a free course prints its fee in green-dark (6.61:1) and a
+ * scholarship wears the green badge, so the two things that decide whether someone can afford the
+ * course are the only things on the card that are not navy.
  */
 export function CourseCard({ course, applyHref }: { course: PublicCourseCard; applyHref: string }) {
   const href = `/courses/${course.slug}`;
+  const free = course.courseFee <= 0;
 
   return (
     <article className="group card card-hover relative flex h-full flex-col overflow-hidden">
@@ -36,7 +50,9 @@ export function CourseCard({ course, applyHref }: { course: PublicCourseCard; ap
         <Media src={course.image} alt={course.image ? course.name : ""} seed={course.slug} ratio="16x9" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw">
           {!course.image && (
             <span className="absolute inset-0 flex items-center justify-center">
-              <span className="flex h-16 w-16 items-center justify-center rounded-card bg-white/90 text-orange shadow-e1">
+              {/* Navy, not orange: the placeholder art already spends the one orange accent it is
+                  allowed, and navy on white/90 is 8.49:1 against the pale geometry behind it. */}
+              <span className="flex h-16 w-16 items-center justify-center rounded-card bg-white/90 text-navy shadow-e1">
                 <DynamicIcon name={course.icon ?? course.category?.icon ?? undefined} className="h-8 w-8" aria-hidden />
               </span>
             </span>
@@ -44,7 +60,7 @@ export function CourseCard({ course, applyHref }: { course: PublicCourseCard; ap
           {(course.category || course.scholarshipAvailable) && (
             <span className="absolute top-3 left-3 flex flex-wrap gap-1.5">
               {course.category && <Badge tone="navy">{course.category.name}</Badge>}
-              {course.scholarshipAvailable && <Badge tone="orange">Scholarship</Badge>}
+              {course.scholarshipAvailable && <Badge className={GREEN_BADGE}>Scholarship</Badge>}
             </span>
           )}
         </Media>
@@ -52,8 +68,13 @@ export function CourseCard({ course, applyHref }: { course: PublicCourseCard; ap
 
       <div className="flex flex-1 flex-col card-p">
         <h3 className="text-h3 text-navy">
-          {/* Stretched link: the whole card is the tap target, the buttons below are raised over it. */}
-          <Link href={href} className="transition-colors duration-micro after:absolute after:inset-0 hover:text-orange focus-visible:text-orange motion-reduce:transition-none">
+          {/* Stretched link: the whole card is the tap target, the buttons below are raised over it.
+              `ring-focus` as well as the hue shift — navy → navy-light is 1.4:1 against itself, so
+              on its own it is not a focus indicator a keyboard user can find. */}
+          <Link
+            href={href}
+            className="ring-focus transition-colors duration-micro ease-soft after:absolute after:inset-0 hover:text-navy-light focus-visible:text-navy-light motion-reduce:transition-none"
+          >
             {course.name}
           </Link>
         </h3>
@@ -68,7 +89,7 @@ export function CourseCard({ course, applyHref }: { course: PublicCourseCard; ap
         <div className="mt-auto pt-4">
           <div className="flex items-baseline justify-between gap-3 border-t border-line pt-4">
             <span className="text-overline text-muted">Course fee</span>
-            <span className="text-h3 text-navy tabular-nums">{course.courseFee > 0 ? formatINR(course.courseFee) : "Free"}</span>
+            <span className={free ? "text-h3 text-green-dark tabular-nums" : "text-h3 text-navy tabular-nums"}>{free ? "Free" : formatINR(course.courseFee)}</span>
           </div>
           <div className="relative z-raised mt-4 grid grid-cols-2 gap-2">
             <ButtonLink href={href} variant="outline" size="sm">
@@ -91,26 +112,30 @@ export function CourseCard({ course, applyHref }: { course: PublicCourseCard; ap
  */
 export function CourseCardCompact({ course }: { course: PublicCourseCard }) {
   const href = `/courses/${course.slug}`;
+  const free = course.courseFee <= 0;
   return (
     <article className="card relative flex h-full flex-col overflow-hidden">
       <div className="rounded-t-card">
         <Media src={course.image} alt="" seed={course.slug} ratio="16x9" sizes="(max-width: 640px) 75vw, 40vw">
           {!course.image && (
             <span className="absolute inset-0 flex items-center justify-center">
-              <span className="flex size-12 items-center justify-center rounded-lg bg-white/90 text-orange shadow-e1">
+              <span className="flex size-12 items-center justify-center rounded-lg bg-white/90 text-navy shadow-e1">
                 <DynamicIcon name={course.icon ?? course.category?.icon ?? undefined} className="size-6" aria-hidden />
               </span>
             </span>
           )}
           {course.scholarshipAvailable && (
             <span className="absolute top-2.5 left-2.5">
-              <Badge tone="orange">Scholarship</Badge>
+              <Badge className={GREEN_BADGE}>Scholarship</Badge>
             </span>
           )}
         </Media>
       </div>
-      <div className="flex flex-1 flex-col p-3.5">
-        {course.category && <p className="truncate text-caption font-semibold text-orange">{course.category.name}</p>}
+      <div className="flex flex-1 flex-col p-4">
+        {/* navy-light, not orange: 12px orange is 3.72:1. navy-light is 5.82 and still tints the
+            category without
+            competing with the navy title directly under it. */}
+        {course.category && <p className="truncate text-caption font-semibold text-navy-light">{course.category.name}</p>}
         <h3 className="mt-0.5 line-clamp-2 text-h4 text-navy">
           <Link href={href} className="ring-focus after:absolute after:inset-0 after:rounded-card">
             {course.name}
@@ -118,10 +143,12 @@ export function CourseCardCompact({ course }: { course: PublicCourseCard }) {
         </h3>
         <div className="mt-auto flex items-center justify-between gap-2 pt-3 text-body-sm text-muted">
           <span className="flex min-w-0 items-center gap-1.5">
-            <Clock className="size-4 shrink-0 text-orange" aria-hidden />
+            <Clock className="size-4 shrink-0 text-navy-light" aria-hidden />
             <span className="truncate">{course.durationText}</span>
           </span>
-          <span className="shrink-0 font-heading font-bold text-navy tabular-nums">{course.courseFee > 0 ? formatINR(course.courseFee) : "Free"}</span>
+          <span className={free ? "shrink-0 font-heading font-bold text-green-dark tabular-nums" : "shrink-0 font-heading font-bold text-navy tabular-nums"}>
+            {free ? "Free" : formatINR(course.courseFee)}
+          </span>
         </div>
       </div>
     </article>

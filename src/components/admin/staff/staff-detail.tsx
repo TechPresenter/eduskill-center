@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Field, FormGrid } from "@/components/ui/form";
 import { Input, RadioCards } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Select } from "@/components/ui/select";
 import { Alert } from "@/components/ui/feedback";
 import { StickyActionBar } from "@/components/ui/sticky-action-bar";
@@ -68,7 +69,7 @@ function ProfileForm({ staff, onDone, onCancel }: { staff: StaffProfile; onDone:
           <Input id="sp-email" type="email" value={email} onChange={(e) => { setEmail(e.target.value); clearField("email"); }} required invalid={!!fieldErrors.email} />
         </Field>
         <Field label="Mobile" htmlFor="sp-mobile" error={fieldErrors.mobile}>
-          <Input id="sp-mobile" value={mobile} onChange={(e) => { setMobile(e.target.value); clearField("mobile"); }} inputMode="tel" invalid={!!fieldErrors.mobile} />
+          <PhoneInput id="sp-mobile" value={mobile} onChange={(v) => { setMobile(v); clearField("mobile"); }} invalid={!!fieldErrors.mobile} />
         </Field>
         <Field label="Designation" htmlFor="sp-desig" error={fieldErrors.designation}>
           <Input id="sp-desig" value={designation} onChange={(e) => setDesignation(e.target.value)} maxLength={120} />

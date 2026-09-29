@@ -33,8 +33,13 @@ export function CtaBand({
           copy — so the closing band matches the section headings above it instead of shouting. */}
       <div className="container-x relative flex flex-col items-start gap-6 section-y lg:flex-row lg:items-center lg:justify-between lg:gap-12">
         <div className="max-w-2xl">
+          {/* The highlighted word is the only coloured text on a navy field, so it takes the on-navy
+              orange: the default text-orange is 2.28:1 here, text-orange-on-navy 4.56:1 (3.58:1 under
+              the lightest corner of surface-tint-dark's white wash — still clear of the 3:1 floor this
+              24/30px 700 heading answers to). The orange BUTTON below keeps plain bg-orange: its label
+              sits on the orange, not on the navy. */}
           <h2 className="text-h2 text-balance text-white lg:text-h1">
-            <Highlight text={title} />
+            <Highlight text={title} highlightClassName="text-orange-on-navy" />
           </h2>
           {description && <p className="mt-2 text-body text-white/80 lg:mt-4 lg:text-body-lg">{description}</p>}
         </div>

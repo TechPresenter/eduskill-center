@@ -30,7 +30,14 @@ export function HomeRail({
         variant="title"
         title={title}
         action={
-          <Link href={seeAllHref} className="ring-focus -mr-2 inline-flex min-h-11 items-center gap-0.5 rounded-lg px-2 text-orange tap-highlight-none">
+          /*
+            Navy, not orange: "See all" is 13.5px text and orange measures 3.72 on white — under the
+            4.5 a sentence-sized link owes. Navy is 8.49, and the hover step navy-light is still 5.82.
+          */
+          <Link
+            href={seeAllHref}
+            className="ring-focus -mr-2 inline-flex min-h-11 items-center gap-0.5 rounded-lg px-2 text-navy transition-colors duration-micro tap-highlight-none hover:text-navy-light motion-reduce:transition-none"
+          >
             See all<span className="sr-only"> {seeAllLabel}</span>
             <ChevronRight className="size-4" aria-hidden />
           </Link>

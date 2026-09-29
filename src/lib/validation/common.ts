@@ -1,8 +1,51 @@
 import { z } from "zod";
+import { parsePhone } from "@/lib/phone";
 
 export const uuid = z.string().uuid("Invalid id");
 export const optionalString = z.string().trim().max(2000).optional().nullable();
-export const mobileSchema = z.string().trim().regex(/^(\+?91[\s-]?)?[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number");
+
+/**
+ * A phone number, validated against the selected country's rule and **normalised to E.164**
+ * (`+919876543210`) — one canonical string for the database to store, for `User.mobile @unique` to
+ * mean "one account per phone", and for every service to compare without re-normalising.
+ *
+ * Accepts a bare 10-digit Indian number (what every existing form submission and every pre-selector
+ * client sends), a `+`-prefixed international number, `919876543210`, `09876543210`, and its own
+ * output. Per-country rules live in `COUNTRIES` in `@/lib/phone`, never here — adding a country is
+ * one table row.
+ *
+ * Note that this **transforms**: the service layer receives E.164, not what the user typed. That is
+ * why `normalizeMobile` has to be idempotent.
+ */
+export const phoneSchema = z
+  .string()
+  .trim()
+  .transform((v, ctx) => {
+    const r = parsePhone(v);
+    if (!r.ok) {
+      ctx.addIssue({ code: "custom", message: r.message });
+      return z.NEVER;
+    }
+    return r.e164;
+  });
+
+/**
+ * Back-compat name for `phoneSchema`, kept so the fourteen existing import sites read naturally.
+ * There is exactly one phone rule in this codebase and this is it.
+ */
+export const mobileSchema = phoneSchema;
+
+/**
+ * An optional phone number. `""` and `null` both collapse to `null` (the column is cleared);
+ * `undefined` stays `undefined`, so a partial update that omits the field still means "leave it
+ * alone" rather than "clear it", and the key stays optional in the inferred type.
+ */
+export const optionalPhone = z
+  .union([z.literal(""), phoneSchema])
+  .nullable()
+  .transform((v) => v || null)
+  // Outermost, so Zod still reports the key as optional; `undefined` never reaches the transform.
+  .optional();
 export const pincodeSchema = z.string().trim().regex(/^[1-9]\d{5}$/, "Enter a valid 6-digit PIN code");
 export const emailSchema = z.email("Enter a valid email address");
 export const optionalEmail = z.union([z.literal(""), emailSchema]).optional().nullable();

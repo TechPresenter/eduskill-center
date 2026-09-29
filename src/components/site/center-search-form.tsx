@@ -188,17 +188,26 @@ export function CenterSearchForm({ initial = {}, compact, className, submitLabel
           />
         </div>
 
-        {/* Phones: the one Filters button that opens the sheet. */}
+        {/*
+          Phones: the one Filters button that opens the sheet. With something pending the whole
+          control turns pale blue (navy on navy-soft, 6.68) instead of relying on the badge alone.
+          The glyph is navy, not the old orange: orange is only 2.93 on navy-soft, under the 3:1 an
+          icon owes, so it would fade out in exactly the state that matters most.
+        */}
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
           aria-haspopup="dialog"
           aria-label={pendingCount > 0 ? `Filters, ${pendingCount} selected` : "Filters"}
-          className="relative inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-navy tap-highlight-none transition-colors duration-micro active:bg-surface ring-focus motion-reduce:transition-none md:hidden"
+          className={cn(
+            "relative inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border px-3 text-sm font-semibold text-navy tap-highlight-none transition-colors duration-micro active:bg-surface ring-focus motion-reduce:transition-none md:hidden",
+            pendingCount > 0 ? "border-navy/40 bg-navy-soft" : "border-line bg-white"
+          )}
         >
-          <SlidersHorizontal className="h-4 w-4 text-orange" aria-hidden />
+          <SlidersHorizontal className="h-4 w-4 text-navy" aria-hidden />
           <span className="max-[359px]:sr-only">Filters</span>
-          {pendingCount > 0 && <span aria-hidden className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-orange px-1.5 text-caption font-bold text-white tabular-nums">{pendingCount}</span>}
+          {/* 12px bold: white on orange is 3.72 and fails here, white on navy is 8.49. */}
+          {pendingCount > 0 && <span aria-hidden className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-navy px-1.5 text-caption font-bold text-white tabular-nums">{pendingCount}</span>}
         </button>
 
         {/* From sm up. On a phone the row is field + Filters, like any app search bar: the keyboard's
@@ -237,7 +246,13 @@ export function CenterSearchForm({ initial = {}, compact, className, submitLabel
               type="button"
               onClick={() => removeFilter(c.key)}
               aria-label={`Remove filter ${c.label}`}
-              className="group inline-flex min-h-11 animate-pop items-center gap-1.5 rounded-full bg-lavender py-1 pr-2 pl-3 text-[13px] font-semibold text-navy transition-colors duration-micro hover:bg-navy hover:text-white focus-visible:ring-2 focus-visible:ring-navy/30 focus-visible:outline-none motion-reduce:animate-none motion-reduce:transition-none sm:min-h-8"
+              /*
+                Pale brand blue rather than lavender: the logo has no violet in it, and navy on
+                navy-soft is 6.68 (white on the navy hover fill, 8.49). `ring-focus` replaces the
+                hand-rolled navy/30 ring — 30% navy over white is ~1.35 against the page, so that
+                ring was effectively invisible.
+              */
+              className="group ring-focus inline-flex min-h-11 animate-pop items-center gap-1.5 rounded-full bg-navy-soft py-1 pr-2 pl-3 text-[13px] font-semibold text-navy transition-colors duration-micro hover:bg-navy hover:text-white motion-reduce:animate-none motion-reduce:transition-none sm:min-h-8"
             >
               <span className="max-w-[11rem] truncate">{c.label}</span>
               <X className="h-3.5 w-3.5 shrink-0 opacity-60 transition-opacity duration-micro group-hover:opacity-100 motion-reduce:transition-none" aria-hidden />
@@ -246,7 +261,8 @@ export function CenterSearchForm({ initial = {}, compact, className, submitLabel
           <button
             type="button"
             onClick={clearAll}
-            className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-[13px] font-semibold text-orange underline-offset-4 transition-colors duration-micro hover:text-orange-hover hover:underline focus-visible:ring-2 focus-visible:ring-orange/30 focus-visible:outline-none motion-reduce:transition-none sm:min-h-8"
+            /* 13px text, so it cannot be orange (3.72 on white). Navy is 8.49, hover navy-light 5.82. */
+            className="ring-focus ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-[13px] font-semibold text-navy underline-offset-4 transition-colors duration-micro hover:text-navy-light hover:underline motion-reduce:transition-none sm:min-h-8"
           >
             <X className="h-3.5 w-3.5" aria-hidden />
             Clear all

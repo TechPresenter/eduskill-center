@@ -21,7 +21,8 @@ export type EnquiryInput = z.infer<typeof enquiryInputSchema>;
 /** Creates a public enquiry (contact form). Returns a null id when the honeypot was triggered. */
 export async function createEnquiry(input: EnquiryInput, meta: { ip?: string | null } = {}) {
   if (input.website && input.website.trim().length > 0) return { id: null, spam: true as const };
-  const mobile = input.mobile.replace(/[\s-]/g, "").replace(/^\+?91/, "");
+  // Already canonical E.164 from `mobileSchema` — no second, divergent normaliser here.
+  const mobile = input.mobile;
   const enquiry = await db.enquiry.create({
     data: {
       name: input.name,

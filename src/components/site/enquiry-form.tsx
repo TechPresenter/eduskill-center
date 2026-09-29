@@ -5,6 +5,7 @@ import { CheckCircle2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, FormGrid } from "@/components/ui/form";
 import { Input, Textarea } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Select } from "@/components/ui/select";
 import { Alert } from "@/components/ui/feedback";
 import { api, ApiClientError } from "@/lib/api-client";
@@ -27,6 +28,8 @@ export function EnquiryForm({ defaultType }: { defaultType?: string }) {
   const [error, setError] = React.useState<string | null>(null);
 
   const set = (k: keyof typeof empty) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  /** `<PhoneInput>` hands back the value itself (E.164), not a change event. */
+  const setPhone = (k: keyof typeof empty) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +84,7 @@ export function EnquiryForm({ defaultType }: { defaultType?: string }) {
           <Input id="enq-name" value={form.name} onChange={set("name")} autoComplete="name" required invalid={!!errors.name} />
         </Field>
         <Field label="Mobile number" htmlFor="enq-mobile" required error={errors.mobile}>
-          <Input id="enq-mobile" type="tel" inputMode="numeric" value={form.mobile} onChange={set("mobile")} autoComplete="tel" placeholder="10-digit mobile" required invalid={!!errors.mobile} />
+          <PhoneInput id="enq-mobile" value={form.mobile} onChange={setPhone("mobile")} required invalid={!!errors.mobile} />
         </Field>
         <Field label="Email" htmlFor="enq-email" error={errors.email}>
           <Input id="enq-email" type="email" value={form.email} onChange={set("email")} autoComplete="email" invalid={!!errors.email} />

@@ -42,20 +42,46 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
     key: "home.hero",
     name: "Hero",
     page: "Homepage",
-    description: "Main banner with headline, supporting text, calls to action and the training center finder card.",
+    description:
+      "Main banner: editorial copy and trust badges on the left, the illustrated student in the middle, and the admission enquiry card on the right. Every figure in the card comes from Admin → Impact Stats, so nothing here can state a number the platform cannot prove.",
     fields: [
       { key: "eyebrow", label: "Eyebrow", type: "text" },
       { key: "title", label: "Headline", type: "textarea", help: "Wrap words in [[ ]] to highlight in orange. Use line breaks for new lines." },
       { key: "mobileTitle", label: "Phone headline (optional)", type: "text", help: "Shown on phones, where the hero has room for two short lines. Leave empty to use the first line of the headline." },
+      { key: "pillText", label: "Pill under the headline", type: "text", help: "The light pill naming who runs this — e.g. the Foundation or the mission. Keep it to a few words." },
+      { key: "emphasis", label: "Emphasis line (orange)", type: "text", help: "One line, the single most useful fact on this slide. It must stay true: the default says the classes are free, which holds while every active course has a zero fee." },
+      { key: "programLine", label: "Programme line", type: "text", help: 'What is on offer, separated by " | ". Use programmes or classes that really exist on the site.' },
       { key: "subtitle", label: "Supporting text", type: "textarea" },
       ...cta("primary", "Primary button"),
       ...cta("secondary", "Secondary button"),
       ...cta("tertiary", "Text link"),
-      { key: "imageUrl", label: "Hero image", type: "image", help: "Portrait/landscape photo of a student. Leave empty for the built-in illustration." },
+      { key: "imageUrl", label: "Hero image", type: "image", help: "Cut-out photo of a student on a transparent background (PNG). Leave empty to use the default photo shipped with the site." },
       { key: "imageAlt", label: "Image alt text", type: "text" },
-      { key: "badgeLabel", label: "Floating badge label", type: "text" },
-      { key: "badgeValueKey", label: "Floating badge statistic", type: "text", help: "Impact stat key: students, centers, trainers, states, completion" },
-      { key: "cardTitle", label: "Finder card title", type: "text" },
+      {
+        key: "badges",
+        label: "Trust badges (white card under the copy)",
+        type: "list",
+        max: 3,
+        itemFields: [
+          { key: "icon", label: "Icon", type: "icon" },
+          { key: "title", label: "Claim", type: "text", help: "Two or three words." },
+          { key: "caption", label: "Caption", type: "text", help: "One short line that makes the claim checkable. Only put something here the Foundation can stand behind — never an award, ranking or accreditation it does not hold." },
+        ],
+      },
+      { key: "formHeading", label: "Enquiry card heading", type: "text" },
+      {
+        key: "chips",
+        label: "Enquiry card chips",
+        type: "list",
+        max: 2,
+        itemFields: [
+          { key: "icon", label: "Icon", type: "icon" },
+          { key: "label", label: "Label", type: "text", help: "Three or four words." },
+        ],
+      },
+      { key: "consentText", label: "Consent sentence", type: "textarea", help: "Shown beside the tick box the visitor must check before the enquiry can be sent." },
+      { key: "formCtaLabel", label: "Enquiry button label", type: "text" },
+      { key: "formNote", label: "Note under the enquiry button", type: "text" },
       {
         key: "slides",
         label: "Extra hero slides",
@@ -65,17 +91,33 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
           { key: "eyebrow", label: "Eyebrow", type: "text" },
           { key: "title", label: "Headline", type: "textarea", help: "Wrap words in [[ ]] to highlight in orange." },
           { key: "mobileTitle", label: "Phone headline (optional)", type: "text", help: "Leave empty to use the first line of the headline." },
+          { key: "pillText", label: "Pill under the headline", type: "text" },
+          { key: "emphasis", label: "Emphasis line (orange)", type: "text" },
+          { key: "programLine", label: "Programme line", type: "text", help: 'Separated by " | ".' },
           { key: "subtitle", label: "Supporting text", type: "textarea" },
           ...cta("primary", "Primary button"),
           ...cta("secondary", "Secondary button"),
-          { key: "imageUrl", label: "Slide image", type: "image", help: "Leave empty to reuse the built-in illustration." },
+          { key: "imageUrl", label: "Slide image", type: "image", help: "Cut-out photo for this slide. Leave empty to reuse the default photo." },
           { key: "imageAlt", label: "Image alt text", type: "text" },
         ],
       },
     ],
+    /*
+     * Every default below is a fact this platform can prove, because the hero is the first thing a
+     * visitor reads and the Foundation is an NGO, not a university selling seats:
+     *   "free" — all four ACTIVE courses (Class 1 to 4) carry a zero course, registration, exam and
+     *            certificate fee, which is also what the fees section further down the page says.
+     *   the programme line — active `Program` rows.
+     *   the three badges — zero fees, the Class 1–4 Normal Education Centres of Project EduSkill
+     *            Shiksha Mission, and /verify-certificate, which really does check a certificate
+     *            number. Nothing here claims a learner count, a ranking or an accreditation.
+     */
     defaults: {
       eyebrow: "Skill Development • Education • Opportunity",
       title: "Empowering India's Youth\nThrough [[Skills]], [[Education]]\n& Opportunity",
+      pillText: "A project of EduSkill India Foundation",
+      emphasis: "Every class is free — no course fee, no exam fee, no certificate fee.",
+      programLine: "Shiksha Mission | Digital Literacy | Skill Development | Women Empowerment",
       subtitle:
         "EduSkill India Foundation is working to create accessible skill development and training opportunities for students and communities across India.",
       primaryLabel: "Explore Programs",
@@ -86,15 +128,29 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
       tertiaryHref: "/become-a-trainer",
       imageUrl: "",
       imageAlt: "Young Indian student learning at an EduSkill training center",
-      badgeLabel: "Students Reached",
-      badgeValueKey: "students",
-      cardTitle: "Find a Training Center",
+      badges: [
+        { icon: "Coins", title: "No fees", caption: "Registration, training and certification at no cost" },
+        { icon: "School", title: "Class 1 to 4", caption: "Normal Education Centres under Project EduSkill Shiksha Mission" },
+        { icon: "BadgeCheck", title: "Checkable certificates", caption: "Every certificate number can be verified on this site" },
+      ],
+      formHeading: "Talk to us about admission",
+      chips: [
+        { icon: "Coins", label: "No fee to study" },
+        { icon: "MapPin", label: "Village & panchayat centres" },
+      ],
+      consentText:
+        "I authorise EduSkill India Foundation and its training centres to contact me about admission on the mobile number I have given.",
+      formCtaLabel: "Send my enquiry",
+      formNote: "No fee to enquire. Our team usually replies within two working days.",
       // Two further slides for real programmes that already exist on this platform. Every link
       // points at a live route. Edit or remove them in Admin → CMS → Homepage → Hero.
       slides: [
         {
           eyebrow: "Project EduSkill Shiksha Mission",
           title: "Foundational Learning for\n[[Class 1 to 4]]",
+          pillText: "Normal Education Centres",
+          emphasis: "Hindi, English, Mathematics and EVS, taught close to home.",
+          programLine: "Class 1 | Class 2 | Class 3 | Class 4",
           subtitle:
             "Normal Education Centres in panchayat and rural areas, where children study Hindi, English, Mathematics and EVS with daily practice, homework support and regular assessment.",
           primaryLabel: "See the classes",
@@ -107,6 +163,9 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
         {
           eyebrow: "Open a Centre",
           title: "Run a Learning Centre\nin [[Your Village]]",
+          pillText: "Project EduSkill Shiksha Mission",
+          emphasis: "Seven verified steps, from your application to the first class.",
+          programLine: "Application | Verification | Selection | Orientation | Centre Start",
           subtitle:
             "If you can provide a room in your village or panchayat, you can apply to open a Normal Education Centre. Seven clear steps from application to opening day.",
           primaryLabel: "Apply to open a centre",
@@ -538,12 +597,10 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
         { text: "Verify any EduSkill certificate online", href: "/verify-certificate" },
         { text: "Volunteer as a trainer in your own block or district", href: "/become-a-trainer" },
       ],
-      quickLinks: [
-        { label: "Verify Certificate", href: "/verify-certificate" },
-        { label: "Donate", href: "/donate" },
-        { label: "FAQ", href: "/faq" },
-        { label: "Contact", href: "/contact" },
-      ],
+      // Empty by default: the topbar carries announcements, contact and social follow, and these
+      // four destinations are all one tap away in the header nav and the footer. Add links here
+      // from Admin → CMS if the Foundation wants them back.
+      quickLinks: [],
     },
   },
   {

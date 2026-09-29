@@ -2,6 +2,7 @@ import { clsx, type ClassValue } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 import { format as formatDateFns, isValid, parseISO, differenceInYears } from "date-fns";
 import { BASE_PATH, stripBasePath, withBasePath } from "@/lib/base-path";
+import { parsePhone } from "@/lib/phone";
 
 /**
  * tailwind-merge has no idea what the project's own `@utility` classes in
@@ -200,9 +201,27 @@ export function absoluteUrl(path: string) {
   return `${base}${suffix}`;
 }
 
+/**
+ * `+919876543210` → `+91XXXXXX3210`, `9876543210` → `98XXXXXX10`.
+ *
+ * Masks the middle of a number while keeping enough of both ends to recognise. The digits are
+ * matched on their own so a leading `+` and country code survive: an earlier version anchored on
+ * `^(\d{2})`, which simply failed to match once a `+` was present and returned the number
+ * **completely unmasked**.
+ */
 export function maskMobile(mobile: string | null | undefined) {
   if (!mobile) return "";
-  return mobile.replace(/^(\d{2})\d+(\d{2})$/, "$1XXXXXX$2");
+  const s = mobile.trim();
+  if (!s) return "";
+  const parsed = parsePhone(s);
+  if (parsed.ok) {
+    const keep = Math.min(4, parsed.national.length);
+    return `+${parsed.country.dial}${"X".repeat(parsed.national.length - keep)}${parsed.national.slice(-keep)}`;
+  }
+  // Legacy or hand-edited value that parses as nothing: still never return it unmasked.
+  const digits = s.replace(/\D/g, "");
+  if (digits.length <= 2) return "X".repeat(digits.length);
+  return `${"X".repeat(digits.length - 2)}${digits.slice(-2)}`;
 }
 
 export function safeJsonParse<T>(value: string | null | undefined, fallback: T): T {
