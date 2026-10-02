@@ -53,7 +53,8 @@ export async function generateMetadata(): Promise<Metadata> {
     // <link rel="manifest"> verbatim, so the sub-path has to be added explicitly.
     manifest: withBasePath("/manifest.webmanifest"),
     appleWebApp: { capable: true, statusBarStyle: "default", title: String(s["branding.shortName"] ?? "EduSkill") },
-    formatDetection: { telephone: true },
+    // No phone numbers are published, so do not let iOS turn digit runs into call links.
+    formatDetection: { telephone: false },
     icons: favicon ? { icon: favicon } : undefined,
     openGraph: {
       type: "website",

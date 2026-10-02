@@ -52,8 +52,10 @@ export const SETTING_DEFAULTS: Record<string, SettingDef> = {
 
   // Contact
   "contact.email": { group: "contact", label: "Contact email", value: "info@eduskillindia.org", isPublic: true },
-  "contact.phone": { group: "contact", label: "Contact phone", value: "+91 00000 00000", isPublic: true },
-  "contact.whatsapp": { group: "contact", label: "WhatsApp number", value: "", isPublic: true },
+  // Phone numbers are kept for the Foundation's own records but are NEVER shown on the website, in
+  // receipts or by the assistant: the Foundation is contacted by email only (getBranding blanks them).
+  "contact.phone": { group: "contact", label: "Contact phone (not shown on the website)", value: "", isPublic: false, help: "Kept for internal records only. The website, receipts and the assistant show the contact email, never a phone number." },
+  "contact.whatsapp": { group: "contact", label: "WhatsApp number (not shown on the website)", value: "", isPublic: false, help: "Kept for internal records only. No WhatsApp link is shown anywhere on the website." },
   "contact.address": { group: "contact", label: "Office address", value: "New Delhi, India", isPublic: true, type: "textarea" },
   "contact.hours": { group: "contact", label: "Office hours", value: "Mon – Sat, 10:00 AM – 6:00 PM", isPublic: true },
 
@@ -335,8 +337,9 @@ export async function getBranding(): Promise<Branding> {
     registrationInfo: str("branding.registrationInfo"),
     contact: {
       email: str("contact.email"),
-      phone: str("contact.phone"),
-      whatsapp: str("contact.whatsapp"),
+      // Email only: no phone or WhatsApp number is ever shown publicly (see contact.phone above).
+      phone: "",
+      whatsapp: "",
       address: str("contact.address"),
       hours: str("contact.hours"),
     },

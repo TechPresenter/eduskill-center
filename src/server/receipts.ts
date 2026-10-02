@@ -99,7 +99,8 @@ export async function renderPaymentDocument(paymentId: string, scope?: { student
   page.drawText(`Status: ${titleCase(p.status)}`, { x: 40, y, size: 9, font: bold, color: isReceipt ? rgb(0.07, 0.55, 0.32) : orange });
 
   page.drawText("This is a computer generated document and does not require a signature.", { x: 40, y: 60, size: 8, font: regular, color: muted });
-  page.drawText(`${branding.contact.email}  |  ${branding.contact.phone}`, { x: 40, y: 48, size: 8, font: regular, color: muted });
+  // Email only: the Foundation shows no phone number anywhere.
+  if (branding.contact.email) page.drawText(branding.contact.email, { x: 40, y: 48, size: 8, font: regular, color: muted });
 
   const bytes = await doc.save();
   return { buffer: Buffer.from(bytes), filename: `${isReceipt ? (p.receiptNo ?? p.paymentNo) : p.invoiceNo}.pdf` };

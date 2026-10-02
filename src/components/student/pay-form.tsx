@@ -218,7 +218,7 @@ export function PayForm({ summary, contact }: { summary: PaymentSummary; contact
 
           {!canPay ? (
             <Alert tone="warning" title="Online payments are not available right now">
-              Please contact the Foundation to pay your fee: {contact.phone} · {contact.email}. Your seat remains reserved.
+              Please contact the Foundation to pay your fee{contact.email ? ` at ${contact.email}` : ""}. Your seat remains reserved.
             </Alert>
           ) : (
             <Card>
@@ -258,7 +258,7 @@ export function PayForm({ summary, contact }: { summary: PaymentSummary; contact
                         <pre className="font-sans text-body-sm break-words whitespace-pre-wrap text-ink">{summary.bankDetails}</pre>
                       </div>
                     ) : (
-                      <Alert tone="info">Pay at your training center or ask the Foundation for bank details ({contact.phone}), then record the payment here.</Alert>
+                      <Alert tone="info">Pay at your training center or ask the Foundation for bank details{contact.email ? ` (${contact.email})` : ""}, then record the payment here.</Alert>
                     )}
                     <Field label="Payment method" htmlFor="method" required error={errors.method}>
                       <Select id="method" value={method} onChange={(e) => setMethod(e.target.value)} options={OFFLINE_METHODS} />

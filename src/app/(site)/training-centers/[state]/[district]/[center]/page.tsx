@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Armchair, BadgeCheck, CalendarDays, Clock, GraduationCap, Mail, MapPin, MessageCircle, Navigation, Phone, Users } from "lucide-react";
+import { ArrowRight, Armchair, BadgeCheck, CalendarDays, Clock, GraduationCap, Mail, MapPin, Navigation, Users } from "lucide-react";
 import { getSessionUser } from "@/lib/auth/session";
 import { getBranding } from "@/lib/settings";
 import { absoluteUrl, formatDate, initials, titleCase } from "@/lib/utils";
@@ -59,8 +59,6 @@ export default async function CenterDetailPage({ params }: Props) {
   const url = `/training-centers/${c.state.slug}/${c.district.slug}/${c.slug}`;
   const apply = applyHref(user, { centerId: c.id });
   const hours = hoursRows(c.openingHours);
-  const waDigits = (c.whatsapp ?? "").replace(/\D/g, "");
-  const waHref = waDigits ? `https://wa.me/${waDigits.length === 10 ? `91${waDigits}` : waDigits}` : null;
   const marker = c.latitude !== null && c.longitude !== null ? [{ id: c.id, code: c.code, name: c.name, lat: c.latitude, lng: c.longitude, verified: c.isVerified, location: `${c.block.name}, ${c.district.name}, ${c.state.name}`, courses: c.courses.map((x) => x.course.name), url }] : [];
   const mark = initials(c.name.replace(/^eduskill\s+/i, "")) || "TC";
   const fullAddress = [c.address, c.landmark ? `near ${c.landmark}` : null, c.villageTown, c.block.name, c.district.name, c.state.name, c.pincode].filter(Boolean).join(", ");
@@ -72,7 +70,6 @@ export default async function CenterDetailPage({ params }: Props) {
     identifier: c.code,
     url: absoluteUrl(url),
     parentOrganization: { "@type": "NGO", name: branding.siteName, url: absoluteUrl("/") },
-    telephone: c.phone ?? undefined,
     email: c.email ?? undefined,
     image: c.coverImage ?? undefined,
     address: { "@type": "PostalAddress", streetAddress: c.address, addressLocality: c.district.name, addressRegion: c.state.name, postalCode: c.pincode, addressCountry: "IN" },
@@ -346,22 +343,7 @@ export default async function CenterDetailPage({ params }: Props) {
                   <MapPin className="mt-0.5 h-4.5 w-4.5 shrink-0 text-orange" aria-hidden />
                   <span className="text-ink">{fullAddress}</span>
                 </p>
-                {c.phone && (
-                  <p className="flex items-center gap-3">
-                    <Phone className="h-4.5 w-4.5 shrink-0 text-orange" aria-hidden />
-                    <a href={`tel:${c.phone.replace(/[^\d+]/g, "")}`} className="inline-flex min-h-11 items-center text-ink hover:text-orange">
-                      {c.phone}
-                    </a>
-                  </p>
-                )}
-                {waHref && (
-                  <p className="flex items-center gap-3">
-                    <MessageCircle className="h-4.5 w-4.5 shrink-0 text-orange" aria-hidden />
-                    <a href={waHref} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-ink hover:text-orange">
-                      WhatsApp {c.whatsapp}
-                    </a>
-                  </p>
-                )}
+                {/* No phone or WhatsApp number on the public site: the centre is reached by email. */}
                 {c.email && (
                   <p className="flex items-center gap-3">
                     <Mail className="h-4.5 w-4.5 shrink-0 text-orange" aria-hidden />
