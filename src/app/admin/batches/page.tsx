@@ -152,7 +152,7 @@ export default async function BatchesPage({ searchParams }: { searchParams: Prom
                 <TD label="Seats" className="text-right tabular-nums">
                   <span className="md:hidden">
                     {b.occupied}/{b.capacity} filled ·{" "}
-                    <span className={b.available === 0 ? "font-semibold text-danger" : "font-semibold text-success-dark"}>{b.available === 0 ? "full" : `${b.available} free`}</span>
+                    <span className={b.available === 0 ? "font-semibold text-danger" : "font-semibold text-success-dark"}>{b.available === 0 ? "full" : `${b.available} left`}</span>
                   </span>
                   <span className="hidden md:inline">{b.capacity}</span>
                 </TD>

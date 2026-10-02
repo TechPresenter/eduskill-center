@@ -43,7 +43,7 @@ export function VerifyCertificateForm({ initial = "" }: { initial?: string }) {
       <Button type="submit" size="lg" className="mt-5" fullWidth loading={busy} disabled={!cleaned} leftIcon={<ShieldCheck className="h-5 w-5" />}>
         Verify certificate
       </Button>
-      <p className="mt-4 text-center text-caption text-muted">Verification is free, instant and needs no account.</p>
+      <p className="mt-4 text-center text-caption text-muted">Verification is instant and needs no account.</p>
     </form>
   );
 }

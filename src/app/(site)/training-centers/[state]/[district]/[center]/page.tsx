@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Armchair, BadgeCheck, CalendarDays, Clock, GraduationCap, Mail, MapPin, MessageCircle, Navigation, Phone, Users } from "lucide-react";
 import { getSessionUser } from "@/lib/auth/session";
 import { getBranding } from "@/lib/settings";
-import { absoluteUrl, formatDate, formatINR, initials, titleCase } from "@/lib/utils";
+import { absoluteUrl, formatDate, initials, titleCase } from "@/lib/utils";
+import { feePeriodOf, formatFeeAmount } from "@/lib/course-pricing";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { ButtonLink, buttonClasses } from "@/components/ui/button";
 import { DynamicIcon } from "@/components/ui/icon";
@@ -164,7 +165,7 @@ export default async function CenterDetailPage({ params }: Props) {
                         {course.durationText} · {titleCase(course.level)} · {titleCase(course.mode)}
                       </p>
                       <p className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-navy tabular-nums">{Number(course.courseFee) > 0 ? formatINR(course.courseFee) : "Free"}</span>
+                        <span className="font-semibold text-navy tabular-nums">{formatFeeAmount(Number(course.courseFee), feePeriodOf(course.feePlan))}</span>
                         {course.scholarshipAvailable && <Badge tone="orange">Scholarship</Badge>}
                       </p>
                       <Link href={applyHref(user, { centerId: c.id, courseId: course.id })} className="relative z-10 mt-2 inline-flex min-h-11 items-center gap-1.5 text-body-sm font-semibold text-orange ring-focus hover:underline">

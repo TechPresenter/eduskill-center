@@ -24,6 +24,7 @@ import {
   shikshaDescription,
   shikshaSyllabus,
 } from "../prisma/seed-data/shiksha-mission";
+import { monthlyFeeFor } from "../prisma/seed-data/course-fees";
 
 /** Monday–Saturday; centres are closed on Sunday. */
 const CLASS_DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -99,7 +100,7 @@ export async function applyShikshaMission(opts: ApplyShikshaOptions = {}): Promi
         maxAge: c.maxAge,
         syllabus: shikshaSyllabus(),
         totalClasses: 200,
-        courseFee: 0,
+        courseFee: monthlyFeeFor(c.code),
         registrationFee: 0,
         examFee: 0,
         certificateFee: 0,
@@ -127,6 +128,13 @@ export async function applyShikshaMission(opts: ApplyShikshaOptions = {}): Promi
         sortOrder: i + 1,
       },
     });
+    // A new course gets the Foundation's MONTHLY fee plan, which is what makes the site print
+    // "/ month". An existing plan is left alone: after the first run the fee is the Foundation's
+    // to edit in Admin → Courses, and a re-run must not overwrite it.
+    const fee = monthlyFeeFor(c.code);
+    if (fee > 0) {
+      await db.courseFeePlan.upsert({ where: { courseId: course.id }, create: { courseId: course.id, feeType: "MONTHLY", baseFee: fee }, update: {} });
+    }
     courseIds.push(course.id);
     log(`course: ${course.code} ${course.name}`);
   }

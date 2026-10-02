@@ -102,7 +102,7 @@ export const ORB = cn(
 );
 
 /** Geometry and typography shared by both bubbles; the fills below add the colour. */
-export const BUBBLE_BASE = "max-w-[92%] rounded-2xl px-3.5 py-2.5 text-[15px] leading-6";
+export const BUBBLE_BASE = "max-w-[92%] rounded-2xl px-3 py-2 text-[13px] leading-5";
 
 /**
  * Assistant reply: a white card on the {@link CONVERSATION_SURFACE} tint, with the tail corner
@@ -117,7 +117,7 @@ export const BUBBLE_ASSISTANT = cn(BUBBLE_BASE, "rounded-bl-md bg-white text-ink
  * at 11.57:1. `bg-navy` underneath is the fallback when the gradient does not paint.
  */
 export const BUBBLE_USER =
-  "max-w-[88%] rounded-2xl rounded-br-md bg-navy bg-linear-to-br from-navy via-navy to-navy-dark px-3.5 py-2.5 text-[15px] leading-6 text-white shadow-e1";
+  "max-w-[88%] rounded-2xl rounded-br-md bg-navy bg-linear-to-br from-navy via-navy to-navy-dark px-3 py-2 text-[13px] leading-5 text-white shadow-e1";
 
 /**
  * A quick-question row. Full-width rows, NOT wrapped pills: the panel is 400px at its widest, so two

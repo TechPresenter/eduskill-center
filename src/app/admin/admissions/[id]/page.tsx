@@ -191,7 +191,7 @@ export default async function AdmissionDetailPage({ params }: { params: Promise<
           </Card>
 
           <Card>
-            <CardHeader title="Fee & payments" description={app.originalFee === 0 ? "Free course" : `${formatINR(app.paidAmount)} received of ${formatINR(app.payableAmount)} payable${due > 0 ? ` · ${formatINR(due)} due` : ""}`} action={<Link href={`/admin/applications/${app.id}`} className="text-body-sm font-semibold text-navy hover:underline">Application {app.applicationNo}</Link>} />
+            <CardHeader title="Fee & payments" description={app.originalFee === 0 ? "No fee for this course" : `${formatINR(app.paidAmount)} received of ${formatINR(app.payableAmount)} payable${due > 0 ? ` · ${formatINR(due)} due` : ""}`} action={<Link href={`/admin/applications/${app.id}`} className="text-body-sm font-semibold text-navy hover:underline">Application {app.applicationNo}</Link>} />
             <TableWrap className="rounded-none border-0">
               <THead>
                 <tr>

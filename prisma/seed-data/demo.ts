@@ -180,7 +180,7 @@ export const DEMO_CENTRE_APPLICATIONS = [
     hasFurniture: true,
     expectedStudents: 28,
     classes: ["CLASS_1", "CLASS_2"],
-    motivation: "The panchayat has offered us a room free of cost. I want to start with Class 1 and 2 and add the higher classes once the centre settles.",
+    motivation: "The panchayat has offered us a room without rent. I want to start with Class 1 and 2 and add the higher classes once the centre settles.",
     status: "CENTRE_VERIFICATION",
     verificationInDays: 6,
     submittedDaysAgo: 18,

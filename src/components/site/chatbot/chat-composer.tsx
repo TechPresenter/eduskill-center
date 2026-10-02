@@ -128,7 +128,7 @@ export function ChatComposer({ t, lang, busy, onSend, onStop }: ChatComposerProp
               // otherwise the browser's default outline would draw a second box inside the first.
               // `text-base` (16px) on phones is non-negotiable: Android zooms the viewport on any
               // smaller focused input, and globals.css force-corrects it under 40rem anyway.
-              "block max-h-[120px] min-h-11 w-full resize-none border-0 bg-transparent px-3 py-2.5 text-base leading-6 text-ink placeholder:text-muted/80 focus:ring-0 focus:outline-none sm:text-[15px]"
+              "block max-h-[120px] min-h-11 w-full resize-none border-0 bg-transparent px-3 py-2.5 text-base leading-6 text-ink placeholder:text-muted/80 focus:ring-0 focus:outline-none sm:text-[13px]"
             )}
           />
         </div>

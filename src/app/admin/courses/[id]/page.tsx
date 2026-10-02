@@ -216,7 +216,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                 ))}
                 <div className="flex justify-between border-t border-line pt-2 font-semibold text-navy">
                   <dt>Total payable</dt>
-                  <dd className="tabular-nums">{totalFee === 0 ? "Free" : formatINR(totalFee)}</dd>
+                  <dd className="tabular-nums">{totalFee === 0 ? "No fee" : formatINR(totalFee)}</dd>
                 </div>
               </dl>
               <p className="mt-3 text-caption text-muted">{course.scholarshipAvailable ? `Scholarship available. ${course.scholarshipNote ?? ""}` : "No scholarship for this course."}</p>

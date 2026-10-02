@@ -47,13 +47,14 @@ export interface FeeDisplay {
   /** "One Time" | "/ Month" | null */
   suffix: string | null;
   enrolmentFee: number;
-  /** Just the price: "FREE", "₹999", "₹1,999 → ₹999", or the custom label. */
+  /** Just the price: "No fee", "₹999", "₹1,999 → ₹999", or the custom label. */
   priceText: string;
-  /** The full label: "FREE", "₹999 One Time", "₹499 / Month", "₹1,999 → ₹999 One Time". */
+  /** The full label: "No fee", "₹999 One Time", "₹499 / Month", "₹1,999 → ₹999 One Time". */
   text: string;
 }
 
-export const FREE_LABEL = "FREE";
+/** Printed for a course with nothing payable. Deliberately not "Free": the site never advertises free training. */
+export const FREE_LABEL = "No fee";
 export const CUSTOM_FALLBACK_LABEL = "Custom pricing";
 
 // ───────────────────────────── Money formatting ─────────────────────────────
@@ -153,6 +154,30 @@ export function feePlanFromCourse(course: { courseFee: number; registrationFee?:
     enrolmentFee: round2(num(course.registrationFee)),
     paymentRequired: baseFee > 0,
   };
+}
+
+// ───────────────────────────── Fee period ─────────────────────────────
+
+/**
+ * How often `Course.courseFee` is charged. `"month"` when the course's `CourseFeePlan` is MONTHLY
+ * (the class and competitive-exam courses), `null` for a one-time fee or a course without a plan.
+ * The admission still bills `courseFee` once — the first month — so this only changes the label.
+ */
+export type FeePeriod = "month" | null;
+
+export function feePeriodOf(plan: { feeType: CourseFeeType | string; deletedAt?: Date | string | null } | null | undefined): FeePeriod {
+  return plan && !plan.deletedAt && plan.feeType === "MONTHLY" ? "month" : null;
+}
+
+/** " / month" for a monthly fee, "" otherwise — appended to a formatted amount. */
+export function feePeriodSuffix(period: FeePeriod): string {
+  return period === "month" ? " / month" : "";
+}
+
+/** "₹50 / month", "₹2,500", or FREE_LABEL when nothing is charged. */
+export function formatFeeAmount(amount: number, period: FeePeriod, currency = "INR"): string {
+  const v = round2(num(amount));
+  return v > 0 ? `${formatMoney(v, currency)}${feePeriodSuffix(period)}` : FREE_LABEL;
 }
 
 // ───────────────────────────── Offer windows ─────────────────────────────

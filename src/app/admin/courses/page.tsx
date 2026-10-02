@@ -141,7 +141,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
                   <Badge tone="neutral">{titleCase(c.level)}</Badge> <Badge tone="info">{titleCase(c.mode)}</Badge>
                 </TD>
                 <TD label="Total fee" className="text-right tabular-nums">
-                  {c.courseFee + c.registrationFee + c.examFee + c.certificateFee === 0 ? <span className="text-success-dark">Free</span> : formatINR(c.courseFee + c.registrationFee + c.examFee + c.certificateFee)}
+                  {c.courseFee + c.registrationFee + c.examFee + c.certificateFee === 0 ? <span className="text-success-dark">No fee</span> : formatINR(c.courseFee + c.registrationFee + c.examFee + c.certificateFee)}
                 </TD>
                 <TD label="Reach" className="text-right tabular-nums">
                   <span className="md:hidden">

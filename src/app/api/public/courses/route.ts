@@ -2,6 +2,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { apiHandler, parseQuery } from "@/lib/api/handler";
 import { toNumber } from "@/lib/utils";
+import { feePeriodOf } from "@/lib/course-pricing";
 
 const schema = z.object({
   centerId: z.string().uuid().optional(),
@@ -41,11 +42,13 @@ export const GET = apiHandler({ auth: "none", csrf: false }, async ({ req }) => 
       maxAge: true,
       eligibility: true,
       category: { select: { id: true, name: true, slug: true } },
+      feePlan: { select: { feeType: true, deletedAt: true } },
     },
   });
   return {
-    courses: courses.map((c) => ({
+    courses: courses.map(({ feePlan, ...c }) => ({
       ...c,
+      feePeriod: feePeriodOf(feePlan),
       courseFee: toNumber(c.courseFee),
       registrationFee: toNumber(c.registrationFee),
       examFee: toNumber(c.examFee),

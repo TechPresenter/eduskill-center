@@ -49,7 +49,7 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
       { key: "title", label: "Headline", type: "textarea", help: "Wrap words in [[ ]] to highlight in orange. Use line breaks for new lines." },
       { key: "mobileTitle", label: "Phone headline (optional)", type: "text", help: "Shown on phones, where the hero has room for two short lines. Leave empty to use the first line of the headline." },
       { key: "pillText", label: "Pill under the headline", type: "text", help: "The light pill naming who runs this — e.g. the Foundation or the mission. Keep it to a few words." },
-      { key: "emphasis", label: "Emphasis line (orange)", type: "text", help: "One line, the single most useful fact on this slide. It must stay true: the default says the classes are free, which holds while every active course has a zero fee." },
+      { key: "emphasis", label: "Emphasis line (orange)", type: "text", help: "Optional. One line, the single most useful fact on this slide. Empty by default — leave it empty to show nothing. Never write a fact that is not true, such as calling the courses free." },
       { key: "programLine", label: "Programme line", type: "text", help: 'What is on offer, separated by " | ". Use programmes or classes that really exist on the site.' },
       { key: "subtitle", label: "Supporting text", type: "textarea" },
       ...cta("primary", "Primary button"),
@@ -105,18 +105,20 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
     /*
      * Every default below is a fact this platform can prove, because the hero is the first thing a
      * visitor reads and the Foundation is an NGO, not a university selling seats:
-     *   "free" — all four ACTIVE courses (Class 1 to 4) carry a zero course, registration, exam and
-     *            certificate fee, which is also what the fees section further down the page says.
+     *   no emphasis line — the Foundation asked for the first slide without one. The fees
+     *            (₹50 for Class 1–4, ₹100 for Class 5–10, ₹300 for Class 11–12 and competitive
+     *            exams) are stated by the badge below and by the fees section further down, which
+     *            reads them from the database. Never say "free": the courses carry a fee.
      *   the programme line — active `Program` rows.
-     *   the three badges — zero fees, the Class 1–4 Normal Education Centres of Project EduSkill
-     *            Shiksha Mission, and /verify-certificate, which really does check a certificate
-     *            number. Nothing here claims a learner count, a ranking or an accreditation.
+     *   the three badges — the monthly fee, the Class 1–4 Normal Education Centres of Project
+     *            EduSkill Shiksha Mission, and /verify-certificate, which really does check a
+     *            certificate number. Nothing here claims a learner count, a ranking or an accreditation.
      */
     defaults: {
       eyebrow: "Skill Development • Education • Opportunity",
       title: "Empowering India's Youth\nThrough [[Skills]], [[Education]]\n& Opportunity",
       pillText: "A project of EduSkill India Foundation",
-      emphasis: "Every class is free — no course fee, no exam fee, no certificate fee.",
+      emphasis: "",
       programLine: "Shiksha Mission | Digital Literacy | Skill Development | Women Empowerment",
       subtitle:
         "EduSkill India Foundation is working to create accessible skill development and training opportunities for students and communities across India.",
@@ -129,13 +131,13 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
       imageUrl: "",
       imageAlt: "Young Indian student learning at an EduSkill training center",
       badges: [
-        { icon: "Coins", title: "No fees", caption: "Registration, training and certification at no cost" },
+        { icon: "Coins", title: "Low monthly fee", caption: "From ₹50 a month for Class 1 to 4" },
         { icon: "School", title: "Class 1 to 4", caption: "Normal Education Centres under Project EduSkill Shiksha Mission" },
         { icon: "BadgeCheck", title: "Checkable certificates", caption: "Every certificate number can be verified on this site" },
       ],
       formHeading: "Talk to us about admission",
       chips: [
-        { icon: "Coins", label: "No fee to study" },
+        { icon: "Coins", label: "Fees from ₹50/month" },
         { icon: "MapPin", label: "Village & panchayat centres" },
       ],
       consentText:
@@ -224,7 +226,7 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
       ctaLabel: "Learn more about us",
       ctaHref: "/about",
       features: [
-        { icon: "BookOpen", title: "Accessible Learning", description: "Low-cost and free courses designed for first-generation learners." },
+        { icon: "BookOpen", title: "Accessible Learning", description: "Low-cost courses designed for first-generation learners." },
         { icon: "Users", title: "Community-Based Training", description: "Centers located inside the communities we serve, close to home." },
         { icon: "Briefcase", title: "Career-Oriented Skills", description: "Practical, job-ready curriculum aligned to real employment needs." },
         { icon: "HeartHandshake", title: "Inclusive Opportunities", description: "Special focus on women, rural youth and differently-abled learners." },
@@ -327,7 +329,7 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
       label: "Fees & Scholarships",
       title: "Affordable Training with [[Scholarship Support]]",
       description:
-        "Most EduSkill courses are free or heavily subsidised. Need-based and merit scholarships reduce the payable fee further, and installments are available for paid courses.",
+        "Monthly fees start at just ₹50 and stay low for every class. Need-based and merit scholarships reduce the payable fee further, and installments are available.",
       ctaLabel: "Check Eligibility",
       ctaHref: "/scholarship",
     },
@@ -358,7 +360,7 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
       title: "Why Students and Communities [[Trust Us]]",
       description: "A learner-first approach backed by verified trainers, local centers and transparent processes.",
       features: [
-        { icon: "BookOpen", title: "Accessible Training", description: "Free and low-cost courses for every background." },
+        { icon: "BookOpen", title: "Accessible Training", description: "Low monthly fees for learners of every background." },
         { icon: "UserCheck", title: "Experienced Trainers", description: "Verified volunteer trainers with real industry and teaching experience." },
         { icon: "Users", title: "Community Learning", description: "Peer learning in small, supportive batches." },
         { icon: "Briefcase", title: "Career-Oriented Skills", description: "Curriculum aligned with jobs and self-employment." },

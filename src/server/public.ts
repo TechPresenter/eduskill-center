@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getSections } from "@/lib/cms";
 import { coverageStats, listHomeCenters } from "@/server/centers";
 import { toNumber } from "@/lib/utils";
+import { feePeriodOf, type FeePeriod } from "@/lib/course-pricing";
 
 // ───────────────────────────── Impact statistics ─────────────────────────────
 
@@ -91,6 +92,8 @@ export const publicCourseSelect = {
   scholarshipNote: true,
   isFeatured: true,
   category: { select: { id: true, name: true, slug: true, icon: true } },
+  // Only the period is read here: whether `courseFee` is charged monthly. See feePeriodOf().
+  feePlan: { select: { feeType: true, deletedAt: true } },
 } as const;
 
 export interface PublicCourseCard {
@@ -110,6 +113,8 @@ export interface PublicCourseCard {
   examFee: number;
   certificateFee: number;
   totalFee: number;
+  /** "month" when `courseFee` is charged every month (a MONTHLY fee plan); null for a one-time fee. */
+  feePeriod: FeePeriod;
   scholarshipAvailable: boolean;
   scholarshipNote: string | null;
   isFeatured: boolean;
@@ -136,6 +141,7 @@ export function toCourseCard(c: {
   scholarshipNote: string | null;
   isFeatured: boolean;
   category: { id: string; name: string; slug: string; icon: string | null } | null;
+  feePlan?: { feeType: string; deletedAt: Date | null } | null;
 }): PublicCourseCard {
   const courseFee = toNumber(c.courseFee);
   const registrationFee = toNumber(c.registrationFee);
@@ -158,6 +164,7 @@ export function toCourseCard(c: {
     examFee,
     certificateFee,
     totalFee: courseFee + registrationFee + examFee + certificateFee,
+    feePeriod: feePeriodOf(c.feePlan),
     scholarshipAvailable: c.scholarshipAvailable,
     scholarshipNote: c.scholarshipNote,
     isFeatured: c.isFeatured,
@@ -254,6 +261,39 @@ export interface FeePresentation {
   originalFee: number;
   scholarshipUpTo: number;
   yourFeeFrom: number;
+  /** The fee course's period, so all three figures read "/ month" when it is billed monthly. */
+  feePeriod: FeePeriod;
+}
+
+/** One row of the homepage fee list: a course category and what its courses charge. */
+export interface FeeSlab {
+  category: { name: string; slug: string };
+  /** Lowest and highest `courseFee` among the category's ACTIVE priced courses (equal when uniform). */
+  min: number;
+  max: number;
+  /** "month" only when every priced course in the category is billed monthly. */
+  feePeriod: FeePeriod;
+}
+
+/**
+ * Groups the ACTIVE priced courses by category, in catalogue order, so the homepage states the
+ * real fees from the database instead of a hard-coded promise. Courses with no fee and courses
+ * without a category are left out: a slab must name a price someone actually pays.
+ */
+export function feeSlabsFrom(courses: PublicCourseCard[]): FeeSlab[] {
+  const slabs = new Map<string, FeeSlab>();
+  for (const c of courses) {
+    if (!c.category || c.courseFee <= 0) continue;
+    const slab = slabs.get(c.category.id);
+    if (!slab) {
+      slabs.set(c.category.id, { category: { name: c.category.name, slug: c.category.slug }, min: c.courseFee, max: c.courseFee, feePeriod: c.feePeriod });
+      continue;
+    }
+    slab.min = Math.min(slab.min, c.courseFee);
+    slab.max = Math.max(slab.max, c.courseFee);
+    if (slab.feePeriod !== c.feePeriod) slab.feePeriod = null;
+  }
+  return [...slabs.values()];
 }
 
 export async function getHomepageData() {
@@ -270,11 +310,11 @@ export async function getHomepageData() {
     listHomeCenters(8).catch(() => []),
   ]);
 
-  let feeCourse = featuredCourses.find((c) => c.scholarshipAvailable && c.courseFee > 0) ?? null;
-  if (!feeCourse) {
-    const all = await listPublicCourses();
-    feeCourse = all.find((c) => c.scholarshipAvailable && c.courseFee > 0) ?? null;
-  }
+  // The whole catalogue feeds the fee list below; it is also the fallback search for a scholarship
+  // course when none of the featured six offers one.
+  const allCourses = await listPublicCourses();
+  const feeCourse =
+    featuredCourses.find((c) => c.scholarshipAvailable && c.courseFee > 0) ?? allCourses.find((c) => c.scholarshipAvailable && c.courseFee > 0) ?? null;
   let fees: FeePresentation | null = null;
   if (feeCourse) {
     const scholarshipUpTo = maxScholarshipFor(feeCourse.courseFee, scholarships);
@@ -283,10 +323,12 @@ export async function getHomepageData() {
       originalFee: feeCourse.courseFee,
       scholarshipUpTo,
       yourFeeFrom: Math.max(0, feeCourse.courseFee - scholarshipUpTo),
+      feePeriod: feeCourse.feePeriod,
     };
   }
+  const feeSlabs = feeSlabsFrom(allCourses);
 
-  return { sections, programs, featuredCourses, stories, partners, coverage, impact, fees, homeCenters };
+  return { sections, programs, featuredCourses, stories, partners, coverage, impact, fees, feeSlabs, homeCenters };
 }
 
 // ───────────────────────────── Locations ─────────────────────────────

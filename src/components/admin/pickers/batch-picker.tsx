@@ -106,7 +106,7 @@ export function BatchPicker({ endpoint, value, onChange, allowNone, currentBatch
               {b.trainerName ? ` · Trainer: ${b.trainerName}` : " · No trainer yet"}
             </span>
             <span className={cn("mt-1 inline-block text-xs font-semibold", b.available > 0 ? "text-success-dark" : "text-danger")}>
-              {b.available > 0 ? `${b.available} of ${b.capacity} seats free` : `Full (${b.occupied}/${b.capacity})`}
+              {b.available > 0 ? `${b.available} of ${b.capacity} seats left` : `Full (${b.occupied}/${b.capacity})`}
             </span>
           </span>
         ) : (

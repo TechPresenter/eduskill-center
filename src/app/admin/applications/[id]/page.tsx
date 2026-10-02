@@ -299,7 +299,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
           <Card>
             <CardHeader
               title="Fee"
-              description={app.originalFee === 0 ? "This course is free of charge." : `${formatINR(app.paidAmount)} received of ${formatINR(app.payableAmount)} payable`}
+              description={app.originalFee === 0 ? "No fee is charged for this course." : `${formatINR(app.paidAmount)} received of ${formatINR(app.payableAmount)} payable`}
               action={<DiscountButton applicationId={app.id} originalFee={app.originalFee} scholarshipAmount={app.scholarshipAmount} discountAmount={app.discountAmount} allowed={can.update && FEE_EDITABLE.includes(app.status) && app.originalFee > 0} reason={!can.update ? "You do not have permission to edit applications" : "Discount cannot be changed after admission"} />}
             />
             <CardBody className="space-y-6">

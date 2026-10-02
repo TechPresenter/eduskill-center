@@ -152,7 +152,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
                   </TD>
                   <TD label="Fee" className="text-right tabular-nums">
                     <span className="block font-semibold">{formatINR(a.payableAmount)}</span>
-                    <span className={`text-caption ${due > 0 ? "text-warning-dark" : "text-success-dark"}`}>{a.payableAmount === 0 ? "Free" : due > 0 ? `Due ${formatINR(due)}` : "Paid"}</span>
+                    <span className={`text-caption ${due > 0 ? "text-warning-dark" : "text-success-dark"}`}>{a.payableAmount === 0 ? "No fee" : due > 0 ? `Due ${formatINR(due)}` : "Paid"}</span>
                   </TD>
                   <TD mobile="hidden">
                     <StatusBadge status={a.status} />

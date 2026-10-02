@@ -119,7 +119,7 @@ export default async function EventsPage() {
               id="events-upcoming-title"
               label="What's next"
               title="Upcoming [[Events]]"
-              description="Entry is free at every event we run. Come with a question — you do not need to register first unless the event says so."
+              description="Everyone is welcome at every event we run. Come with a question — you do not need to register first unless the event says so."
             />
           </Reveal>
           {upcoming.length === 0 ? (

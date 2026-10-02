@@ -5,7 +5,8 @@
  *  - creates/updates the three course categories with the sortOrder that puts them 2nd, 3rd
  *    and 4th behind Normal Education (Class 1–4) in the header's "Popular courses" menu,
  *  - creates/updates one ACTIVE course per school class (Class 5–12) plus one general
- *    competitive-exam course, all free, so each category qualifies for the menu
+ *    competitive-exam course, each at the Foundation's monthly fee
+ *    (prisma/seed-data/course-fees.ts), so each category qualifies for the menu
  *    (src/server/nav-menu.ts lists only categories that have at least one ACTIVE course)
  *    and /courses?category=<slug> is never an empty page,
  *  - offers every new course at every active training centre, exactly as
@@ -46,6 +47,7 @@ import {
   educationCourseDescription,
   educationEligibility,
 } from "../prisma/seed-data/education-categories";
+import { monthlyFeeFor } from "../prisma/seed-data/course-fees";
 
 export interface ApplyEducationCategoriesOptions {
   quiet?: boolean;
@@ -96,7 +98,7 @@ export async function applyEducationCategories(
           minAge: band?.minAge ?? null,
           maxAge: band?.maxAge ?? null,
           totalClasses: course.totalClasses,
-          courseFee: 0,
+          courseFee: monthlyFeeFor(course.code),
           registrationFee: 0,
           examFee: 0,
           certificateFee: 0,
@@ -127,6 +129,13 @@ export async function applyEducationCategories(
           sortOrder: course.sortOrder,
         },
       });
+      // A new course gets the Foundation's MONTHLY fee plan, which is what makes the site print
+      // "/ month". An existing plan is left alone: after the first run the fee is the Foundation's
+      // to edit in Admin → Courses, and a re-run must not overwrite it.
+      const fee = monthlyFeeFor(course.code);
+      if (fee > 0) {
+        await db.courseFeePlan.upsert({ where: { courseId: row.id }, create: { courseId: row.id, feeType: "MONTHLY", baseFee: fee }, update: {} });
+      }
       courseIds.push(row.id);
       log(`course: ${row.code} ${row.name}`);
     }

@@ -17,6 +17,7 @@ import { withBasePath } from "@/lib/base-path";
 import { formatINR, titleCase, truncate } from "@/lib/utils";
 import { coverageStats } from "@/server/centers";
 import { listFaqs, listPrograms, listPublicCourses, listScholarshipPrograms, listStatesWithCenters } from "@/server/public";
+import type { FeePeriod } from "@/lib/course-pricing";
 
 // ───────────────────────────── Configuration ─────────────────────────────
 
@@ -183,12 +184,17 @@ function assemble(header: string, sections: DigestSection[], cap: number): strin
   return parts.join("\n");
 }
 
-function feeLine(c: { courseFee: number; registrationFee: number; examFee: number; certificateFee: number; totalFee: number }): string {
+function feeLine(c: { courseFee: number; registrationFee: number; examFee: number; certificateFee: number; totalFee: number; feePeriod: FeePeriod }): string {
   if (c.totalFee <= 0) return "Fees: not published on the website";
   const extras: string[] = [];
   if (c.registrationFee > 0) extras.push(`registration ${formatINR(c.registrationFee)}`);
   if (c.examFee > 0) extras.push(`exam ${formatINR(c.examFee)}`);
   if (c.certificateFee > 0) extras.push(`certificate ${formatINR(c.certificateFee)}`);
+  if (c.feePeriod === "month" && c.courseFee > 0) {
+    // Charged every month; admission collects the first month (plus any one-time fees listed).
+    const oneTime = extras.length ? `; one-time fees: ${extras.join(", ")}` : "";
+    return `Fees: course fee ${formatINR(c.courseFee)} per month — the first month is paid at admission, then every month${oneTime}`;
+  }
   const base = `course fee ${formatINR(c.courseFee)}`;
   return `Fees: total ${formatINR(c.totalFee)} (${[base, ...extras].join(", ")})`;
 }

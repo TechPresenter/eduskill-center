@@ -26,19 +26,53 @@ const hasSynthesis = () => typeof window !== "undefined" && "speechSynthesis" in
 
 /* ───────────── output: speechSynthesis ───────────── */
 
-/** Preferred voices per language: Indian first, then the closest well-supported neighbours. */
-const PREFERRED_VOICES: Record<ChatLang, string[]> = {
-  hi: ["hi-in", "hi"],
-  en: ["en-in", "en-gb", "en-us", "en"],
-};
+/**
+ * The assistant speaks with an Indian accent in a female voice. The Web Speech API exposes no
+ * gender, so voices are recognised by name across the engines visitors actually have: Edge's
+ * natural voices (Neerja, Swara), Windows (Heera, Kalpana), Apple (Veena, Isha, Lekha), Google
+ * Chrome ("Google हिन्दी") and Android's Google TTS ids (en-in-x-ena…, hi-in-x-hia…).
+ */
+const FEMALE_VOICE = /female|woman|neerja|swara|heera|kalpana|veena|isha|lekha|aditi|raveena|priya|kajal|ananya|google हिन्दी|google hindi|-x-ena|-x-enc|-x-hia|-x-hic/i;
+const MALE_VOICE = /\bmale\b|\bman\b|ravi|hemant|prabhat|madhur|rishi|aarav|kunal|-x-end|-x-ene|-x-hid|-x-hie/i;
+
+function voiceTag(v: SpeechSynthesisVoice): string {
+  return (v.lang ?? "").replace(/_/g, "-").toLowerCase();
+}
+
+/**
+ * Accent outranks gender: an Indian-English voice of unknown gender beats a female voice with a
+ * foreign accent. For English, a female Hindi (India) voice comes next — it reads English text
+ * with an Indian accent, which is closer than a British or American voice. Natural/online voices
+ * win ties because they sound far less robotic.
+ */
+function voiceScore(v: SpeechSynthesisVoice, lang: ChatLang): number {
+  const tag = voiceTag(v);
+  let accent = 0;
+  if (lang === "hi") {
+    if (tag.startsWith("hi-in")) accent = 10;
+    else if (tag.startsWith("hi")) accent = 8;
+  } else if (tag.startsWith("en-in")) accent = 10;
+  else if (tag.startsWith("hi-in")) accent = 6;
+  else if (tag.startsWith("en")) accent = 2;
+  if (accent === 0) return 0;
+  const name = `${v.name ?? ""} ${v.voiceURI ?? ""}`;
+  const gender = FEMALE_VOICE.test(name) ? 5 : MALE_VOICE.test(name) ? 0 : 2;
+  const natural = /natural|neural|online|enhanced|premium/i.test(name) ? 1 : 0;
+  return accent + gender + natural;
+}
 
 function pickVoice(voices: SpeechSynthesisVoice[], lang: ChatLang): SpeechSynthesisVoice | null {
-  for (const tag of PREFERRED_VOICES[lang]) {
-    const match = voices.find((v) => (v.lang ?? "").replace(/_/g, "-").toLowerCase().startsWith(tag));
-    if (match) return match;
+  let best: SpeechSynthesisVoice | null = null;
+  let bestScore = 0;
+  for (const v of voices) {
+    const score = voiceScore(v, lang);
+    if (score > bestScore) {
+      best = v;
+      bestScore = score;
+    }
   }
   // No Indian (or any) voice for this language: let the engine choose with the utterance's `lang`.
-  return null;
+  return best;
 }
 
 export interface SpeechOutput {

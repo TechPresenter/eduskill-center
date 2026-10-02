@@ -48,7 +48,8 @@ export interface ChatCopy {
   voiceOff: string;
   jumpToLatest: string;
   retry: string;
-  disclaimer: string;
+  /** Footer credit before the developer link, e.g. "Developed By". */
+  developedBy: string;
   charactersLeft: (n: number) => string;
   errors: Record<ChatErrorKind, string>;
 }
@@ -81,7 +82,7 @@ const en: ChatCopy = {
   voiceOff: "Turn spoken replies on",
   jumpToLatest: "Go to the latest message",
   retry: "Try again",
-  disclaimer: "AI assistant — please confirm important details with our team.",
+  developedBy: "Developed By",
   charactersLeft: (n) => `${n} characters left`,
   errors: {
     network: "The reply could not be loaded. Please check your connection and try again.",
@@ -120,7 +121,7 @@ const hi: ChatCopy = {
   voiceOff: "बोलकर उत्तर चालू करें",
   jumpToLatest: "नवीनतम संदेश पर जाएँ",
   retry: "फिर से कोशिश करें",
-  disclaimer: "एआई सहायक — ज़रूरी जानकारी हमारी टीम से ज़रूर पुष्टि करें।",
+  developedBy: "Developed By",
   charactersLeft: (n) => `${n} अक्षर शेष`,
   errors: {
     network: "उत्तर नहीं आ सका। कृपया अपना इंटरनेट जाँचें और फिर कोशिश करें।",

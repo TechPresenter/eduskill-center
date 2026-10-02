@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import {
   CUSTOM_FALLBACK_LABEL,
+  FREE_LABEL,
+  feePeriodOf,
   feePlanFromCourse,
   formatCourseFee,
+  formatFeeAmount,
   isOfferEffective,
   pickEffectiveOffer,
 } from "@/lib/course-pricing";
@@ -30,10 +33,11 @@ import { ensureAdmin, makeCourse } from "./helpers";
 // ───────────────────────────── The one fee formatter ─────────────────────────────
 
 describe("formatCourseFee", () => {
-  it("renders FREE", () => {
+  it("renders a no-fee course without the word free", () => {
     const d = formatCourseFee({ feeType: "FREE", baseFee: 0 });
-    expect(d.text).toBe("FREE");
-    expect(d.priceText).toBe("FREE");
+    expect(FREE_LABEL).toBe("No fee");
+    expect(d.text).toBe(FREE_LABEL);
+    expect(d.priceText).toBe(FREE_LABEL);
     expect(d.isFree).toBe(true);
     expect(d.paymentRequired).toBe(false);
     expect(d.amount).toBe(0);
@@ -82,13 +86,28 @@ describe("formatCourseFee", () => {
     expect(formatCourseFee({ feeType: "ONE_TIME", baseFee: 500, discountedFee: 900 }).priceText).toBe("₹500");
   });
 
-  it("treats a zero effective amount as free and derives a plan from a legacy course", () => {
-    expect(formatCourseFee({ feeType: "ONE_TIME", baseFee: 1200, discountedFee: 0 }).text).toBe("FREE");
+  it("treats a zero effective amount as no fee and derives a plan from a legacy course", () => {
+    expect(formatCourseFee({ feeType: "ONE_TIME", baseFee: 1200, discountedFee: 0 }).text).toBe(FREE_LABEL);
     expect(formatCourseFee(feePlanFromCourse({ courseFee: 3500, registrationFee: 100 })).text).toBe("₹3,500 One Time");
     expect(formatCourseFee(feePlanFromCourse({ courseFee: 3500, registrationFee: 100 })).enrolmentFee).toBe(100);
-    expect(formatCourseFee(feePlanFromCourse({ courseFee: 0 })).text).toBe("FREE");
+    expect(formatCourseFee(feePlanFromCourse({ courseFee: 0 })).text).toBe(FREE_LABEL);
     // No plan at all still produces a renderable result rather than throwing.
-    expect(formatCourseFee(null).text).toBe("FREE");
+    expect(formatCourseFee(null).text).toBe(FREE_LABEL);
+  });
+});
+
+describe("fee period", () => {
+  it("is monthly only for a live MONTHLY plan", () => {
+    expect(feePeriodOf({ feeType: "MONTHLY" })).toBe("month");
+    expect(feePeriodOf({ feeType: "MONTHLY", deletedAt: new Date() })).toBeNull();
+    expect(feePeriodOf({ feeType: "ONE_TIME" })).toBeNull();
+    expect(feePeriodOf(null)).toBeNull();
+  });
+
+  it("formats the amount with its period", () => {
+    expect(formatFeeAmount(50, "month")).toBe("₹50 / month");
+    expect(formatFeeAmount(2500, null)).toBe("₹2,500");
+    expect(formatFeeAmount(0, "month")).toBe(FREE_LABEL);
   });
 });
 

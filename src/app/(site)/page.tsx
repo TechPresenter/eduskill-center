@@ -7,7 +7,8 @@ import { Carousel, CarouselSlide } from "@/components/ui/carousel";
 import { getBranding, getPublicSettings, getSetting } from "@/lib/settings";
 import { getSessionUser } from "@/lib/auth/session";
 import { absoluteUrl, formatINR } from "@/lib/utils";
-import { getHomepageData, listPublicCourses } from "@/server/public";
+import { getHomepageData, listPublicCourses, type FeeSlab } from "@/server/public";
+import { feePeriodSuffix, formatFeeAmount } from "@/lib/course-pricing";
 import { Hero, type HeroSection } from "@/components/site/hero";
 import { TrustStrip } from "@/components/site/trust-strip";
 import { SectionHeading } from "@/components/site/section-heading";
@@ -118,6 +119,12 @@ type BrandHue = keyof typeof HUE_TILE;
  * alternating colours reads as unsorted status, not as a brand.
  */
 const HUE_CYCLE: BrandHue[] = ["navy", "orange", "navy", "green"];
+
+/** "₹50 / month" for a uniform category, "₹50–₹100 / month" when its courses differ. */
+function feeSlabLabel(slab: FeeSlab): string {
+  if (slab.min === slab.max) return formatFeeAmount(slab.min, slab.feePeriod);
+  return `${formatINR(slab.min)}–${formatFeeAmount(slab.max, slab.feePeriod)}`;
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getPublicSettings();
@@ -491,7 +498,10 @@ export default async function HomePage() {
                       </Link>
                     </p>
                   </div>
-                  <p className="font-heading text-2xl font-extrabold text-navy sm:text-3xl">{formatINR(data.fees.originalFee)}</p>
+                  <p className="font-heading text-2xl font-extrabold text-navy sm:text-3xl">
+                    {formatINR(data.fees.originalFee)}
+                    {feePeriodSuffix(data.fees.feePeriod)}
+                  </p>
                 </div>
                 {/*
                   The three rows are a ladder — what it costs (white), what we take off (green, the
@@ -506,7 +516,10 @@ export default async function HomePage() {
                       <p className="text-xs font-semibold tracking-wide text-green-dark uppercase">Scholarship up to</p>
                       <p className="mt-1 text-sm text-ink/70">Need-based and merit support</p>
                     </div>
-                    <p className="font-heading text-2xl font-extrabold text-green-dark sm:text-3xl">− {formatINR(data.fees.scholarshipUpTo)}</p>
+                    <p className="font-heading text-2xl font-extrabold text-green-dark sm:text-3xl">
+                      − {formatINR(data.fees.scholarshipUpTo)}
+                      {feePeriodSuffix(data.fees.feePeriod)}
+                    </p>
                   </div>
                 )}
                 <div className="flex items-center justify-between gap-4 rounded-card bg-navy p-4 text-white shadow-card sm:p-6">
@@ -514,18 +527,41 @@ export default async function HomePage() {
                     <p className="text-xs font-semibold tracking-wide text-white/70 uppercase">Your fee from</p>
                     <p className="mt-1 text-sm text-white/70">Final amount decided per application</p>
                   </div>
-                  <p className="font-heading text-2xl font-extrabold text-white sm:text-3xl">{data.fees.yourFeeFrom > 0 ? formatINR(data.fees.yourFeeFrom) : "Free"}</p>
+                  <p className="font-heading text-2xl font-extrabold text-white sm:text-3xl">{formatFeeAmount(data.fees.yourFeeFrom, data.fees.feePeriod)}</p>
                 </div>
               </div>
             ) : (
               <div className="card p-5 sm:p-8">
-                {/* "Free" is the site's green signal (a free course prints its fee in green-dark too).
-                    Spelled out rather than cn("eyebrow", …): `eyebrow` is orange at 12px, 3.72:1, and
+                {/* Spelled out rather than cn("eyebrow", …): `eyebrow` is orange at 12px, 3.72:1, and
                     tailwind-merge knows neither utility name, so stacking a colour on it would leave
-                    the winner to stylesheet order. green-dark on white is 6.61. */}
-                <p className="text-overline text-green-dark">Free training</p>
-                <h3 className="mt-2 text-2xl font-extrabold text-navy">Currently all our courses are free of cost.</h3>
-                <p className="mt-3 text-sm text-muted">Registration, training and certification are provided without any fee. Where paid courses are introduced, scholarship support will be shown here.</p>
+                    the winner to stylesheet order. navy-light on white is 5.82. */}
+                <p className="text-overline text-navy-light">Course fees</p>
+                {data.feeSlabs.length > 0 ? (
+                  <>
+                    <h3 className="mt-2 text-2xl font-extrabold text-navy">Low fees for every class</h3>
+                    {/* Every figure is read from the live catalogue (ACTIVE priced courses grouped by
+                        category), so this list can never promise a fee the course page does not charge. */}
+                    <ul className="mt-4 divide-y divide-line">
+                      {data.feeSlabs.map((slab) => (
+                        <li key={slab.category.slug} className="flex items-baseline justify-between gap-4 py-3">
+                          <Link href={`/courses?category=${slab.category.slug}`} className="ring-focus min-w-0 text-body font-medium text-navy hover:text-navy-light">
+                            {slab.category.name}
+                          </Link>
+                          <span className="shrink-0 font-heading text-lg font-extrabold text-navy tabular-nums">{feeSlabLabel(slab)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-4 text-sm text-muted">
+                      {data.feeSlabs.some((slab) => slab.feePeriod === "month") ? "The first month's fee is paid at admission. " : ""}
+                      Each course page shows its exact fee.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="mt-2 text-2xl font-extrabold text-navy">Fees are listed on every course page.</h3>
+                    <p className="mt-3 text-sm text-muted">Where a course offers scholarship support, it will be shown here.</p>
+                  </>
+                )}
               </div>
             )}
           </Reveal>

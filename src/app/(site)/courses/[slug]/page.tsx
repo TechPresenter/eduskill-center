@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth/session";
 import { getBranding } from "@/lib/settings";
 import { absoluteUrl, formatINR, titleCase } from "@/lib/utils";
+import { FREE_LABEL, feePeriodSuffix, formatFeeAmount } from "@/lib/course-pricing";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/feedback";
 import { ButtonLink } from "@/components/ui/button";
@@ -94,11 +95,14 @@ export default async function CourseDetailPage({ params }: Props) {
   const syllabus = parseSyllabus(raw.syllabus);
   const apply = applyHref(user, { courseId: raw.id });
 
+  // A monthly course bills `courseFee` every month; admission collects the first month together with
+  // any one-time fee, which is what the "Payable at admission" total adds up.
+  const monthly = course.feePeriod === "month";
   const feeRows = [
-    { label: "Course fee", value: course.courseFee },
-    { label: "Registration fee", value: course.registrationFee },
-    { label: "Exam fee", value: course.examFee },
-    { label: "Certificate fee", value: course.certificateFee },
+    { label: monthly ? "Monthly fee" : "Course fee", value: course.courseFee, suffix: feePeriodSuffix(course.feePeriod) },
+    { label: "Registration fee", value: course.registrationFee, suffix: "" },
+    { label: "Exam fee", value: course.examFee, suffix: "" },
+    { label: "Certificate fee", value: course.certificateFee, suffix: "" },
   ].filter((r) => r.value > 0);
 
   const jsonLd = {
@@ -294,21 +298,25 @@ export default async function CourseDetailPage({ params }: Props) {
               </div>
               <div className="card-p">
                 {feeRows.length === 0 ? (
-                  <p className="text-h1 text-navy">Free</p>
+                  <p className="text-h1 text-navy">{FREE_LABEL}</p>
                 ) : (
                   <dl className="space-y-2 text-body">
                     {feeRows.map((r) => (
                       <div key={r.label} className="flex items-baseline justify-between gap-4">
                         <dt className="text-muted">{r.label}</dt>
-                        <dd className="font-semibold text-ink tabular-nums">{formatINR(r.value)}</dd>
+                        <dd className="font-semibold text-ink tabular-nums">
+                          {formatINR(r.value)}
+                          {r.suffix}
+                        </dd>
                       </div>
                     ))}
                     <div className="flex items-baseline justify-between gap-4 border-t border-line pt-3">
-                      <dt className="font-bold text-navy">Total</dt>
+                      <dt className="font-bold text-navy">{monthly ? "Payable at admission" : "Total"}</dt>
                       <dd className="text-h3 text-navy tabular-nums">{formatINR(course.totalFee)}</dd>
                     </div>
                   </dl>
                 )}
+                {monthly && feeRows.length > 0 && <p className="mt-3 text-body-sm text-muted">The course fee is charged every month. The first month is paid at admission.</p>}
                 {course.scholarshipAvailable && (
                   <div className="mt-4 rounded-card bg-orange-light p-4">
                     <Badge tone="orange" className="mb-2">
@@ -366,7 +374,7 @@ export default async function CourseDetailPage({ params }: Props) {
       <StickyActionBar desktop="hidden" innerClassName="justify-between">
         <span className="min-w-0">
           <span className="block text-overline text-muted">Course fee</span>
-          <span className="block truncate text-h4 text-navy tabular-nums">{course.totalFee > 0 ? formatINR(course.totalFee) : "Free"}</span>
+          <span className="block truncate text-h4 text-navy tabular-nums">{monthly && course.courseFee > 0 ? formatFeeAmount(course.courseFee, course.feePeriod) : course.totalFee > 0 ? formatINR(course.totalFee) : FREE_LABEL}</span>
         </span>
         <ButtonLink href={apply} size="md" className="shrink-0" rightIcon={<ArrowRight className="h-4 w-4" />}>
           Apply Now

@@ -153,7 +153,7 @@ export function HeroEnquiryForm({
             {[
               "A team member replies on your mobile number, usually within two working days.",
               "We share the nearest EduSkill centre and the dates of the next batch.",
-              "There is no fee to enquire, and no fee to study.",
+              "There is no fee to enquire. Each course page shows its fee.",
             ].map((line) => (
               <li key={line} className="flex gap-2.5">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-on-navy" aria-hidden />

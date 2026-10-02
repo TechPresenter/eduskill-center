@@ -6,6 +6,7 @@ import { DynamicIcon } from "@/components/ui/icon";
 import { Media } from "@/components/site/safe-image";
 import type { PublicCourseCard } from "@/server/public";
 import { formatINR, titleCase } from "@/lib/utils";
+import { FREE_LABEL } from "@/lib/course-pricing";
 
 /**
  * Brand green as a badge, because `Badge` has no green tone yet (see program-card.tsx for the
@@ -34,13 +35,14 @@ function Fact({ icon: Icon, label, value }: { icon: typeof Clock; label: string;
  * photograph is never cropped two different ways — and when there is none (the common case) the
  * branded placeholder fills the identical box, with the course icon laid over it.
  *
- * Money carries the card's hierarchy: a free course prints its fee in green-dark (6.61:1) and a
+ * Money carries the card's hierarchy: a course with no fee prints it in green-dark (6.61:1) and a
  * scholarship wears the green badge, so the two things that decide whether someone can afford the
- * course are the only things on the card that are not navy.
+ * course are the only things on the card that are not navy. A monthly fee carries its "/ month"
+ * in muted text so the amount itself stays the figure the eye lands on.
  */
 export function CourseCard({ course, applyHref }: { course: PublicCourseCard; applyHref: string }) {
   const href = `/courses/${course.slug}`;
-  const free = course.courseFee <= 0;
+  const noFee = course.courseFee <= 0;
 
   return (
     <article className="group card card-hover relative flex h-full flex-col overflow-hidden">
@@ -89,7 +91,10 @@ export function CourseCard({ course, applyHref }: { course: PublicCourseCard; ap
         <div className="mt-auto pt-4">
           <div className="flex items-baseline justify-between gap-3 border-t border-line pt-4">
             <span className="text-overline text-muted">Course fee</span>
-            <span className={free ? "text-h3 text-green-dark tabular-nums" : "text-h3 text-navy tabular-nums"}>{free ? "Free" : formatINR(course.courseFee)}</span>
+            <span className={noFee ? "text-h3 text-green-dark tabular-nums" : "text-h3 text-navy tabular-nums"}>
+              {noFee ? FREE_LABEL : formatINR(course.courseFee)}
+              {!noFee && course.feePeriod === "month" && <span className="text-body-sm font-semibold text-muted"> / month</span>}
+            </span>
           </div>
           <div className="relative z-raised mt-4 grid grid-cols-2 gap-2">
             <ButtonLink href={href} variant="outline" size="sm">
@@ -112,7 +117,7 @@ export function CourseCard({ course, applyHref }: { course: PublicCourseCard; ap
  */
 export function CourseCardCompact({ course }: { course: PublicCourseCard }) {
   const href = `/courses/${course.slug}`;
-  const free = course.courseFee <= 0;
+  const noFee = course.courseFee <= 0;
   return (
     <article className="card relative flex h-full flex-col overflow-hidden">
       <div className="rounded-t-card">
@@ -146,8 +151,9 @@ export function CourseCardCompact({ course }: { course: PublicCourseCard }) {
             <Clock className="size-4 shrink-0 text-navy-light" aria-hidden />
             <span className="truncate">{course.durationText}</span>
           </span>
-          <span className={free ? "shrink-0 font-heading font-bold text-green-dark tabular-nums" : "shrink-0 font-heading font-bold text-navy tabular-nums"}>
-            {free ? "Free" : formatINR(course.courseFee)}
+          <span className={noFee ? "shrink-0 font-heading font-bold text-green-dark tabular-nums" : "shrink-0 font-heading font-bold text-navy tabular-nums"}>
+            {noFee ? FREE_LABEL : formatINR(course.courseFee)}
+            {!noFee && course.feePeriod === "month" && <span className="text-caption font-semibold text-muted"> / month</span>}
           </span>
         </div>
       </div>

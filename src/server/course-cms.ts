@@ -332,7 +332,7 @@ export const courseFeePlanInputSchema = z
       ctx.addIssue({ code: "custom", path: ["customLabel"], message: "Custom pricing needs a label to show on the site" });
     }
     if ((v.feeType === "ONE_TIME" || v.feeType === "MONTHLY") && v.baseFee <= 0) {
-      ctx.addIssue({ code: "custom", path: ["baseFee"], message: "Enter the amount, or switch the fee type to Free" });
+      ctx.addIssue({ code: "custom", path: ["baseFee"], message: "Enter the amount, or switch the fee type to No fee" });
     }
     if (typeof v.discountedFee === "number" && v.discountedFee > v.baseFee) {
       ctx.addIssue({ code: "custom", path: ["discountedFee"], message: "The discounted fee must be lower than the base fee" });

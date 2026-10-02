@@ -23,6 +23,7 @@
     "media:ai": "tsx scripts/generate-ai-media.ts",
     "content:shiksha": "tsx scripts/apply-shiksha-mission.ts",
     "content:education": "tsx scripts/apply-education-categories.ts",
+    "content:fees": "tsx scripts/apply-monthly-fees.ts",
     "content:course-cover": "tsx scripts/apply-course-cover.ts"
   },
   "dependencies": {

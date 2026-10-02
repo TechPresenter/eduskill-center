@@ -12,7 +12,8 @@
  * and the Foundation can edit every field from Admin → Courses afterwards.
  *
  * Nothing here is invented beyond what the Foundation has stated. The category descriptions
- * are its own wording, the classes carry no fee (like Class 1–4), and the subjects, timetable,
+ * are its own wording, the fees are the Foundation's monthly fees (prisma/seed-data/course-fees.ts),
+ * and the subjects, timetable,
  * assessment schedule and the examinations covered are left to the centre to announce rather
  * than guessed at.
  */
@@ -151,7 +152,7 @@ export function educationCourseDescription(category: EducationCategorySeed, cour
     "",
     `This course is offered under **${category.name}** — ${category.description}`,
     "",
-    "Classes are held at the EduSkill training centre offering the course, and there is no course fee.",
+    "Classes are held at the EduSkill training centre offering the course, for the monthly fee shown on this page.",
     "",
     "The subjects, timetable and assessment schedule are set by the Foundation and announced by the centre.",
   ].join("\n");

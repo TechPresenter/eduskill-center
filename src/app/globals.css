@@ -181,9 +181,27 @@
    * on the cheap Android phones most of our students use — do not add new uses.
    */
   --animate-float: float 5s ease-in-out infinite;
+  /*
+   * The chat launcher's typing dots: one staggered hop of three 3px dots, then a rest, so the
+   * corner is not in constant motion. Transform + opacity only (compositor), and every use pairs
+   * it with motion-reduce:animate-none.
+   */
+  --animate-typing-dot: typing-dot 2.4s ease-in-out infinite;
   /* Alias from an earlier draft of the page transition; prefer animate-fade-up. */
   --animate-page: page-in var(--duration-micro) var(--ease-out-soft) both;
 
+  @keyframes typing-dot {
+    0%,
+    30%,
+    100% {
+      opacity: 0.55;
+      transform: translateY(0);
+    }
+    15% {
+      opacity: 1;
+      transform: translateY(-3px);
+    }
+  }
   @keyframes fade-up {
     from {
       opacity: 0;

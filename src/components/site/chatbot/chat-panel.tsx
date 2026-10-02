@@ -8,7 +8,7 @@ import { UI_COPY } from "./copy";
 import { ChatBubble, GreetingBubble } from "./chat-message";
 import { ChatComposer } from "./chat-composer";
 import { ChatEmptyState } from "./chat-empty-state";
-import { AssistantAvatar, CONVERSATION_SURFACE, HEADER_ACCENT, HEADER_GLOW, HEADER_SHELL, ICON_BTN_ON_NAVY } from "./chat-theme";
+import { CONVERSATION_SURFACE, HEADER_ACCENT, HEADER_GLOW, HEADER_SHELL, ICON_BTN_ON_NAVY } from "./chat-theme";
 import { useSpeechOutput } from "./use-speech";
 import type { ChatController } from "./use-chat";
 import { detectLang, type ChatConfig, type ChatLang } from "./types";
@@ -166,12 +166,12 @@ export function ChatPanel({ panelId, name, config, chat, closing, onClose, voice
         style={keyboardStyle}
         className={cn(
           "fixed z-overlay flex flex-col overflow-hidden bg-white shadow-e3 outline-none",
-          // phone: near-full-height sheet that clears the notch. `max(1.5rem, safe-area)` rather than
-          // `pt-safe`, because a phone without a notch reports 0 and the sheet would touch the edge.
-          "inset-x-0 bottom-0 top-[max(1.5rem,env(safe-area-inset-top))] rounded-t-2xl",
-          // desktop: compact card sitting just above the launcher (1rem offset + 3.5rem button + 0.75rem gap).
-          // The 5.25rem is arithmetic against the launcher's 56px height — do not touch one without the other.
-          "sm:inset-x-auto sm:top-auto sm:left-auto sm:right-[max(1rem,env(safe-area-inset-right))] sm:bottom-[calc(var(--bottom-nav-h)+var(--sticky-bar-h)+env(safe-area-inset-bottom,0px)+5.25rem)] sm:h-[620px] sm:max-h-[calc(100dvh-7rem)] sm:w-[400px] sm:rounded-card-lg sm:border sm:border-line lg:w-[420px]",
+          // phone: a sheet over the lower ~85% of the screen, so the page stays visible above it. The
+          // safe-area term keeps it clear of a notch; the open keyboard overrides `top` (keyboardStyle).
+          "inset-x-0 bottom-0 top-[max(15dvh,1.5rem,env(safe-area-inset-top))] rounded-t-2xl",
+          // desktop: compact card sitting just above the launcher (1rem offset + 3rem button + 0.75rem gap).
+          // The 4.75rem is arithmetic against the launcher's 48px height — do not touch one without the other.
+          "sm:inset-x-auto sm:top-auto sm:left-auto sm:right-[max(1rem,env(safe-area-inset-right))] sm:bottom-[calc(var(--bottom-nav-h)+var(--sticky-bar-h)+env(safe-area-inset-bottom,0px)+4.75rem)] sm:h-[520px] sm:max-h-[calc(100dvh-6.5rem)] sm:w-[340px] sm:rounded-card-lg sm:border sm:border-line lg:w-[360px]",
           closing
             ? "pointer-events-none animate-slide-down motion-reduce:animate-none sm:animate-none sm:translate-y-2 sm:opacity-0 sm:transition sm:duration-micro sm:ease-in sm:motion-reduce:transition-none"
             : "animate-slide-up sm:animate-fade-up motion-reduce:animate-none"
@@ -189,14 +189,11 @@ export function ChatPanel({ panelId, name, config, chat, closing, onClose, voice
           <span aria-hidden className={HEADER_ACCENT} />
 
           <div className="relative flex items-center gap-2.5 px-3 py-2.5">
-            {/* Hidden on phones: at 390px this 36px mark plus its gap was squeezing the title down
-                to "EduSkill Assis…" and the status to "Online — usually". It is decorative
-                (aria-hidden) and the empty state renders a large one directly below, so nothing is
-                lost by giving the row back to the text. */}
-            <AssistantAvatar size="md" ringTone="navy" className="max-sm:hidden" />
-
+            {/* No assistant mark in this row: on a 340–360px card (and on phones) the 36px tile plus its
+                gap squeezed the title to "EduSkill Ass…" and clipped the status line. It is decorative,
+                and the empty state shows the mark directly below, so the row goes to the text. */}
             <div className="min-w-0 flex-1">
-              <h2 id={titleId} className="truncate font-heading text-[15px] font-bold text-white">
+              <h2 id={titleId} className="truncate font-heading text-[14px] font-bold text-white">
                 {t.title(name)}
               </h2>
               {/* A status line, not a tagline: the visitor can see at a glance whether a reply is on
@@ -315,9 +312,19 @@ export function ChatPanel({ panelId, name, config, chat, closing, onClose, voice
           <ChatComposer t={t} lang={lang} busy={busy} onSend={send} onStop={stop} />
 
           <div className="mt-2 flex items-start justify-between gap-2">
-            <p className="text-[12px] leading-4 text-muted">{t.disclaimer}</p>
+            <p className="text-[12px] leading-4 text-muted">
+              {t.developedBy}{" "}
+              <a
+                href="https://appsgain.in"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-9 items-center font-semibold text-navy underline-offset-2 ring-focus hover:underline max-sm:min-h-11"
+              >
+                Appsgain Technologies
+              </a>
+            </p>
             {messages.length > 0 && (
-              // The visible label is short so it cannot crowd the disclaimer on a 360px phone; the
+              // The visible label is short so it cannot crowd the footer credit on a 360px phone; the
               // full sentence stays as the accessible name.
               <button
                 type="button"

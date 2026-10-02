@@ -5,7 +5,8 @@ import { requireStudent } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { studentAdmissions } from "@/server/student-portal";
 import { formatSchedule } from "@/server/batches";
-import { formatDate, formatINR, titleCase, toNumber } from "@/lib/utils";
+import { formatDate, titleCase, toNumber } from "@/lib/utils";
+import { feePeriodOf, formatFeeAmount } from "@/lib/course-pricing";
 import { PageHeader } from "@/components/ui/misc";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
@@ -23,7 +24,7 @@ export default async function StudentCoursesPage() {
       where: { status: "ACTIVE", deletedAt: null },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       take: 12,
-      select: { id: true, name: true, durationText: true, level: true, mode: true, courseFee: true, scholarshipAvailable: true, category: { select: { name: true } } },
+      select: { id: true, name: true, durationText: true, level: true, mode: true, courseFee: true, scholarshipAvailable: true, category: { select: { name: true } }, feePlan: { select: { feeType: true, deletedAt: true } } },
     }),
   ]);
   const enrolledCourseIds = new Set(admissions.map((a) => a.courseId));
@@ -141,7 +142,7 @@ export default async function StudentCoursesPage() {
                       {[c.category?.name, c.durationText, titleCase(c.level), titleCase(c.mode)].filter(Boolean).join(" · ")}
                     </span>
                     <span className="block text-caption font-semibold text-orange">
-                      {formatINR(toNumber(c.courseFee))}
+                      {formatFeeAmount(toNumber(c.courseFee), feePeriodOf(c.feePlan))}
                       {c.scholarshipAvailable ? " · scholarship available" : ""}
                     </span>
                   </span>

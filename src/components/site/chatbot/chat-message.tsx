@@ -14,7 +14,7 @@ import type { ChatMessage } from "./types";
  * winner depend on utility ordering; the site's own page copy is untouched.
  */
 const BUBBLE_MARKDOWN =
-  "text-[15px]! leading-6! [&_p]:mb-2! [&_p:last-child]:mb-0! [&_ul]:mb-2! [&_ol]:mb-2! [&_ul]:pl-5! [&_ol]:pl-5! [&_li]:mb-0.5! [&_h2]:mt-3! [&_h2]:mb-1! [&_h2]:text-base! [&_h3]:mt-3! [&_h3]:mb-1! [&_h3]:text-[15px]! [&_table]:my-2! [&_blockquote]:my-2!";
+  "text-[13px]! leading-5! [&_p]:mb-2! [&_p:last-child]:mb-0! [&_ul]:mb-2! [&_ol]:mb-2! [&_ul]:pl-5! [&_ol]:pl-5! [&_li]:mb-0.5! [&_h2]:mt-3! [&_h2]:mb-1! [&_h2]:text-[14px]! [&_h3]:mt-3! [&_h3]:mb-1! [&_h3]:text-[13px]! [&_table]:my-2! [&_blockquote]:my-2!";
 
 /**
  * Copy / Speak under a finished reply. Kept as one string both buttons share so the pair can never

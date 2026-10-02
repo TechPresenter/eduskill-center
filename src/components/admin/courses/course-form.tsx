@@ -254,7 +254,7 @@ export function CourseForm({ initial, categories, documentTypes }: CourseFormPro
         </div>
       </FormSection>
 
-      <FormSection title="Fees & scholarship" description={`Total payable: ₹${totalFee.toLocaleString("en-IN")}. Set every fee to 0 for a free course.`}>
+      <FormSection title="Fees & scholarship" description={`Total payable: ₹${totalFee.toLocaleString("en-IN")}. Set every fee to 0 if nothing is charged.`}>
         <FormGrid cols={4}>
           <Field label="Course fee (₹)" htmlFor="co-fee" error={fieldErrors.courseFee}>
             <Input id="co-fee" type="number" min={0} step="1" value={courseFee} onChange={(e) => { setCourseFee(e.target.value); clearField("courseFee"); }} invalid={!!fieldErrors.courseFee} />

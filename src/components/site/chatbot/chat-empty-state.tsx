@@ -48,12 +48,12 @@ export function ChatEmptyState({ greeting, suggestions, lang, busy, onSelect, t 
     <div className="flex flex-col gap-4 pt-2 pb-1">
       {/* Hero. `h3` is the correct level: the dialog's own `h2` is the panel header's title. */}
       <div className="flex flex-col items-start gap-3">
-        <AssistantAvatar size="lg" />
-        <h3 className="font-heading text-[20px] leading-7 font-bold text-navy">{t.emptyTitle}</h3>
+        <AssistantAvatar size="md" />
+        <h3 className="font-heading text-[16px] leading-6 font-bold text-navy">{t.emptyTitle}</h3>
       </div>
 
       {/* `whitespace-pre-wrap`: the greeting is admin-authored in Settings and may carry line breaks. */}
-      <p className="text-[15px] leading-6 whitespace-pre-wrap text-ink">{greeting}</p>
+      <p className="text-[13px] leading-5 whitespace-pre-wrap text-ink">{greeting}</p>
 
       {/*
         Capability tags. Labels, not prompts — no handler, no `tabIndex`, no hover state — so nothing
