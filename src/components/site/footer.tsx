@@ -14,6 +14,8 @@ const COLUMNS: { id: string; title: string; links: { label: string; href: string
     links: [
       { label: "About Us", href: "/about" },
       { label: "Programs", href: "/programs" },
+      { label: "Computer & Skill Development Training", href: "/programs/computer-skill-development-training" },
+      { label: "AI Workshop & Training", href: "/programs/ai-workshop-training" },
       { label: "Courses", href: "/courses" },
       { label: "Training Centers", href: "/training-centers" },
       { label: "Success Stories", href: "/success-stories" },
