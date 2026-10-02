@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth/session";
 import { getBranding } from "@/lib/settings";
 import { absoluteUrl, formatINR, titleCase } from "@/lib/utils";
-import { FREE_LABEL, feePeriodSuffix, formatFeeAmount } from "@/lib/course-pricing";
+import { ADMISSION_FEE_LABEL, FREE_LABEL, feeHeadline, feePeriodSuffix } from "@/lib/course-pricing";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/feedback";
 import { ButtonLink } from "@/components/ui/button";
@@ -95,9 +95,11 @@ export default async function CourseDetailPage({ params }: Props) {
   const syllabus = parseSyllabus(raw.syllabus);
   const apply = applyHref(user, { courseId: raw.id });
 
-  // A monthly course bills `courseFee` every month; admission collects the first month together with
-  // any one-time fee, which is what the "Payable at admission" total adds up.
+  // A monthly course (Class 5 and above) bills `courseFee` every month; what admission collects —
+  // the course fee plus any one-time fee — is called the registration fees. A registration-only
+  // course (Class 1–4) has a single "Registration fee" row and no total.
   const monthly = course.feePeriod === "month";
+  const headline = feeHeadline(course);
   const feeRows = [
     { label: monthly ? "Monthly fee" : "Course fee", value: course.courseFee, suffix: feePeriodSuffix(course.feePeriod) },
     { label: "Registration fee", value: course.registrationFee, suffix: "" },
@@ -310,13 +312,15 @@ export default async function CourseDetailPage({ params }: Props) {
                         </dd>
                       </div>
                     ))}
-                    <div className="flex items-baseline justify-between gap-4 border-t border-line pt-3">
-                      <dt className="font-bold text-navy">{monthly ? "Payable at admission" : "Total"}</dt>
-                      <dd className="text-h3 text-navy tabular-nums">{formatINR(course.totalFee)}</dd>
-                    </div>
+                    {(monthly || feeRows.length > 1) && (
+                      <div className="flex items-baseline justify-between gap-4 border-t border-line pt-3">
+                        <dt className="font-bold text-navy">{monthly ? ADMISSION_FEE_LABEL : "Total"}</dt>
+                        <dd className="text-h3 text-navy tabular-nums">{formatINR(course.totalFee)}</dd>
+                      </div>
+                    )}
                   </dl>
                 )}
-                {monthly && feeRows.length > 0 && <p className="mt-3 text-body-sm text-muted">The course fee is charged every month. The first month is paid at admission.</p>}
+                {monthly && feeRows.length > 0 && <p className="mt-3 text-body-sm text-muted">Registration fees are paid at admission. After that, the course fee is charged every month.</p>}
                 {course.scholarshipAvailable && (
                   <div className="mt-4 rounded-card bg-orange-light p-4">
                     <Badge tone="orange" className="mb-2">
@@ -373,8 +377,8 @@ export default async function CourseDetailPage({ params }: Props) {
           where the sidebar's Apply button is always in view. */}
       <StickyActionBar desktop="hidden" innerClassName="justify-between">
         <span className="min-w-0">
-          <span className="block text-overline text-muted">Course fee</span>
-          <span className="block truncate text-h4 text-navy tabular-nums">{monthly && course.courseFee > 0 ? formatFeeAmount(course.courseFee, course.feePeriod) : course.totalFee > 0 ? formatINR(course.totalFee) : FREE_LABEL}</span>
+          <span className="block text-overline text-muted">{headline.label}</span>
+          <span className="block truncate text-h4 text-navy tabular-nums">{headline.text}</span>
         </span>
         <ButtonLink href={apply} size="md" className="shrink-0" rightIcon={<ArrowRight className="h-4 w-4" />}>
           Apply Now

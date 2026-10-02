@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { getSections } from "@/lib/cms";
 import { coverageStats, listHomeCenters } from "@/server/centers";
 import { toNumber } from "@/lib/utils";
-import { feePeriodOf, type FeePeriod } from "@/lib/course-pricing";
+import { feeHeadline, feePeriodOf, type FeeHeadlineKind, type FeePeriod } from "@/lib/course-pricing";
 
 // ───────────────────────────── Impact statistics ─────────────────────────────
 
@@ -268,11 +268,11 @@ export interface FeePresentation {
 /** One row of the homepage fee list: a course category and what its courses charge. */
 export interface FeeSlab {
   category: { name: string; slug: string };
-  /** Lowest and highest `courseFee` among the category's ACTIVE priced courses (equal when uniform). */
+  /** Lowest and highest headline fee among the category's ACTIVE priced courses (equal when uniform). */
   min: number;
   max: number;
-  /** "month" only when every priced course in the category is billed monthly. */
-  feePeriod: FeePeriod;
+  /** The courses' fee kind (see feeHeadline): "monthly" → "/ month", "registration" → "registration fee". "mixed" when they differ. */
+  kind: FeeHeadlineKind | "mixed";
 }
 
 /**
@@ -283,15 +283,16 @@ export interface FeeSlab {
 export function feeSlabsFrom(courses: PublicCourseCard[]): FeeSlab[] {
   const slabs = new Map<string, FeeSlab>();
   for (const c of courses) {
-    if (!c.category || c.courseFee <= 0) continue;
+    const fee = feeHeadline(c);
+    if (!c.category || fee.kind === "none") continue;
     const slab = slabs.get(c.category.id);
     if (!slab) {
-      slabs.set(c.category.id, { category: { name: c.category.name, slug: c.category.slug }, min: c.courseFee, max: c.courseFee, feePeriod: c.feePeriod });
+      slabs.set(c.category.id, { category: { name: c.category.name, slug: c.category.slug }, min: fee.amount, max: fee.amount, kind: fee.kind });
       continue;
     }
-    slab.min = Math.min(slab.min, c.courseFee);
-    slab.max = Math.max(slab.max, c.courseFee);
-    if (slab.feePeriod !== c.feePeriod) slab.feePeriod = null;
+    slab.min = Math.min(slab.min, fee.amount);
+    slab.max = Math.max(slab.max, fee.amount);
+    if (slab.kind !== fee.kind) slab.kind = "mixed";
   }
   return [...slabs.values()];
 }

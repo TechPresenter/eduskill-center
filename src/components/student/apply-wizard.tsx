@@ -17,7 +17,7 @@ import { useHideBottomNav } from "@/components/portal/header-context";
 import { useScrollIntoViewOnFocus } from "@/lib/hooks";
 import { api, ApiClientError, errorMessage } from "@/lib/api-client";
 import { cn, formatDate, formatINR, titleCase } from "@/lib/utils";
-import { FREE_LABEL, type FeePeriod } from "@/lib/course-pricing";
+import { ADMISSION_FEE_LABEL, FREE_LABEL, feeHeadline, type FeePeriod } from "@/lib/course-pricing";
 import { phoneIssue } from "@/lib/phone";
 import { DocumentsChecklist, type ChecklistDoc } from "@/components/student/documents-checklist";
 import {
@@ -77,9 +77,19 @@ interface CourseResult {
   category: { name: string } | null;
 }
 
-/** True when admission also collects a one-time fee (registration, exam, certificate) besides the course fee. */
-function admissionExtras(detail: { feeLines: { type: string; amount: number }[] }): boolean {
-  return detail.feeLines.some((l) => l.type !== "COURSE" && l.amount > 0);
+/** The fee shown on a course row: "₹100 per month", "₹50 registration fee" or "₹2,500 total fee". */
+function courseListFee(c: CourseResult): { amount: string; note: string } {
+  const fee = feeHeadline(c);
+  if (fee.kind === "monthly") return { amount: formatINR(fee.amount), note: " per month" };
+  if (fee.kind === "registration") return { amount: formatINR(fee.amount), note: " registration fee" };
+  if (c.totalFee > 0) return { amount: formatINR(c.totalFee), note: " total fee" };
+  return { amount: FREE_LABEL, note: "" };
+}
+
+/** Monthly and registration-only courses call what admission collects "Registration fees". */
+function admissionFeeLabel(c: CourseResult | null | undefined, otherwise: string): string {
+  const kind = c ? feeHeadline(c).kind : "none";
+  return kind === "monthly" || kind === "registration" ? ADMISSION_FEE_LABEL : otherwise;
 }
 
 interface CourseDetail {
@@ -815,17 +825,8 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
                         )}
                       </div>
                       <p className="text-body-sm">
-                        {c.feePeriod === "month" && c.courseFee > 0 ? (
-                          <>
-                            <span className="font-bold text-ink">{formatINR(c.courseFee)}</span>
-                            <span className="text-muted"> per month</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="font-bold text-ink">{c.totalFee > 0 ? formatINR(c.totalFee) : FREE_LABEL}</span>
-                            {c.totalFee > 0 && <span className="text-muted"> total fee</span>}
-                          </>
-                        )}
+                        <span className="font-bold text-ink">{courseListFee(c).amount}</span>
+                        <span className="text-muted">{courseListFee(c).note}</span>
                       </p>
                       {(c.eligibility || c.minAge || c.maxAge) && (
                         <p className="text-caption text-muted">
@@ -927,17 +928,14 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
                           </li>
                         ))}
                         <li className="flex items-center justify-between gap-3 bg-surface px-4 py-3">
-                          <span className="font-bold text-navy">{course.feePeriod === "month" ? "Payable at admission" : "Total course fee"}</span>
+                          <span className="font-bold text-navy">{admissionFeeLabel(course, "Total course fee")}</span>
                           <span className="text-h4 text-navy tabular-nums">{formatINR(detail.originalFee)}</span>
                         </li>
                       </>
                     )}
                   </ul>
                   {course.feePeriod === "month" && detail.originalFee > 0 && (
-                    <p className="text-body-sm text-muted">
-                      The course fee is charged every month. The amount above is payable once your application is approved and covers the first month
-                      {admissionExtras(detail) ? " plus the one-time fees listed" : ""}.
-                    </p>
+                    <p className="text-body-sm text-muted">Registration fees are payable once your application is approved. After that, the course fee is charged every month.</p>
                   )}
                   {canScholarship ? (
                     <div className="space-y-3 rounded-md border border-line bg-surface/60 p-4">
@@ -973,7 +971,7 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
                   <ReviewItem label="Course" value={course.name} sub={`${course.durationText} · ${titleCase(course.mode)}`} onEdit={() => goTo(STEP_COURSE)} />
                   <ReviewItem label="Batch" value={selectedBatch ? `${selectedBatch.name} (${selectedBatch.code})` : "To be allocated by the Foundation"} sub={selectedBatch?.schedule} onEdit={() => goTo(STEP_COURSE)} />
                   <ReviewItem label="Documents" value={requiredDocs.length === 0 ? "None required" : `${requiredDocs.length - missingDocs.length} of ${requiredDocs.length} uploaded`} sub={missingDocs.length ? `Missing: ${missingDocs.map((d) => d.name).join(", ")}` : undefined} onEdit={() => goTo(STEP_DOCUMENTS)} />
-                  <ReviewItem label={course.feePeriod === "month" ? "Payable at admission" : "Course fee"} value={detail && detail.originalFee > 0 ? formatINR(detail.originalFee) : FREE_LABEL} sub={canScholarship && scholarship ? "Scholarship requested" : undefined} onEdit={() => goTo(STEP_SCHOLARSHIP)} />
+                  <ReviewItem label={admissionFeeLabel(course, "Course fee")} value={detail && detail.originalFee > 0 ? formatINR(detail.originalFee) : FREE_LABEL} sub={canScholarship && scholarship ? "Scholarship requested" : undefined} onEdit={() => goTo(STEP_SCHOLARSHIP)} />
                 </dl>
               </CardBody>
             </Card>
@@ -997,7 +995,7 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
               <StepIntro title="Fees & payment" text="Your application is submitted. Fees become payable once the Foundation approves it." />
               <ul className="divide-y divide-line overflow-hidden rounded-md border border-line">
                 <li className="flex items-center justify-between gap-3 px-4 py-2.5 text-body">
-                  <span className="text-muted">{course?.feePeriod === "month" ? "Payable at admission" : "Course fee"}</span>
+                  <span className="text-muted">{admissionFeeLabel(course, "Course fee")}</span>
                   <span className="font-medium text-ink tabular-nums">{detail && detail.originalFee > 0 ? formatINR(detail.originalFee) : FREE_LABEL}</span>
                 </li>
                 <li className="flex items-center justify-between gap-3 px-4 py-2.5 text-body">

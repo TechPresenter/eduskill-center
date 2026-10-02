@@ -6,7 +6,13 @@ import { db } from "@/lib/db";
 import { studentAdmissions } from "@/server/student-portal";
 import { formatSchedule } from "@/server/batches";
 import { formatDate, titleCase, toNumber } from "@/lib/utils";
-import { feePeriodOf, formatFeeAmount } from "@/lib/course-pricing";
+import { feeHeadline, feePeriodOf } from "@/lib/course-pricing";
+
+/** "₹100 / month", "₹50 registration fee", "₹2,500" or "No fee". */
+function studentCourseFee(c: { courseFee: unknown; registrationFee: unknown; examFee: unknown; certificateFee: unknown; feePlan: { feeType: string; deletedAt: Date | null } | null }): string {
+  const fee = feeHeadline({ courseFee: toNumber(c.courseFee), registrationFee: toNumber(c.registrationFee), examFee: toNumber(c.examFee), certificateFee: toNumber(c.certificateFee), feePeriod: feePeriodOf(c.feePlan) });
+  return fee.kind === "registration" ? `${fee.text} registration fee` : fee.text;
+}
 import { PageHeader } from "@/components/ui/misc";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
@@ -24,7 +30,7 @@ export default async function StudentCoursesPage() {
       where: { status: "ACTIVE", deletedAt: null },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       take: 12,
-      select: { id: true, name: true, durationText: true, level: true, mode: true, courseFee: true, scholarshipAvailable: true, category: { select: { name: true } }, feePlan: { select: { feeType: true, deletedAt: true } } },
+      select: { id: true, name: true, durationText: true, level: true, mode: true, courseFee: true, registrationFee: true, examFee: true, certificateFee: true, scholarshipAvailable: true, category: { select: { name: true } }, feePlan: { select: { feeType: true, deletedAt: true } } },
     }),
   ]);
   const enrolledCourseIds = new Set(admissions.map((a) => a.courseId));
@@ -142,7 +148,7 @@ export default async function StudentCoursesPage() {
                       {[c.category?.name, c.durationText, titleCase(c.level), titleCase(c.mode)].filter(Boolean).join(" · ")}
                     </span>
                     <span className="block text-caption font-semibold text-orange">
-                      {formatFeeAmount(toNumber(c.courseFee), feePeriodOf(c.feePlan))}
+                      {studentCourseFee(c)}
                       {c.scholarshipAvailable ? " · scholarship available" : ""}
                     </span>
                   </span>

@@ -160,8 +160,8 @@ export function feePlanFromCourse(course: { courseFee: number; registrationFee?:
 
 /**
  * How often `Course.courseFee` is charged. `"month"` when the course's `CourseFeePlan` is MONTHLY
- * (the class and competitive-exam courses), `null` for a one-time fee or a course without a plan.
- * The admission still bills `courseFee` once — the first month — so this only changes the label.
+ * (Class 5 and above, and competitive exams), `null` for a one-time fee or a course without a plan.
+ * The admission bills `courseFee` once (shown as the registration fees), so this only changes labels.
  */
 export type FeePeriod = "month" | null;
 
@@ -178,6 +178,45 @@ export function feePeriodSuffix(period: FeePeriod): string {
 export function formatFeeAmount(amount: number, period: FeePeriod, currency = "INR"): string {
   const v = round2(num(amount));
   return v > 0 ? `${formatMoney(v, currency)}${feePeriodSuffix(period)}` : FREE_LABEL;
+}
+
+/** What admission collects on a monthly or registration-only course, as the Foundation names it. */
+export const ADMISSION_FEE_LABEL = "Registration fees";
+
+export type FeeHeadlineKind = "monthly" | "course" | "registration" | "total" | "none";
+
+/** The one fee line a card, a list row or a sticky bar shows for a course. */
+export interface FeeHeadline {
+  kind: FeeHeadlineKind;
+  /** "Monthly fee" | "Course fee" | "Registration fee" | "Fees" */
+  label: string;
+  amount: number;
+  /** " / month" for a monthly fee, "" otherwise. */
+  suffix: string;
+  /** "₹100 / month", "₹2,500", "₹50", or FREE_LABEL. */
+  text: string;
+}
+
+/**
+ * Picks the line that answers "what does this course cost?":
+ *  - a monthly course fee → "₹100 / month" (Class 5 and above),
+ *  - a one-time course fee → "₹2,500",
+ *  - only a registration fee → "₹50", labelled "Registration fee" (Class 1–4: no monthly fee),
+ *  - anything else that adds up → the total, labelled "Fees",
+ *  - nothing at all → FREE_LABEL.
+ */
+export function feeHeadline(
+  c: { courseFee: number; registrationFee?: number | null; examFee?: number | null; certificateFee?: number | null; feePeriod?: FeePeriod },
+  currency = "INR"
+): FeeHeadline {
+  const course = round2(num(c.courseFee));
+  const registration = round2(num(c.registrationFee));
+  const total = round2(course + registration + num(c.examFee) + num(c.certificateFee));
+  if (course > 0 && c.feePeriod === "month") return { kind: "monthly", label: "Monthly fee", amount: course, suffix: " / month", text: `${formatMoney(course, currency)} / month` };
+  if (course > 0) return { kind: "course", label: "Course fee", amount: course, suffix: "", text: formatMoney(course, currency) };
+  if (registration > 0 && registration === total) return { kind: "registration", label: "Registration fee", amount: registration, suffix: "", text: formatMoney(registration, currency) };
+  if (total > 0) return { kind: "total", label: "Fees", amount: total, suffix: "", text: formatMoney(total, currency) };
+  return { kind: "none", label: "Course fee", amount: 0, suffix: "", text: FREE_LABEL };
 }
 
 // ───────────────────────────── Offer windows ─────────────────────────────

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import {
+  ADMISSION_FEE_LABEL,
   CUSTOM_FALLBACK_LABEL,
   FREE_LABEL,
+  feeHeadline,
   feePeriodOf,
   feePlanFromCourse,
   formatCourseFee,
@@ -108,6 +110,16 @@ describe("fee period", () => {
     expect(formatFeeAmount(50, "month")).toBe("₹50 / month");
     expect(formatFeeAmount(2500, null)).toBe("₹2,500");
     expect(formatFeeAmount(0, "month")).toBe(FREE_LABEL);
+  });
+
+  it("picks the headline fee: monthly, course, registration-only, total or none", () => {
+    expect(feeHeadline({ courseFee: 100, registrationFee: 0, feePeriod: "month" })).toMatchObject({ kind: "monthly", label: "Monthly fee", amount: 100, text: "₹100 / month" });
+    expect(feeHeadline({ courseFee: 2500, registrationFee: 100, feePeriod: null })).toMatchObject({ kind: "course", label: "Course fee", amount: 2500, text: "₹2,500" });
+    // Class 1–4: only a registration fee, never "/ month" even if a stray monthly period is passed.
+    expect(feeHeadline({ courseFee: 0, registrationFee: 50, feePeriod: "month" })).toMatchObject({ kind: "registration", label: "Registration fee", amount: 50, suffix: "", text: "₹50" });
+    expect(feeHeadline({ courseFee: 0, registrationFee: 50, examFee: 20 })).toMatchObject({ kind: "total", amount: 70 });
+    expect(feeHeadline({ courseFee: 0 })).toMatchObject({ kind: "none", text: FREE_LABEL });
+    expect(ADMISSION_FEE_LABEL).toBe("Registration fees");
   });
 });
 

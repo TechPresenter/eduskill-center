@@ -195,7 +195,7 @@ const publicCenterSelect = {
   state: { select: { id: true, name: true, slug: true, code: true } },
   district: { select: { id: true, name: true, slug: true } },
   block: { select: { id: true, name: true, slug: true } },
-  courses: { where: { isActive: true, course: { status: "ACTIVE" as const, deletedAt: null } }, select: { course: { select: { id: true, name: true, slug: true, code: true, durationText: true, level: true, mode: true, courseFee: true, scholarshipAvailable: true, icon: true, feePlan: { select: { feeType: true, deletedAt: true } } } } } },
+  courses: { where: { isActive: true, course: { status: "ACTIVE" as const, deletedAt: null } }, select: { course: { select: { id: true, name: true, slug: true, code: true, durationText: true, level: true, mode: true, courseFee: true, registrationFee: true, examFee: true, certificateFee: true, scholarshipAvailable: true, icon: true, feePlan: { select: { feeType: true, deletedAt: true } } } } } },
   gallery: { orderBy: { sortOrder: "asc" as const }, select: { id: true, url: true, caption: true } },
 } satisfies Prisma.CenterSelect;
 

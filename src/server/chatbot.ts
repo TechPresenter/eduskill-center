@@ -191,12 +191,15 @@ function feeLine(c: { courseFee: number; registrationFee: number; examFee: numbe
   if (c.examFee > 0) extras.push(`exam ${formatINR(c.examFee)}`);
   if (c.certificateFee > 0) extras.push(`certificate ${formatINR(c.certificateFee)}`);
   if (c.feePeriod === "month" && c.courseFee > 0) {
-    // Charged every month; admission collects the first month (plus any one-time fees listed).
-    const oneTime = extras.length ? `; one-time fees: ${extras.join(", ")}` : "";
-    return `Fees: course fee ${formatINR(c.courseFee)} per month — the first month is paid at admission, then every month${oneTime}`;
+    // Admission collects the registration fees (the course fee plus any one-time fee), then the course fee is charged every month.
+    const oneTime = extras.length ? ` (including one-time fees: ${extras.join(", ")})` : "";
+    return `Fees: monthly fee ${formatINR(c.courseFee)} per month; registration fees of ${formatINR(c.totalFee)} are paid at admission${oneTime}`;
   }
-  const base = `course fee ${formatINR(c.courseFee)}`;
-  return `Fees: total ${formatINR(c.totalFee)} (${[base, ...extras].join(", ")})`;
+  if (c.courseFee <= 0 && c.registrationFee > 0 && c.registrationFee === c.totalFee) {
+    return `Fees: only a one-time registration fee of ${formatINR(c.registrationFee)}, paid at admission. There is no monthly fee.`;
+  }
+  const base = c.courseFee > 0 ? [`course fee ${formatINR(c.courseFee)}`] : [];
+  return `Fees: total ${formatINR(c.totalFee)} (${[...base, ...extras].join(", ")})`;
 }
 
 /** The site's page map, so the assistant always links to a page that actually exists. */

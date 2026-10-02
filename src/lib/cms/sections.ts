@@ -106,11 +106,12 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
      * Every default below is a fact this platform can prove, because the hero is the first thing a
      * visitor reads and the Foundation is an NGO, not a university selling seats:
      *   no emphasis line — the Foundation asked for the first slide without one. The fees
-     *            (₹50 for Class 1–4, ₹100 for Class 5–10, ₹300 for Class 11–12 and competitive
-     *            exams) are stated by the badge below and by the fees section further down, which
-     *            reads them from the database. Never say "free": the courses carry a fee.
+     *            (a ₹50 registration fee only for Class 1–4; ₹100 a month for Class 5–10; ₹300 a
+     *            month for Class 11–12 and competitive exams) are stated by the badge below and by
+     *            the fees section further down, which reads them from the database. Never say
+     *            "free": every course carries a fee.
      *   the programme line — active `Program` rows.
-     *   the three badges — the monthly fee, the Class 1–4 Normal Education Centres of Project
+     *   the three badges — the registration fee, the Class 1–4 Normal Education Centres of Project
      *            EduSkill Shiksha Mission, and /verify-certificate, which really does check a
      *            certificate number. Nothing here claims a learner count, a ranking or an accreditation.
      */
@@ -131,13 +132,13 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
       imageUrl: "",
       imageAlt: "Young Indian student learning at an EduSkill training center",
       badges: [
-        { icon: "Coins", title: "Low monthly fee", caption: "From ₹50 a month for Class 1 to 4" },
+        { icon: "Coins", title: "Low fees", caption: "Only a ₹50 registration fee for Class 1 to 4" },
         { icon: "School", title: "Class 1 to 4", caption: "Normal Education Centres under Project EduSkill Shiksha Mission" },
         { icon: "BadgeCheck", title: "Checkable certificates", caption: "Every certificate number can be verified on this site" },
       ],
       formHeading: "Talk to us about admission",
       chips: [
-        { icon: "Coins", label: "Fees from ₹50/month" },
+        { icon: "Coins", label: "₹50 registration fee" },
         { icon: "MapPin", label: "Village & panchayat centres" },
       ],
       consentText:
@@ -329,7 +330,7 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
       label: "Fees & Scholarships",
       title: "Affordable Training with [[Scholarship Support]]",
       description:
-        "Monthly fees start at just ₹50 and stay low for every class. Need-based and merit scholarships reduce the payable fee further, and installments are available.",
+        "Fees stay low for every class: only a ₹50 registration fee for Class 1 to 4, and small monthly fees from Class 5. Need-based and merit scholarships reduce the payable fee further, and installments are available.",
       ctaLabel: "Check Eligibility",
       ctaHref: "/scholarship",
     },
@@ -360,7 +361,7 @@ export const CMS_SECTIONS: CmsSectionDef[] = [
       title: "Why Students and Communities [[Trust Us]]",
       description: "A learner-first approach backed by verified trainers, local centers and transparent processes.",
       features: [
-        { icon: "BookOpen", title: "Accessible Training", description: "Low monthly fees for learners of every background." },
+        { icon: "BookOpen", title: "Accessible Training", description: "Low fees for learners of every background." },
         { icon: "UserCheck", title: "Experienced Trainers", description: "Verified volunteer trainers with real industry and teaching experience." },
         { icon: "Users", title: "Community Learning", description: "Peer learning in small, supportive batches." },
         { icon: "Briefcase", title: "Career-Oriented Skills", description: "Curriculum aligned with jobs and self-employment." },

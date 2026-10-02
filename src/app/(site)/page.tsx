@@ -120,10 +120,12 @@ type BrandHue = keyof typeof HUE_TILE;
  */
 const HUE_CYCLE: BrandHue[] = ["navy", "orange", "navy", "green"];
 
-/** "₹50 / month" for a uniform category, "₹50–₹100 / month" when its courses differ. */
+/** "₹100 / month", "₹50 registration fee", or a "₹50–₹100" range when a category's courses differ. */
 function feeSlabLabel(slab: FeeSlab): string {
-  if (slab.min === slab.max) return formatFeeAmount(slab.min, slab.feePeriod);
-  return `${formatINR(slab.min)}–${formatFeeAmount(slab.max, slab.feePeriod)}`;
+  const amount = slab.min === slab.max ? formatINR(slab.min) : `${formatINR(slab.min)}–${formatINR(slab.max)}`;
+  if (slab.kind === "monthly") return `${amount} / month`;
+  if (slab.kind === "registration") return `${amount} registration fee`;
+  return amount;
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -552,7 +554,7 @@ export default async function HomePage() {
                       ))}
                     </ul>
                     <p className="mt-4 text-sm text-muted">
-                      {data.feeSlabs.some((slab) => slab.feePeriod === "month") ? "The first month's fee is paid at admission. " : ""}
+                      {data.feeSlabs.some((slab) => slab.kind === "monthly" || slab.kind === "registration") ? "Registration fees are paid at admission. " : ""}
                       Each course page shows its exact fee.
                     </p>
                   </>
