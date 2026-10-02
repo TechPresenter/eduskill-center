@@ -4,7 +4,7 @@ import type { NotificationChannel, NotificationStatus, AnnouncementAudience } fr
 import type { AuthUser } from "@/lib/auth/session";
 import { Errors } from "@/lib/api/errors";
 import { audit } from "@/lib/audit";
-import { DEFAULT_TEMPLATES, notify, renderTemplate, type NotifyEvent } from "@/lib/notifications";
+import { DEFAULT_TEMPLATES, LOCKED_EVENTS, notify, renderTemplate, type NotifyEvent } from "@/lib/notifications";
 import { getSettingsGroup } from "@/lib/settings";
 import { uuid } from "@/lib/validation/common";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalDate } from "@/lib/api/query";
@@ -18,8 +18,11 @@ export interface Ctx {
 export const NOTIFY_EVENTS = Object.keys(DEFAULT_TEMPLATES) as NotifyEvent[];
 export const TEMPLATE_CHANNELS: NotificationChannel[] = ["EMAIL", "SMS", "WHATSAPP", "IN_APP"];
 const RESENDABLE: NotificationChannel[] = ["EMAIL", "SMS", "WHATSAPP"];
-/** Login codes are stored redacted and expire in minutes: resending one from the log is never right. */
-const NOT_RESENDABLE_EVENTS = new Set(["LOGIN_OTP"]);
+/**
+ * Sign-in codes, reset links, temporary credentials and security notices are stored redacted and
+ * expire in minutes: resending one from the log is never right.
+ */
+const NOT_RESENDABLE_EVENTS = new Set<string>([...LOCKED_EVENTS, "TRAINER_APPROVED"]);
 const eventOf = (templateKey: string | null) => templateKey?.split(":")[0] ?? "";
 
 /** Which outbound channels are switched on in Settings → Communication. */
@@ -145,6 +148,8 @@ export function sampleData(variables: string[]): Record<string, string> {
     note: "Please upload your Aadhaar card.", scholarshipAmount: "₹1,500", payableAmount: "₹1,000", amount: "₹1,000", paymentNo: "PAY-2026-000045", receiptNo: "RCPT-2026-000045", studentId: "ESK-ST-000123", batch: "Morning Batch",
     schedule: "Mon–Fri · 10:00–12:00", attendancePct: "62", requiredPct: "75", certificateNo: "ESK-CERT-2026-000010", verifyUrl: "https://eduskillindia.org/verify/ESK-CERT-2026-000010", level: "Block", trainerId: "ESK-TR-00012",
     credentials: "\n\nLogin: asha@example.com\nTemporary password: Xy7abc9", details: " for batch Morning Batch (Digital Literacy Foundation)", ticketNo: "TKT-000031", message: "We have updated your batch timing.", title: "Holiday notice", body: "Centers remain closed on 2 October.",
+    code: "482913", minutes: "10", device: "Chrome on Windows", ip: "203.0.113.42", time: "2 Oct 2026, 6:42 pm IST", method: "Email code + authenticator", actor: "Super Admin",
+    remaining: "7", oldEmail: "old@example.com", newEmail: "info@eduskillindia.com",
   };
   const out: Record<string, string> = {};
   for (const v of variables) out[v] = samples[v] ?? `{${v}}`;
@@ -159,6 +164,7 @@ export const templateSchema = z.object({
 
 export async function saveTemplate(key: string, input: z.infer<typeof templateSchema>, ctx: Ctx) {
   const { event, channel } = parseTemplateKey(key);
+  if (LOCKED_EVENTS.has(event)) throw Errors.forbidden("Security messages use fixed wording and cannot be edited.");
   const def = DEFAULT_TEMPLATES[event];
   const needsSubject = channel === "EMAIL" || channel === "IN_APP";
   if (needsSubject && !input.subject) throw Errors.validation("Please correct the highlighted fields.", { subject: "Subject is required for this channel" });

@@ -6,7 +6,7 @@ import { sendTestEmail } from "@/lib/notifications";
 
 const schema = z.object({ to: z.email("Enter a valid email address") });
 
-export const POST = apiHandler({ permission: "settings.update", rateLimit: { limit: 10, windowSec: 600, keyBy: "user", name: "test-email" } }, async ({ req, user, ip, userAgent }) => {
+export const POST = apiHandler({ permission: ["settings.update", "email.send"], rateLimit: { limit: 10, windowSec: 600, keyBy: "user", name: "test-email" } }, async ({ req, user, ip, userAgent }) => {
   const body = await parseBody(req, schema);
   try {
     await sendTestEmail(body.to);

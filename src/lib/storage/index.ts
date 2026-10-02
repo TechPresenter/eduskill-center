@@ -195,6 +195,52 @@ const SIGNATURE_COMPAT: Record<string, string[]> = {
   ole: ["doc", "xls"],
 };
 
+/**
+ * MIME types a browser may declare (`File.type`) for each extension we accept. Browsers derive
+ * File.type from the OS registry, so the lists carry the common platform variants: Windows labels
+ * a .csv `application/vnd.ms-excel` when Excel is installed, some Android pickers call a .docx a
+ * plain zip, older IE said `image/pjpeg`.
+ */
+const DECLARED_MIME_BY_EXT: Record<string, readonly string[]> = {
+  jpg: ["image/jpeg", "image/jpg", "image/pjpeg"],
+  jpeg: ["image/jpeg", "image/jpg", "image/pjpeg"],
+  png: ["image/png", "image/x-png"],
+  webp: ["image/webp"],
+  gif: ["image/gif"],
+  pdf: ["application/pdf", "application/x-pdf", "application/acrobat"],
+  doc: ["application/msword", "application/doc", "application/vnd.ms-word"],
+  docx: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/zip", "application/x-zip-compressed"],
+  xls: ["application/vnd.ms-excel", "application/excel", "application/x-excel", "application/x-msexcel"],
+  xlsx: ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/zip", "application/x-zip-compressed"],
+  csv: ["text/csv", "text/plain", "application/csv", "text/x-csv", "text/comma-separated-values", "application/vnd.ms-excel"],
+  txt: ["text/plain"],
+  mp4: ["video/mp4", "application/mp4", "video/x-m4v"],
+  zip: ["application/zip", "application/x-zip-compressed", "application/x-zip", "multipart/x-zip"],
+};
+
+/** Declared types that are never acceptable for an upload, whatever its extension. */
+const DANGEROUS_DECLARED_MIME = /^(text\/html|application\/xhtml\+xml|image\/svg\+xml|text\/xml|application\/xml|(text|application)\/(x-)?(java|ecma)script|application\/x-(msdownload|msdos-program|executable|sh|bat|httpd-php|php)|application\/(x-)?php|application\/vnd\.microsoft\.portable-executable|application\/hta)\b/;
+
+const KNOWN_DECLARED_MIMES = new Set(Object.values(DECLARED_MIME_BY_EXT).flat());
+
+/**
+ * Rejects an obvious disagreement between the browser-declared MIME type and the extension — e.g.
+ * `text/html` on a `.pdf`, or `image/png` on a `.docx`. An empty or generic declaration
+ * (`application/octet-stream`) is accepted, as is an unfamiliar vendor type we have no opinion on:
+ * the magic-byte check below stays the authority on what the bytes actually are.
+ */
+function assertDeclaredMimeMatches(declared: string | undefined, ext: string) {
+  const mime = (declared ?? "").split(";")[0]!.trim().toLowerCase();
+  if (!mime || mime === "application/octet-stream" || mime === "binary/octet-stream") return;
+  if (DANGEROUS_DECLARED_MIME.test(mime)) throw Errors.badRequest("This file type is not allowed");
+  const expected = DECLARED_MIME_BY_EXT[ext];
+  if (!expected || expected.includes(mime)) return;
+  // A type we recognise as belonging to a DIFFERENT extension is a mismatch, not a quirk.
+  if (KNOWN_DECLARED_MIMES.has(mime) || mime.startsWith("image/") || mime.startsWith("video/") || mime.startsWith("audio/")) {
+    throw Errors.badRequest("File type does not match its extension");
+  }
+}
+
 export interface UploadLimits {
   preset?: UploadPreset;
   allowedExts?: readonly string[];
@@ -226,8 +272,9 @@ export interface ValidatedUpload {
 
 /**
  * Validates an uploaded File without writing it anywhere: size against the preset's cap, the
- * extension against the preset's allow-list, and the leading bytes against that extension — so a
- * renamed executable is rejected however its name is spelled.
+ * extension against the preset's allow-list, the browser-declared MIME type against that
+ * extension, and the leading bytes against that extension — so a renamed executable is rejected
+ * however its name is spelled.
  */
 export async function validateUpload(file: File, limits: UploadLimits = {}): Promise<ValidatedUpload> {
   const preset = UPLOAD_PRESETS[limits.preset ?? "document"];
@@ -242,6 +289,8 @@ export async function validateUpload(file: File, limits: UploadLimits = {}): Pro
   const originalName = (file.name || "file").replace(/[^\w.\- ]+/g, "_").slice(0, 120);
   const ext = originalName.includes(".") ? originalName.split(".").pop()!.toLowerCase() : "";
   if (!ext || !allowed.includes(ext)) throw Errors.badRequest(`File type .${ext || "?"} is not allowed. Allowed: ${allowed.join(", ")}`);
+  if (ext === "svg" || ext === "html" || ext === "htm" || ext === "js") throw Errors.badRequest("This file type is not allowed");
+  assertDeclaredMimeMatches(file.type, ext);
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const sig = detectSignature(buffer);
@@ -249,7 +298,6 @@ export async function validateUpload(file: File, limits: UploadLimits = {}): Pro
   if (expectedByExt && sig !== expectedByExt) {
     throw Errors.badRequest("File content does not match its extension");
   }
-  if (ext === "svg" || ext === "html" || ext === "js") throw Errors.badRequest("This file type is not allowed");
 
   const mimeType = MIME_BY_EXT[ext] ?? "application/octet-stream";
   return { buffer, name: originalName, ext, mimeType, size: buffer.length };

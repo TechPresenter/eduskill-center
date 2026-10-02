@@ -1,12 +1,8 @@
 import { apiHandler, parseQuery } from "@/lib/api/handler";
 import { listTrainers, trainerListSchema } from "@/server/trainers";
 import { audit } from "@/lib/audit";
+import { csvFromRecords } from "@/lib/csv";
 import { titleCase } from "@/lib/utils";
-
-function csvCell(v: unknown) {
-  const s = v === null || v === undefined ? "" : String(v);
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
 
 /** CSV export of trainers using the same filters as the list (max 5000 rows). */
 export const GET = apiHandler({ permission: "trainers.export" }, async ({ req, user, ip, userAgent }) => {
@@ -35,8 +31,7 @@ export const GET = apiHandler({ permission: "trainers.export" }, async ({ req, u
     }
     if (page >= res.meta.totalPages) break;
   }
-  const headers = rows[0] ? Object.keys(rows[0]) : ["trainerId"];
-  const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => csvCell(r[h])).join(","))].join("\r\n");
+  const csv = csvFromRecords(rows, ["trainerId"]);
   await audit({ user: user!, action: "export", module: "trainers", recordType: "Trainer", description: `${user!.name} exported ${rows.length} trainers to CSV`, newValue: q, ip, userAgent });
   return new Response(csv, {
     headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="trainers-${new Date().toISOString().slice(0, 10)}.csv"` },

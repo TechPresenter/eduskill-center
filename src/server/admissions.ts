@@ -8,6 +8,7 @@ import { assertBatchHasSeat, formatSchedule } from "@/server/batches";
 import { recomputeProgress } from "@/server/progress";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid, optionalDate, optionalBool } from "@/lib/api/query";
 import { z } from "zod";
+import { csvCell as safeCsvCell } from "@/lib/csv";
 
 export interface Ctx {
   user: AuditActor;
@@ -274,8 +275,9 @@ export type CsvCell = string | number | boolean | Date | null | undefined;
 function csvCell(v: CsvCell): string {
   if (v === null || v === undefined) return "";
   if (v instanceof Date) return formatDate(v, "yyyy-MM-dd");
-  const s = typeof v === "boolean" ? (v ? "Yes" : "No") : String(v);
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  if (typeof v === "number") return String(v);
+  // Text goes through the shared writer, which also defuses spreadsheet formulas (=, +, -, @).
+  return safeCsvCell(typeof v === "boolean" ? (v ? "Yes" : "No") : v);
 }
 
 export function toCsv(headers: string[], rows: CsvCell[][]): string {

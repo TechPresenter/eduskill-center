@@ -22,11 +22,23 @@ export interface AuditInput {
   userAgent?: string | null;
 }
 
+/**
+ * Keys whose values never belong in an audit row, wherever they appear in oldValue/newValue:
+ * password and code hashes, authenticator secrets, tokens, raw codes and credentials. Audit rows
+ * are readable by staff with audit_logs.view, so a record dumped whole (e.g. `include: { user }`)
+ * must not leak them.
+ */
+const SENSITIVE_KEY = /(password|passwordhash|hash$|secret|token|totp|backupcodes?|codehash|otp|credentials?|apikey|api_key|smtppass)/i;
+export const AUDIT_REDACTED = "[redacted]";
+
 function toJson(value: unknown): Prisma.InputJsonValue | undefined {
   if (value === undefined || value === null) return undefined;
   try {
     return JSON.parse(
-      JSON.stringify(value, (_k, v) => (typeof v === "bigint" ? v.toString() : v))
+      JSON.stringify(value, (k, v) => {
+        if (k && SENSITIVE_KEY.test(k) && v !== null && v !== undefined && v !== "") return AUDIT_REDACTED;
+        return typeof v === "bigint" ? v.toString() : v;
+      })
     ) as Prisma.InputJsonValue;
   } catch {
     return undefined;

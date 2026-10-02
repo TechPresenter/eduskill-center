@@ -4,11 +4,17 @@ import { createHash, randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
 import { BASE_PATH } from "@/lib/base-path";
 import type { UserRole, TrainerStatus, TrainerLevel } from "@/generated/prisma/enums";
+import { adminIdleMs, adminSessionMs, adminTwoFactorRequired, isAdminRole } from "@/lib/auth/policy";
 
 export const SESSION_COOKIE = "esk_session";
 const SESSION_DAYS = 7;
 const REMEMBER_DAYS = 30;
 const TOUCH_INTERVAL_MS = 5 * 60 * 1000;
+/** Administrators are touched every minute so the inactivity limit is accurate to a minute. */
+const ADMIN_TOUCH_INTERVAL_MS = 60 * 1000;
+
+/** How a session was signed in. Stored on the session and in login history. */
+export type AuthMethod = "PASSWORD" | "EMAIL_OTP" | "SMS_OTP" | "REGISTER" | "RECOVERY";
 
 export interface AuthUser {
   id: string;
@@ -23,29 +29,62 @@ export interface AuthUser {
   student: { id: string; studentId: string | null; profileCompleted: boolean } | null;
   trainer: { id: string; trainerId: string; status: TrainerStatus; level: TrainerLevel } | null;
   sessionId: string;
+  /** Sign-in security of THIS session (administrators). */
+  security: {
+    twoFactorEnabled: boolean;
+    /** A second factor was verified for this session. */
+    mfa: boolean;
+    authMethod: string | null;
+    /** Tier of the staff member's role (1 Admin, 2 Manager, 3 Staff); 0 for a Super Admin. */
+    tier: number;
+  };
 }
 
 export function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
+/**
+ * Mints a NEW session token. Every sign-in (and every completed second factor) creates a fresh
+ * token rather than upgrading an existing one, so a token that existed before sign-in can never
+ * become privileged (session fixation).
+ *
+ * Administrator sessions ignore "remember me": they last at most ADMIN_SESSION_HOURS and end after
+ * ADMIN_IDLE_MINUTES of inactivity (see resolveSessionByToken).
+ */
 export async function createSession(
   userId: string,
-  opts: { ip?: string | null; userAgent?: string | null; remember?: boolean } = {}
+  opts: {
+    ip?: string | null;
+    userAgent?: string | null;
+    remember?: boolean;
+    /** The account's role; administrators get the short admin lifetime. */
+    role?: UserRole;
+    authMethod?: AuthMethod;
+    /** True only when a second factor was verified in this sign-in. */
+    mfa?: boolean;
+    deviceIdHash?: string | null;
+  } = {}
 ) {
   const token = randomBytes(32).toString("base64url");
-  const days = opts.remember ? REMEMBER_DAYS : SESSION_DAYS;
-  const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-  await db.session.create({
+  const lifetimeMs = isAdminRole(opts.role)
+    ? adminSessionMs()
+    : (opts.remember ? REMEMBER_DAYS : SESSION_DAYS) * 24 * 60 * 60 * 1000;
+  const expiresAt = new Date(Date.now() + lifetimeMs);
+  const session = await db.session.create({
     data: {
       userId,
       tokenHash: hashToken(token),
       ip: opts.ip ?? null,
       userAgent: opts.userAgent?.slice(0, 500) ?? null,
       expiresAt,
+      authMethod: opts.authMethod ?? null,
+      mfaAt: opts.mfa ? new Date() : null,
+      deviceIdHash: opts.deviceIdHash ?? null,
     },
+    select: { id: true },
   });
-  return { token, expiresAt };
+  return { token, expiresAt, sessionId: session.id };
 }
 
 /**
@@ -103,7 +142,22 @@ export async function resolveSessionByToken(token: string): Promise<AuthUser | n
   const u = session.user;
   if (u.status !== "ACTIVE" || u.deletedAt) return null;
 
-  if (Date.now() - session.lastSeenAt.getTime() > TOUCH_INTERVAL_MS) {
+  const admin = isAdminRole(u.role);
+  const idleFor = Date.now() - session.lastSeenAt.getTime();
+  if (admin) {
+    // Single choke point for administrator session policy: every page, API route and file download
+    // resolves the session here, so a rule enforced here cannot be bypassed by a route that forgot.
+    if (idleFor > adminIdleMs()) {
+      // Inactivity timeout: the session ends for good, not just for this request.
+      await db.session.updateMany({ where: { id: session.id, revokedAt: null }, data: { revokedAt: new Date() } }).catch(() => undefined);
+      return null;
+    }
+    // 2FA: an administrator who has an authenticator (or must have one) needs a session that
+    // verified it. Sessions signed in before 2FA was switched on fail closed and sign in again.
+    if (!session.mfaAt && (u.totpEnabledAt || (await adminTwoFactorRequired()))) return null;
+  }
+
+  if (idleFor > (admin ? ADMIN_TOUCH_INTERVAL_MS : TOUCH_INTERVAL_MS)) {
     void db.session
       .update({ where: { id: session.id }, data: { lastSeenAt: new Date() } })
       .catch(() => undefined);
@@ -139,6 +193,12 @@ export async function resolveSessionByToken(token: string): Promise<AuthUser | n
     student: u.student,
     trainer: u.trainer,
     sessionId: session.id,
+    security: {
+      twoFactorEnabled: !!u.totpEnabledAt,
+      mfa: !!session.mfaAt,
+      authMethod: session.authMethod,
+      tier: u.role === "SUPER_ADMIN" ? 0 : (u.staff && !u.staff.deletedAt ? (u.staff.role?.level ?? 3) : 3),
+    },
   };
 }
 
@@ -157,10 +217,25 @@ export async function revokeSessionByToken(token: string) {
 }
 
 export async function revokeAllSessions(userId: string, exceptSessionId?: string) {
-  await db.session.updateMany({
+  const res = await db.session.updateMany({
     where: { userId, revokedAt: null, ...(exceptSessionId ? { id: { not: exceptSessionId } } : {}) },
     data: { revokedAt: new Date() },
   });
+  return res.count;
+}
+
+/** Ends one session. With `userId`, only if it belongs to that user (no revoking someone else's by id). */
+export async function revokeSessionById(sessionId: string, userId?: string) {
+  const res = await db.session.updateMany({
+    where: { id: sessionId, revokedAt: null, ...(userId ? { userId } : {}) },
+    data: { revokedAt: new Date() },
+  });
+  return res.count;
+}
+
+/** Keeps an administrator session alive (the idle timer's "Stay signed in"). */
+export async function touchSession(sessionId: string) {
+  await db.session.updateMany({ where: { id: sessionId, revokedAt: null }, data: { lastSeenAt: new Date() } });
 }
 
 /**

@@ -28,6 +28,8 @@ export const PERMISSION_MODULES = [
   { key: "roles", label: "Roles & Permissions", actions: ["view", "create", "update", "delete"] },
   { key: "settings", label: "Settings", actions: ["view", "update"] },
   { key: "audit_logs", label: "Audit Logs", actions: ["view"] },
+  { key: "security", label: "Security Center", actions: ["view", "manage"] },
+  { key: "email", label: "Send Email", actions: ["view", "send", "templates"] },
   { key: "support", label: "Support Tickets & Enquiries", actions: ["view", "respond"] },
   { key: "donations", label: "Donations & Campaigns", actions: ["view", "update"] },
 ] as const;
@@ -59,6 +61,7 @@ const ACTION_LABELS: Record<string, string> = {
   send: "Send",
   templates: "Manage Templates",
   respond: "Respond",
+  manage: "Manage",
 };
 
 export const ALL_PERMISSIONS: PermissionDef[] = PERMISSION_MODULES.flatMap((m) =>
@@ -84,6 +87,7 @@ export function hasAllPermissions(
 ): boolean {
   if (!user) return false;
   if (user.role === "SUPER_ADMIN" || user.permissions.includes("*")) return true;
+  if (user.role !== "STAFF") return false;
   return required.every((k) => user.permissions.includes(k));
 }
 
@@ -91,8 +95,57 @@ export function isAdminRole(role: UserRole | undefined | null) {
   return role === "SUPER_ADMIN" || role === "STAFF";
 }
 
-/** Default Foundation Staff roles created by the seed. Super Admin can edit them freely. */
-export const DEFAULT_STAFF_ROLES: { name: string; slug: string; description: string; permissions: string[] }[] = [
+/** Staff tiers. A member acts only on staff of a lower tier (higher number); never on a Super Admin. */
+export const STAFF_TIERS = [
+  { level: 1, label: "Admin" },
+  { level: 2, label: "Manager" },
+  { level: 3, label: "Staff" },
+] as const;
+
+export function tierLabel(level: number | null | undefined): string {
+  return STAFF_TIERS.find((t) => t.level === level)?.label ?? "Staff";
+}
+
+/** Permissions every tier preset leaves to the Super Admin alone. */
+const SUPER_ADMIN_ONLY = new Set(["users.create", "users.delete", "roles.create", "roles.update", "roles.delete", "settings.update", "security.manage"]);
+
+/**
+ * The three tier presets (Admin / Manager / Staff) plus the department roles. Super Admin can edit
+ * all of them freely; the tier (`level`) decides who may act on whom.
+ */
+export const DEFAULT_STAFF_ROLES: { name: string; slug: string; description: string; level?: number; permissions: string[] }[] = [
+  {
+    name: "Admin",
+    slug: "admin",
+    level: 1,
+    description: "Senior administrator: every module, the Security Center (view) and audit logs. Cannot manage roles, settings or other administrators' security — those stay with the Super Admin.",
+    permissions: ALL_PERMISSIONS.map((p) => p.key).filter((k) => !SUPER_ADMIN_ONLY.has(k)),
+  },
+  {
+    name: "Manager",
+    slug: "manager",
+    level: 2,
+    description: "Runs day-to-day operations: centres, courses, batches, applications, admissions, payments, certificates and reports.",
+    permissions: [
+      "dashboard.view", "locations.view", "centers.view", "centers.create", "centers.update", "centers.verify",
+      "students.view", "students.update", "students.export", "trainers.view", "trainers.update", "trainers.assign",
+      "centre_applications.view", "centre_applications.update", "courses.view", "courses.update", "batches.view", "batches.create",
+      "batches.update", "applications.view", "applications.update", "applications.approve", "applications.reject", "admissions.view",
+      "admissions.update", "admissions.approve", "payments.view", "payments.verify", "scholarships.view", "scholarships.approve",
+      "attendance.view", "progress.view", "certificates.view", "certificates.issue", "reports.view", "reports.export",
+      "notifications.view", "notifications.send", "support.view", "support.respond",
+    ],
+  },
+  {
+    name: "Staff",
+    slug: "staff",
+    level: 3,
+    description: "Front-line staff: view records and handle support. Add more permissions per person as needed.",
+    permissions: [
+      "dashboard.view", "students.view", "applications.view", "admissions.view", "centers.view", "courses.view", "batches.view",
+      "attendance.view", "support.view", "support.respond",
+    ],
+  },
   {
     name: "Admissions Staff",
     slug: "admissions-staff",

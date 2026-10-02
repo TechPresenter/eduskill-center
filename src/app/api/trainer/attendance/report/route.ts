@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiHandler, parseQuery } from "@/lib/api/handler";
+import { csvCell } from "@/lib/csv";
 import { uuid } from "@/lib/validation/common";
 import { assertBatchAccess, batchAttendanceReport } from "@/server/attendance";
 import { isoDay, myBatch, trainerOf, utcToday } from "@/server/trainer-scope";
@@ -20,11 +21,6 @@ function rangeFor(range: "week" | "month" | "all"): { from?: Date; to?: Date } {
   }
   if (range === "month") return { from: new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)), to };
   return {};
-}
-
-function csvCell(v: unknown): string {
-  const s = v === null || v === undefined ? "" : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 /** GET /api/trainer/attendance/report?batchId=&range=week|month|all&format=json|csv */

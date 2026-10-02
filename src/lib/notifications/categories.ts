@@ -42,6 +42,16 @@ export const EVENT_CATEGORY = {
   TRAINER_APPROVED: "System",
   CENTRE_APPLICATION_SUBMITTED: "Application",
   CENTRE_APPLICATION_STATUS: "Application",
+  ADMIN_LOGIN_OTP: "System",
+  EMAIL_CHANGE_OTP: "System",
+  NEW_DEVICE_LOGIN: "System",
+  TWO_FACTOR_ENABLED: "System",
+  TWO_FACTOR_DISABLED: "System",
+  TWO_FACTOR_RESET: "System",
+  BACKUP_CODES_REGENERATED: "System",
+  BACKUP_CODE_USED: "System",
+  LOGIN_EMAIL_CHANGED: "System",
+  SECURITY_ALERT: "System",
 } satisfies Record<NotifyEvent, NotificationCategory>;
 
 export type CategorisedEvent = keyof typeof EVENT_CATEGORY;

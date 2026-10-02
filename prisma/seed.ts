@@ -90,17 +90,15 @@ async function seedPermissionsAndRoles() {
   const perms = await db.permission.findMany({ select: { id: true, key: true } });
   const permId = new Map(perms.map((p) => [p.key, p.id]));
 
-  await db.role.upsert({
-    where: { slug: "super-admin" },
-    create: { name: "Super Admin", slug: "super-admin", description: "Full control of the platform.", isSystem: true },
-    update: {},
-  });
+  // The Super Admin is a USER role (UserRole.SUPER_ADMIN), not a staff Role. An older seed created
+  // a "Super Admin" staff role, which could be assigned to ordinary staff and looked like a promotion;
+  // staff.ts refuses to assign it and it is no longer created.
 
   for (const role of DEFAULT_STAFF_ROLES) {
     const r = await db.role.upsert({
       where: { slug: role.slug },
-      create: { name: role.name, slug: role.slug, description: role.description, isSystem: true },
-      update: { description: role.description },
+      create: { name: role.name, slug: role.slug, description: role.description, isSystem: true, level: role.level ?? 3 },
+      update: { description: role.description, ...(role.level ? { level: role.level } : {}) },
     });
     const existing = await db.rolePermission.count({ where: { roleId: r.id } });
     if (existing === 0) {
@@ -114,7 +112,14 @@ async function seedPermissionsAndRoles() {
 }
 
 async function seedSuperAdmin() {
-  const email = process.env.SEED_SUPER_ADMIN_EMAIL ?? "superadmin@eduskillindia.org";
+  // A Super Admin that already exists (under any address) is never duplicated: the address may have
+  // been changed since the first seed, and a second Super Admin with a password would be a backdoor.
+  const anySuperAdmin = await db.user.findFirst({ where: { role: "SUPER_ADMIN", deletedAt: null }, orderBy: { createdAt: "asc" } });
+  if (anySuperAdmin) {
+    log(`super admin exists (${anySuperAdmin.email ?? anySuperAdmin.id})`);
+    return anySuperAdmin;
+  }
+  const email = process.env.SEED_SUPER_ADMIN_EMAIL ?? "info@eduskillindia.com";
   // The built-in password is a local-development convenience and is published in the README, so it
   // must never reach a real deployment. Against any non-local database, SEED_SUPER_ADMIN_PASSWORD
   // is required rather than defaulted.
@@ -136,7 +141,8 @@ async function seedSuperAdmin() {
   await db.staff.create({
     data: { userId: user.id, employeeCode: await generateEmployeeCode(), designation: "Super Administrator", department: "Foundation" },
   });
-  log(`super admin created: ${email} / ${password}`);
+  // The password is never printed: it came from the environment (or is the local-dev default).
+  log(`super admin created: ${email}`);
   return user;
 }
 

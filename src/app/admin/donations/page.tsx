@@ -21,6 +21,12 @@ export const metadata = { title: "Donations" };
 
 const STATUS_TILE: Record<string, TileTone> = { COMPLETED: "success", PENDING: "warning", FAILED: "danger" };
 
+/** A PAN is a tax identifier: the list shows only its last 4 characters (ABCDE1234F → ••••••234F). */
+function maskPan(pan: string): string {
+  const v = pan.replace(/\s+/g, "");
+  return v.length <= 4 ? "••••" : `${"•".repeat(Math.min(v.length - 4, 6))}${v.slice(-4)}`;
+}
+
 export default async function DonationsPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
   const user = await requireAdmin("donations.view");
   const sp = flattenSearchParams(await searchParams);
@@ -155,7 +161,7 @@ export default async function DonationsPage({ searchParams }: { searchParams: Pr
                         <TD>
                           <span className="block font-medium">{d.donorDisplay}</span>
                           {!d.isAnonymous && <span className="block text-caption font-normal text-muted">{[d.email, d.mobile].filter(Boolean).join(" · ") || "—"}</span>}
-                          {d.pan && !d.isAnonymous && <span className="block text-caption font-normal text-muted">PAN {d.pan}</span>}
+                          {d.pan && !d.isAnonymous && <span className="block text-caption font-normal text-muted">PAN <span className="font-mono">{maskPan(d.pan)}</span></span>}
                         </TD>
                         <TD>{d.campaign?.title ?? <span className="text-caption text-muted">General fund</span>}</TD>
                         <TD className="text-right font-semibold text-navy tabular-nums">{formatINR(d.amount)}</TD>

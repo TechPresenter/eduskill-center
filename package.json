@@ -25,7 +25,9 @@
     "content:education": "tsx scripts/apply-education-categories.ts",
     "content:fees": "tsx scripts/apply-monthly-fees.ts",
     "content:programs": "tsx scripts/apply-skill-ai-programs.ts",
-    "content:course-cover": "tsx scripts/apply-course-cover.ts"
+    "content:course-cover": "tsx scripts/apply-course-cover.ts",
+    "security:migrate": "tsx scripts/apply-admin-security.ts",
+    "security:recovery": "tsx scripts/admin-recovery.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1135.0",
@@ -50,6 +52,7 @@
     "react-dom": "19.2.8",
     "react-hook-form": "^7.88.0",
     "recharts": "^3.10.1",
+    "sanitize-html": "^2.18.0",
     "sharp": "^0.35.4",
     "tailwind-merge": "^3.7.0",
     "zod": "^4.6.5"
@@ -65,6 +68,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/sanitize-html": "^2.16.2",
     "dotenv": "^18.0.0",
     "embedded-postgres": "^17.10.0-beta.17",
     "eslint": "^9",

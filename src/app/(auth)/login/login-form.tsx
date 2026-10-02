@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User } from "lucide-react";
+import { ShieldCheck, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/form";
@@ -38,6 +38,8 @@ export function LoginForm({
   method?: LoginMethod;
 }) {
   const [method, setMethod] = useState<LoginMethod>(initialMethod);
+  // Carry an /admin destination across, so a bounced admin lands where they were going.
+  const adminLoginHref = next && /^\/admin(\/|$|\?)/.test(next) ? `/login/admin?next=${encodeURIComponent(next)}` : "/login/admin";
 
   return (
     <AuthCard
@@ -90,6 +92,14 @@ export function LoginForm({
       <div role="tabpanel" aria-label="Log in with admission number" hidden={method !== "admission"}>
         <AdmissionLogin next={next} onUsePassword={() => setMethod("password")} />
       </div>
+
+      <p className="text-body-sm mt-5 flex flex-wrap items-center justify-center gap-x-1.5 border-t border-line pt-4 text-center text-muted">
+        <ShieldCheck className="h-4 w-4 shrink-0 text-navy" aria-hidden />
+        Administrator?
+        <Link href={adminLoginHref} className="ring-focus inline-flex min-h-11 items-center rounded-xs font-semibold text-navy hover:underline">
+          Use Secure Admin Login
+        </Link>
+      </p>
     </AuthCard>
   );
 }
@@ -110,7 +120,13 @@ function PasswordLogin({ next }: { next?: string }) {
     setFieldErrors({});
     setLoading(true);
     try {
-      const data = await api.post<{ redirect: string }>("/api/auth/login", { identifier, password, remember, next });
+      const data = await api.post<{ redirect: string; mfaRequired?: boolean }>("/api/auth/login", { identifier, password, remember, next });
+      if (data.mfaRequired) {
+        // An administrator whose password checked out: no session yet. Secure Admin Login picks the
+        // sign-in up at the authenticator step (the server set the challenge cookie).
+        router.replace(data.redirect);
+        return;
+      }
       router.replace(data.redirect);
       router.refresh();
     } catch (err) {

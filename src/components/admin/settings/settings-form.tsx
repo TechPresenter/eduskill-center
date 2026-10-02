@@ -24,6 +24,8 @@ export interface SettingFieldDef {
   secret: boolean;
   isPublic: boolean;
   defaultValue: unknown;
+  /** `isSuperAdminOnlySetting(key)`: shown read-only to everyone but a Super Admin (the API refuses it too). */
+  superAdminOnly?: boolean;
 }
 
 const MASK = "••••••••";
@@ -38,12 +40,35 @@ function toState(fields: SettingFieldDef[], values: Record<string, unknown>) {
   return out;
 }
 
-export function SettingsForm({ group, groupLabel, fields, values, canUpdate, defaultTestEmail }: { group: string; groupLabel: string; fields: SettingFieldDef[]; values: Record<string, unknown>; canUpdate: boolean; defaultTestEmail: string }) {
+export function SettingsForm({
+  group,
+  groupLabel,
+  fields,
+  values,
+  canUpdate,
+  isSuperAdmin = false,
+  defaultTestEmail,
+}: {
+  group: string;
+  groupLabel: string;
+  fields: SettingFieldDef[];
+  values: Record<string, unknown>;
+  canUpdate: boolean;
+  /** Super-Admin-only fields are editable only when this is true. */
+  isSuperAdmin?: boolean;
+  defaultTestEmail: string;
+}) {
   const router = useRouter();
   const { loading, error, fieldErrors, submit, clearField } = useApiForm();
   const [state, setState] = React.useState(() => toState(fields, values));
   const [saved, setSaved] = React.useState(() => toState(fields, values));
   const [reveal, setReveal] = React.useState<Record<string, boolean>>({});
+  const lockedFor = (f: SettingFieldDef) => !!f.superAdminOnly && !isSuperAdmin;
+  const hasLocked = canUpdate && fields.some(lockedFor);
+  const editable = canUpdate && fields.some((f) => !lockedFor(f));
+  // Badge Super-Admin-only fields only where the group mixes them with ordinary ones (Email Signature & Limits);
+  // on an all-Super-Admin page such as Communication a badge on every field says nothing.
+  const mixedGroup = fields.some((f) => f.superAdminOnly) && fields.some((f) => !f.superAdminOnly);
   const dirty = fields.some((f) => state[f.key] !== saved[f.key]);
   const set = (key: string, v: string | boolean) => {
     setState((s) => ({ ...s, [key]: v }));
@@ -54,7 +79,7 @@ export function SettingsForm({ group, groupLabel, fields, values, canUpdate, def
     e.preventDefault();
     const changed: Record<string, unknown> = {};
     for (const f of fields) {
-      if (state[f.key] === saved[f.key]) continue;
+      if (state[f.key] === saved[f.key] || lockedFor(f)) continue;
       const v = state[f.key];
       if (f.secret && v === MASK) continue;
       changed[f.key] = f.type === "number" ? (v === "" ? "" : Number(v)) : v;
@@ -73,13 +98,25 @@ export function SettingsForm({ group, groupLabel, fields, values, canUpdate, def
     <form onSubmit={onSubmit} className="space-y-6" noValidate>
       {error && Object.keys(fieldErrors).length === 0 && <Alert tone="danger">{error}</Alert>}
       {!canUpdate && <Alert tone="info">You can view these settings but need the “Edit Settings” permission to change them.</Alert>}
+      {hasLocked && (
+        <Alert tone="info" title="Some settings are Super Admin only">
+          Fields marked “Super Admin only” are shown read-only. They control email delivery, sending limits or sign-in security, so only a Super Admin can change them.
+        </Alert>
+      )}
       <FormGrid>
         {fields.map((f) => {
           const id = `set-${f.key.replace(/\./g, "-")}`;
           const value = state[f.key];
+          const locked = lockedFor(f);
+          const off = !canUpdate || loading || locked;
           const label = (
             <span className="inline-flex flex-wrap items-center gap-1.5">
               {f.label}
+              {f.superAdminOnly && (locked || mixedGroup) && (
+                <Badge tone={locked ? "neutral" : "warning"} className="text-caption">
+                  Super Admin only
+                </Badge>
+              )}
               {f.isPublic && (
                 <Badge tone="info" className="text-caption">
                   Public
@@ -96,24 +133,24 @@ export function SettingsForm({ group, groupLabel, fields, values, canUpdate, def
           if (f.type === "boolean") {
             return (
               <div key={f.key} className="flex items-start pt-1 sm:col-span-2">
-                <Checkbox id={id} checked={value === true} onChange={(e) => set(f.key, e.target.checked)} disabled={!canUpdate || loading} label={label} description={f.help ?? undefined} />
+                <Checkbox id={id} checked={value === true} onChange={(e) => set(f.key, e.target.checked)} disabled={off} label={label} description={f.help ?? undefined} />
               </div>
             );
           }
           return (
             <Field key={f.key} label={label} htmlFor={id} error={fieldErrors[f.key]} hint={f.help ?? undefined} className={wide ? "sm:col-span-2" : undefined}>
               {f.type === "textarea" ? (
-                <Textarea id={id} value={String(value ?? "")} onChange={(e) => set(f.key, e.target.value)} rows={3} disabled={!canUpdate || loading} invalid={!!fieldErrors[f.key]} />
+                <Textarea id={id} value={String(value ?? "")} onChange={(e) => set(f.key, e.target.value)} rows={3} disabled={off} invalid={!!fieldErrors[f.key]} />
               ) : f.type === "select" ? (
-                <Select id={id} value={String(value ?? "")} onChange={(e) => set(f.key, e.target.value)} options={f.options ?? []} disabled={!canUpdate || loading} invalid={!!fieldErrors[f.key]} />
+                <Select id={id} value={String(value ?? "")} onChange={(e) => set(f.key, e.target.value)} options={f.options ?? []} disabled={off} invalid={!!fieldErrors[f.key]} />
               ) : f.type === "image" ? (
-                <ImageField value={String(value ?? "")} onChange={(url) => set(f.key, url)} folder={`settings/${group}`} disabled={!canUpdate || loading} />
+                <ImageField value={String(value ?? "")} onChange={(url) => set(f.key, url)} folder={`settings/${group}`} disabled={off} />
               ) : f.type === "number" ? (
-                <Input id={id} type="number" value={String(value ?? "")} onChange={(e) => set(f.key, e.target.value)} disabled={!canUpdate || loading} invalid={!!fieldErrors[f.key]} />
+                <Input id={id} type="number" value={String(value ?? "")} onChange={(e) => set(f.key, e.target.value)} disabled={off} invalid={!!fieldErrors[f.key]} />
               ) : f.type === "color" ? (
                 <div className="flex items-center gap-2">
-                  <input type="color" aria-label={`${f.label} colour`} value={/^#[0-9a-f]{6}$/i.test(String(value)) ? String(value) : "#000000"} onChange={(e) => set(f.key, e.target.value)} disabled={!canUpdate || loading} className="h-11 w-14 rounded-lg border border-line" />
-                  <Input id={id} value={String(value ?? "")} onChange={(e) => set(f.key, e.target.value)} disabled={!canUpdate || loading} invalid={!!fieldErrors[f.key]} className="font-mono" />
+                  <input type="color" aria-label={`${f.label} colour`} value={/^#[0-9a-f]{6}$/i.test(String(value)) ? String(value) : "#000000"} onChange={(e) => set(f.key, e.target.value)} disabled={off} className="h-11 w-14 rounded-lg border border-line" />
+                  <Input id={id} value={String(value ?? "")} onChange={(e) => set(f.key, e.target.value)} disabled={off} invalid={!!fieldErrors[f.key]} className="font-mono" />
                 </div>
               ) : f.secret ? (
                 <div className="flex gap-2">
@@ -126,7 +163,7 @@ export function SettingsForm({ group, groupLabel, fields, values, canUpdate, def
                       if (value === MASK) set(f.key, "");
                     }}
                     placeholder={saved[f.key] === MASK ? "Stored – type to replace" : "Not set"}
-                    disabled={!canUpdate || loading}
+                    disabled={off}
                     invalid={!!fieldErrors[f.key]}
                     autoComplete="off"
                   />
@@ -140,13 +177,13 @@ export function SettingsForm({ group, groupLabel, fields, values, canUpdate, def
                   )}
                 </div>
               ) : (
-                <Input id={id} value={String(value ?? "")} onChange={(e) => set(f.key, e.target.value)} disabled={!canUpdate || loading} invalid={!!fieldErrors[f.key]} />
+                <Input id={id} value={String(value ?? "")} onChange={(e) => set(f.key, e.target.value)} disabled={off} invalid={!!fieldErrors[f.key]} />
               )}
             </Field>
           );
         })}
       </FormGrid>
-      {canUpdate && (
+      {editable && (
         <FormActions>
           {group === "comms" && <TestEmailButton defaultTo={defaultTestEmail} disabled={dirty} />}
           <Button type="button" variant="outline" onClick={() => setState(saved)} disabled={!dirty || loading}>

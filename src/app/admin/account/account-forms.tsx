@@ -60,8 +60,17 @@ export function ChangePasswordForm() {
 
 export function RevokeOtherSessionsButton({ count }: { count: number }) {
   return (
-    <ConfirmAction method="post" url="/api/admin/account/revoke-sessions" title="Log out other devices?" description={`${count} other active session${count === 1 ? "" : "s"} will be ended. This device stays signed in.`} confirmLabel="Log out others" successMessage="Other devices logged out" variant="outline" size="sm" icon={<LogOut className="h-4 w-4" />} disabled={count === 0}>
-      Log out other devices
+    <ConfirmAction method="post" url="/api/admin/account/revoke-sessions" title="Sign out all other devices?" description={`${count} other active session${count === 1 ? "" : "s"} will be ended. This device stays signed in.`} confirmLabel="Sign out others" successMessage="Other devices signed out" variant="outline" size="sm" icon={<LogOut className="h-4 w-4" />} disabled={count === 0}>
+      Sign out all other devices
+    </ConfirmAction>
+  );
+}
+
+/** Ends one of the administrator's own other sessions. */
+export function SignOutSessionButton({ id, device }: { id: string; device: string }) {
+  return (
+    <ConfirmAction method="delete" url={`/api/admin/account/sessions/${id}`} title="Sign out this device?" description={`${device} will be signed out and will need to sign in again.`} confirmLabel="Sign out" successMessage="Device signed out" variant="outline" size="xs" icon={<LogOut className="h-4 w-4" />}>
+      Sign out<span className="sr-only"> {device}</span>
     </ConfirmAction>
   );
 }

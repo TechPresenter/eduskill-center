@@ -14,6 +14,7 @@ describe("authentication", () => {
     expect(user.student).not.toBeNull();
 
     const result = await login({ identifier: mobile, password: "Secret123", ip: "127.0.0.1", userAgent: "vitest" });
+    if (result.kind !== "session") throw new Error("expected a session");
     expect(result.token).toBeTruthy();
     const session = await resolveSessionByToken(result.token);
     expect(session?.id).toBe(user.id);
@@ -62,8 +63,9 @@ describe("authentication", () => {
     await db.rolePermission.create({ data: { roleId: role.id, permissionId: view.id } });
     const user = await db.user.create({ data: { name: "Staff Test", email: `${uid("staff")}@test.local`, mobile: `93${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`, passwordHash: await hashPassword("Right123"), role: "STAFF", staff: { create: { employeeCode: uid("EMP").toUpperCase(), roleId: role.id } } }, include: { staff: true } });
     await db.staffPermission.create({ data: { staffId: user.staff!.id, permissionId: approve.id } });
-    const { token } = await login({ identifier: user.email!, password: "Right123" });
-    const session = await resolveSessionByToken(token);
+    const result = await login({ identifier: user.email!, password: "Right123" });
+    if (result.kind !== "session") throw new Error("expected a session");
+    const session = await resolveSessionByToken(result.token);
     expect(session?.permissions.sort()).toEqual(["applications.approve", "students.view"]);
     expect(hasPermission(session, "students.view")).toBe(true);
     expect(hasPermission(session, "payments.verify")).toBe(false);

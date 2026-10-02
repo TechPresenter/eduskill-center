@@ -315,14 +315,31 @@ model User {
   lastLoginAt      DateTime?  @map("last_login_at")
   failedLoginCount Int        @default(0) @map("failed_login_count")
   lockedUntil      DateTime?  @map("locked_until")
-  createdAt        DateTime   @default(now()) @map("created_at")
-  updatedAt        DateTime   @updatedAt @map("updated_at")
-  deletedAt        DateTime?  @map("deleted_at")
+
+  /// Google Authenticator (TOTP) second factor. The secret is AES-256-GCM encrypted with
+  /// DATA_ENCRYPTION_KEY (src/lib/crypto.ts) and is never returned after set-up.
+  totpSecretEnc        String?   @map("totp_secret_enc")
+  totpEnabledAt        DateTime? @map("totp_enabled_at")
+  /// Last accepted 30-second time step, so an authenticator code can never be replayed.
+  totpLastStep         Int?      @map("totp_last_step")
+  /// A secret being enrolled from the account page, until a valid code confirms it.
+  totpPendingSecretEnc String?   @map("totp_pending_secret_enc")
+  totpPendingAt        DateTime? @map("totp_pending_at")
+  /// Wrong second-factor codes across every sign-in attempt; drives an escalating cooldown.
+  mfaFailedCount       Int       @default(0) @map("mfa_failed_count")
+  mfaLockedUntil       DateTime? @map("mfa_locked_until")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
   sessions       Session[]
   loginHistory   LoginHistory[]
   passwordResets PasswordReset[]
   loginOtps      LoginOtp[]
+  authChallenges AuthChallenge[]
+  backupCodes    TwoFactorBackupCode[]
+  securityAlerts SecurityAlert[]
   staff          Staff?
   student        Student?
   trainer        Trainer?
@@ -336,15 +353,22 @@ model User {
 }
 
 model Session {
-  id         String    @id @default(uuid(7)) @db.Uuid
-  userId     String    @map("user_id") @db.Uuid
-  tokenHash  String    @unique @map("token_hash")
-  ip         String?
-  userAgent  String?   @map("user_agent")
-  expiresAt  DateTime  @map("expires_at")
-  revokedAt  DateTime? @map("revoked_at")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  lastSeenAt DateTime  @default(now()) @map("last_seen_at")
+  id           String    @id @default(uuid(7)) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash")
+  ip           String?
+  userAgent    String?   @map("user_agent")
+  expiresAt    DateTime  @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastSeenAt   DateTime  @default(now()) @map("last_seen_at")
+  /// PASSWORD | EMAIL_OTP | SMS_OTP | REGISTER | RECOVERY
+  authMethod   String?   @map("auth_method")
+  /// When a second factor (authenticator code or backup code) was verified for this session.
+  /// An administrator with 2FA switched on cannot use a session without it.
+  mfaAt        DateTime? @map("mfa_at")
+  /// SHA-256 of the long-lived esk_device cookie: device lists and new-device alerts.
+  deviceIdHash String?   @map("device_id_hash")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -354,14 +378,21 @@ model Session {
 }
 
 model LoginHistory {
-  id         String   @id @default(uuid(7)) @db.Uuid
-  userId     String?  @map("user_id") @db.Uuid
-  identifier String
-  success    Boolean
-  reason     String?
-  ip         String?
-  userAgent  String?  @map("user_agent")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id           String   @id @default(uuid(7)) @db.Uuid
+  userId       String?  @map("user_id") @db.Uuid
+  identifier   String
+  success      Boolean
+  reason       String?
+  ip           String?
+  userAgent    String?  @map("user_agent")
+  /// PASSWORD | EMAIL_OTP | SMS_OTP | TOTP | BACKUP_CODE | RECOVERY
+  method       String?
+  deviceIdHash String?  @map("device_id_hash")
+  /// First successful sign-in from this browser for this account.
+  newDevice    Boolean  @default(false) @map("new_device")
+  /// New device AND a network not seen for this account recently.
+  suspicious   Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -383,24 +414,117 @@ model PasswordReset {
   @@map("password_resets")
 }
 
-/// One-time sign-in code for admission-number login. Only a keyed hash of the code is stored;
-/// a code expires after 5 minutes, locks after 5 wrong tries and can be consumed once.
+/// One-time code: admission-number login (STUDENT_LOGIN), administrator email sign-in
+/// (ADMIN_LOGIN) or confirming a new login email (EMAIL_CHANGE). Only a keyed hash of the code is
+/// stored, bound to the purpose, the user and — for admins — the browser's challenge; a code
+/// expires after a few minutes, locks after 5 wrong tries and can be consumed once.
 model LoginOtp {
-  id         String    @id @default(uuid(7)) @db.Uuid
-  userId     String    @map("user_id") @db.Uuid
-  codeHash   String    @map("code_hash")
-  expiresAt  DateTime  @map("expires_at")
-  attempts   Int       @default(0)
-  consumedAt DateTime? @map("consumed_at")
-  ip         String?
-  userAgent  String?   @map("user_agent")
-  createdAt  DateTime  @default(now()) @map("created_at")
+  id          String     @id @default(uuid(7)) @db.Uuid
+  userId      String     @map("user_id") @db.Uuid
+  purpose     OtpPurpose @default(STUDENT_LOGIN)
+  /// The AuthChallenge (admin sign-in) this code belongs to; codes never cross challenges.
+  challengeId String?    @map("challenge_id") @db.Uuid
+  /// The address a code was sent to, for EMAIL_CHANGE (the new login email).
+  target      String?
+  codeHash    String     @map("code_hash")
+  expiresAt   DateTime   @map("expires_at")
+  attempts    Int        @default(0)
+  consumedAt  DateTime?  @map("consumed_at")
+  ip          String?
+  userAgent   String?    @map("user_agent")
+  createdAt   DateTime   @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([challengeId])
   @@index([expiresAt])
   @@map("login_otps")
+}
+
+enum OtpPurpose {
+  STUDENT_LOGIN
+  ADMIN_LOGIN
+  EMAIL_CHANGE
+}
+
+/// An administrator sign-in in progress. The email code and the second factor are completed
+/// against this row, which is bound to one browser by the httpOnly esk_auth cookie. No session
+/// exists until every required factor has passed; the row is then consumed exactly once.
+model AuthChallenge {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  tokenHash        String    @unique @map("token_hash")
+  /// Null for an address that is not an active administrator: the flow still runs (no email is
+  /// sent) so the response never reveals whether an address belongs to an admin.
+  userId           String?   @map("user_id") @db.Uuid
+  purpose          String
+  /// OTP → SECOND_FACTOR | ENROLL → DONE
+  stage            String
+  /// EMAIL_OTP | PASSWORD — how the first factor was proven.
+  firstFactor      String?   @map("first_factor")
+  /// Keyed hash of the address that was typed (rate limits and the masked hint).
+  emailHash        String?   @map("email_hash")
+  emailHint        String?   @map("email_hint")
+  next             String?
+  /// Forced 2FA enrolment inside the sign-in flow: the secret being set up (encrypted).
+  pendingSecretEnc String?   @map("pending_secret_enc")
+  secretShownAt    DateTime? @map("secret_shown_at")
+  attempts         Int       @default(0)
+  /// Emailed-code bookkeeping, kept on the challenge for EVERY address (administrator or not) so the
+  /// resend cooldown, the resend cap, the wrong-code lock and the code expiry answer identically.
+  codesSent        Int       @default(0) @map("codes_sent")
+  codeSentAt       DateTime? @map("code_sent_at")
+  codeAttempts     Int       @default(0) @map("code_attempts")
+  ip               String?
+  userAgent        String?   @map("user_agent")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  expiresAt        DateTime  @map("expires_at")
+  completedAt      DateTime? @map("completed_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("auth_challenges")
+}
+
+/// Single-use recovery codes for the authenticator. Only a keyed hash is stored.
+model TwoFactorBackupCode {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  codeHash  String    @unique @map("code_hash")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("two_factor_backup_codes")
+}
+
+/// Security events surfaced in Admin → Security Center (new-device and suspicious sign-ins,
+/// lockouts, 2FA changes, failed OTP delivery, email-configuration changes).
+model SecurityAlert {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  userId           String?   @map("user_id") @db.Uuid
+  /// e.g. NEW_DEVICE_LOGIN, SUSPICIOUS_LOGIN, ACCOUNT_LOCKED, TWO_FACTOR_RESET, OTP_DELIVERY_FAILED
+  type             String
+  /// info | warning | critical
+  severity         String
+  title            String
+  detail           String?
+  ip               String?
+  userAgent        String?   @map("user_agent")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  acknowledgedAt   DateTime? @map("acknowledged_at")
+  acknowledgedById String?   @map("acknowledged_by_id") @db.Uuid
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([acknowledgedAt])
+  @@index([userId])
+  @@map("security_alerts")
 }
 
 // ───────────────────────────── STAFF / RBAC ─────────────────────────────
@@ -411,6 +535,9 @@ model Role {
   slug        String   @unique
   description String?
   isSystem    Boolean  @default(false) @map("is_system")
+  /// Seniority among Foundation staff: 1 Admin, 2 Manager, 3 Staff. A member can only act on
+  /// staff of a lower tier (a higher number); nobody but a Super Admin acts on a Super Admin.
+  level       Int      @default(3)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -2178,4 +2305,66 @@ model CentreApplicationStatusHistory {
 
   @@index([applicationId])
   @@map("centre_application_status_history")
+}
+
+// ───────────────────────────── MANUAL EMAIL ─────────────────────────────
+
+enum EmailMessageStatus {
+  DRAFT
+  SENDING
+  SENT
+  FAILED
+}
+
+/// An email composed by an administrator in Admin → Send Email: drafts, test sends and the sent
+/// history. The body is stored already sanitised (src/lib/email/sanitize.ts). Attachments are
+/// private files (`private/email/...`) referenced by storage key.
+model EmailMessage {
+  id               String             @id @default(uuid(7)) @db.Uuid
+  status           EmailMessageStatus @default(DRAFT)
+  /// A "Send test email" copy that went only to the sender's chosen test address.
+  isTest           Boolean            @default(false) @map("is_test")
+  toAddresses      String[]           @map("to_addresses")
+  ccAddresses      String[]           @map("cc_addresses")
+  bccAddresses     String[]           @map("bcc_addresses")
+  subject          String
+  html             String
+  /// Plain-text alternative generated from the HTML.
+  text             String?
+  includeSignature Boolean            @default(true) @map("include_signature")
+  /// [{ key, name, size, mimeType }]
+  attachments      Json               @default("[]")
+  fromAddress      String?            @map("from_address")
+  replyTo          String?            @map("reply_to")
+  /// SMTP Message-ID returned by the server.
+  messageId        String?            @map("message_id")
+  error            String?
+  templateId       String?            @map("template_id") @db.Uuid
+  createdById      String             @map("created_by_id") @db.Uuid
+  sentById         String?            @map("sent_by_id") @db.Uuid
+  sentAt           DateTime?          @map("sent_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  deletedAt        DateTime?          @map("deleted_at")
+
+  @@index([status, createdAt])
+  @@index([createdById])
+  @@index([sentAt])
+  @@map("email_messages")
+}
+
+/// Reusable layouts for the manual email composer (not the automatic notification templates).
+model EmailTemplate {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  name        String
+  description String?
+  subject     String
+  html        String
+  isActive    Boolean   @default(true) @map("is_active")
+  createdById String?   @map("created_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  @@map("email_templates")
 }

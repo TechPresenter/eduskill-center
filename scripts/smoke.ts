@@ -4,6 +4,15 @@
  * server-side error markers in the HTML.
  *
  *   npx tsx scripts/smoke.ts [baseUrl]
+ *
+ * Administrators sign in with an email code and, when 2FA is on, an authenticator app — a script
+ * cannot do that. The admin pass therefore uses, in order:
+ *   1. SMOKE_ADMIN_COOKIE="esk_session=<token>" when set, e.g. from the local-only helper:
+ *        SMOKE_ADMIN_COOKIE="$(npx tsx scripts/mint-session.ts info@eduskillindia.com)" npx tsx scripts/smoke.ts
+ *   2. otherwise a password sign-in with SEED_SUPER_ADMIN_EMAIL / SEED_SUPER_ADMIN_PASSWORD, which
+ *      works only while ADMIN_PASSWORD_LOGIN is on and that account has no second factor due.
+ * Every POST carries an Origin header for the base URL: /api/auth and /api/admin refuse a
+ * state-changing request without one (CSRF rule in src/lib/api/handler.ts).
  */
 import "dotenv/config";
 
@@ -24,12 +33,20 @@ const BASE_PREFIX = (() => {
 const urlFor = (route: string) => (route === "/" && BASE_PREFIX ? BASE : `${BASE}${route}`);
 const stripPrefix = (p: string) => (BASE_PREFIX && (p === BASE_PREFIX || p.startsWith(`${BASE_PREFIX}/`)) ? p.slice(BASE_PREFIX.length) || "/" : p);
 const DEMO_PASSWORD = "Demo@1234";
+/** Origin of the base URL ("http://localhost:3000" for ".../center"): what a browser sends on a POST. */
+const ORIGIN = (() => {
+  try {
+    return new URL(BASE).origin;
+  } catch {
+    return BASE;
+  }
+})();
 
 const PUBLIC_ROUTES = [
   "/", "/about", "/programs", "/courses", "/training-centers", "/become-a-trainer", "/become-a-trainer/apply", "/become-a-trainer/status",
   "/open-a-centre", "/open-a-centre/apply", "/open-a-centre/status",
   "/scholarship", "/success-stories", "/contact", "/verify-certificate", "/blog", "/events", "/gallery", "/faq", "/donate",
-  "/privacy-policy", "/terms", "/refund-policy", "/disclaimer", "/login", "/register", "/forgot-password", "/sitemap.xml", "/robots.txt",
+  "/privacy-policy", "/terms", "/refund-policy", "/disclaimer", "/login", "/login/admin", "/register", "/forgot-password", "/sitemap.xml", "/robots.txt",
   "/manifest.webmanifest", "/api/public/locations", "/api/public/courses", "/api/public/centers", "/api/public/centers/map", "/api/public/stats",
 ];
 
@@ -49,7 +66,9 @@ const ADMIN_ROUTES = [
   "/admin/students", "/admin/applications", "/admin/admissions", "/admin/payments", "/admin/scholarships", "/admin/attendance", "/admin/progress",
   "/admin/certificates", "/admin/trainer-applications", "/admin/trainers", "/admin/centre-applications", "/admin/reports", "/admin/cms", "/admin/gallery", "/admin/blog", "/admin/events",
   "/admin/faqs", "/admin/donations", "/admin/notifications", "/admin/support", "/admin/staff", "/admin/roles", "/admin/permissions", "/admin/settings",
-  "/admin/audit-logs", "/admin/account",
+  "/admin/audit-logs", "/admin/account", "/admin/account/security",
+  "/admin/security", "/admin/security/sessions", "/admin/security/activity", "/admin/security/admins", "/admin/security/alerts",
+  "/admin/email", "/admin/email/history", "/admin/email/drafts", "/admin/email/templates",
 ];
 
 interface Result {
@@ -59,17 +78,43 @@ interface Result {
   problem?: string;
 }
 
-async function login(identifier: string, password: string): Promise<string> {
+/** Password sign-in. `mfaRequired` means the account is an administrator who still owes a second factor. */
+async function tryLogin(identifier: string, password: string): Promise<{ cookie: string } | { mfaRequired: true } | { error: string }> {
   const res = await fetch(`${BASE}/api/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Origin: BASE },
+    headers: { "Content-Type": "application/json", Origin: ORIGIN },
     body: JSON.stringify({ identifier, password }),
   });
-  if (!res.ok) throw new Error(`Login failed for ${identifier}: ${res.status} ${await res.text()}`);
-  const cookie = res.headers.get("set-cookie") ?? "";
-  const match = cookie.match(/esk_session=([^;]+)/);
-  if (!match) throw new Error("No session cookie returned");
-  return `esk_session=${match[1]}`;
+  const text = await res.text();
+  if (!res.ok) return { error: `${res.status} ${text.slice(0, 300)}` };
+  try {
+    if ((JSON.parse(text) as { data?: { mfaRequired?: boolean } }).data?.mfaRequired) return { mfaRequired: true };
+  } catch {
+    /* not JSON: fall through to the cookie check */
+  }
+  const match = (res.headers.get("set-cookie") ?? "").match(/esk_session=([^;]+)/);
+  if (!match) return { error: "no session cookie returned" };
+  return { cookie: `esk_session=${match[1]}` };
+}
+
+async function login(identifier: string, password: string): Promise<string> {
+  const r = await tryLogin(identifier, password);
+  if ("cookie" in r) return r.cookie;
+  throw new Error(`Login failed for ${identifier}: ${"error" in r ? r.error : "a second factor is required"}`);
+}
+
+/** The Super Admin cookie, or null (with the reason printed) when the script cannot sign in alone. */
+async function adminCookie(): Promise<string | null> {
+  const preset = process.env.SMOKE_ADMIN_COOKIE?.trim();
+  if (preset) return preset.startsWith("esk_session=") ? preset : `esk_session=${preset}`;
+  const email = process.env.SEED_SUPER_ADMIN_EMAIL ?? "info@eduskillindia.com";
+  const r = await tryLogin(email, process.env.SEED_SUPER_ADMIN_PASSWORD ?? "SuperAdmin@123");
+  if ("cookie" in r) return r.cookie;
+  const why = "mfaRequired" in r ? "the password was accepted but a second factor (authenticator) is required" : `password sign-in failed (${r.error})`;
+  console.log(`\n✗ Super Admin: ${why}.`);
+  console.log("  Admin sign-in needs an email code / authenticator, which this script cannot provide. Against a LOCAL database run:");
+  console.log(`    SMOKE_ADMIN_COOKIE="$(npx tsx scripts/mint-session.ts ${email})" npx tsx scripts/smoke.ts ${BASE}`);
+  return null;
 }
 
 async function check(route: string, cookie?: string): Promise<Result> {
@@ -113,17 +158,21 @@ async function main() {
   failures += await run("Student", STUDENT_ROUTES, student);
   const trainer = await login("trainer.kolkata@demo.eduskill.local", DEMO_PASSWORD);
   failures += await run("Trainer", TRAINER_ROUTES, trainer);
-  const admin = await login(process.env.SEED_SUPER_ADMIN_EMAIL ?? "superadmin@eduskillindia.org", process.env.SEED_SUPER_ADMIN_PASSWORD ?? "SuperAdmin@123");
-  failures += await run("Super Admin", ADMIN_ROUTES, admin);
+  const admin = await adminCookie();
+  if (admin) failures += await run("Super Admin", ADMIN_ROUTES, admin);
+  else failures++;
   // Role isolation: a student must not reach admin/trainer pages, staff must not reach student pages.
   console.log("\n=== Role isolation ===");
-  for (const [label, cookie, route] of [
+  const isolation: [string, string | undefined, string][] = [
     ["student → /admin/dashboard", student, "/admin/dashboard"],
+    ["student → /admin/email", student, "/admin/email"],
     ["student → /trainer/dashboard", student, "/trainer/dashboard"],
     ["trainer → /admin/dashboard", trainer, "/admin/dashboard"],
-    ["admin → /student/dashboard", admin, "/student/dashboard"],
+    ["trainer → /admin/security", trainer, "/admin/security"],
+    ...(admin ? ([["admin → /student/dashboard", admin, "/student/dashboard"]] as [string, string, string][]) : []),
     ["anonymous → /admin/dashboard", undefined, "/admin/dashboard"],
-  ] as const) {
+  ];
+  for (const [label, cookie, route] of isolation) {
     const r = await check(route, cookie);
     const ok = r.status >= 300 && r.status < 400;
     if (!ok) failures++;

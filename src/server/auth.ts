@@ -4,10 +4,12 @@ import { hashPassword, passwordIssue, verifyPassword } from "@/lib/auth/password
 import { createSession, revokeAllSessions, revokeSessionByToken } from "@/lib/auth/session";
 import { Errors } from "@/lib/api/errors";
 import { audit } from "@/lib/audit";
-import { notify, notifyStaff } from "@/lib/notifications";
+import { getPhoneChannels, isEmailConfigured, notify, notifyStaff } from "@/lib/notifications";
 import { absoluteUrl } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
 import { mobileVariants, parsePhone, samePhone, toE164 } from "@/lib/phone";
+import { adminPasswordLoginEnabled, isAdminRole } from "@/lib/auth/policy";
+import type { NotificationChannel, UserRole } from "@/generated/prisma/enums";
 
 const MAX_FAILED_LOGINS = 5;
 const LOCK_MINUTES = 15;
@@ -36,9 +38,30 @@ export function normalizeEmail(email: string) {
 export interface RequestMeta {
   ip?: string | null;
   userAgent?: string | null;
+  /** esk_device cookie value — administrator sign-ins use it for new-device detection. */
+  deviceId?: string | null;
 }
 
-export async function login(input: { identifier: string; password: string; remember?: boolean } & RequestMeta) {
+/** A real bcrypt hash of a random string: unknown accounts still pay for one compare (no timing oracle). */
+let dummyHash: Promise<string> | null = null;
+function getDummyHash() {
+  dummyHash ??= hashPassword(randomBytes(18).toString("base64url"));
+  return dummyHash;
+}
+
+const GENERIC_LOGIN_ERROR = "Invalid email/mobile or password";
+
+export type LoginResult =
+  | { kind: "session"; user: { id: string; name: string; role: UserRole }; token: string; expiresAt: Date; sessionId: string; redirect?: string }
+  | { kind: "challenge"; user: { id: string; name: string; role: UserRole }; challengeToken: string; challengeExpiresAt: Date };
+
+/**
+ * Password sign-in for every role. Failures are deliberately indistinguishable — unknown account,
+ * wrong password, locked or inactive all read the same until the PASSWORD is proven — so the form
+ * cannot be used to discover accounts. Administrators continue into Secure Admin Login
+ * (authenticator step / 2FA set-up) whenever their policy requires a second factor.
+ */
+export async function login(input: { identifier: string; password: string; remember?: boolean; next?: string | null } & RequestMeta): Promise<LoginResult> {
   const raw = input.identifier.trim();
   const email = normalizeEmail(raw);
   // One free-text box for "email or mobile", so both readings are tried. `mobileVariants` is empty
@@ -51,43 +74,67 @@ export async function login(input: { identifier: string; password: string; remem
 
   const record = (success: boolean, reason?: string) =>
     db.loginHistory.create({
-      data: { userId: user?.id ?? null, identifier: raw.slice(0, 190), success, reason, ip: input.ip ?? null, userAgent: input.userAgent?.slice(0, 500) ?? null },
+      data: { userId: user?.id ?? null, identifier: raw.slice(0, 190), success, reason, method: "PASSWORD", ip: input.ip ?? null, userAgent: input.userAgent?.slice(0, 500) ?? null },
     });
 
   if (!user) {
+    await verifyPassword(input.password, await getDummyHash());
     await record(false, "unknown_user");
-    throw Errors.unauthorized("Invalid email/mobile or password");
+    throw Errors.unauthorized(GENERIC_LOGIN_ERROR);
   }
-  if (user.lockedUntil && user.lockedUntil > new Date()) {
+
+  // An expired lock starts a fresh count (it used to re-lock on the very next mistake, forever).
+  const now = new Date();
+  if (user.lockedUntil && user.lockedUntil <= now) {
+    await db.user.update({ where: { id: user.id }, data: { failedLoginCount: 0, lockedUntil: null } });
+    user.failedLoginCount = 0;
+    user.lockedUntil = null;
+  }
+  const locked = !!user.lockedUntil && user.lockedUntil > now;
+  const ok = await verifyPassword(input.password, user.passwordHash);
+
+  if (!ok) {
+    if (!locked) {
+      // Atomic: concurrent guesses cannot under-count.
+      const after = await db.user.update({ where: { id: user.id }, data: { failedLoginCount: { increment: 1 } }, select: { failedLoginCount: true } });
+      if (after.failedLoginCount >= MAX_FAILED_LOGINS) {
+        await db.user.update({ where: { id: user.id }, data: { lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60000) } });
+        if (isAdminRole(user.role)) {
+          const { raiseSecurityAlert } = await import("@/server/security-alerts");
+          await raiseSecurityAlert({ type: "ACCOUNT_LOCKED", severity: "warning", title: `Password sign-in locked for ${user.name}`, detail: `${MAX_FAILED_LOGINS} wrong passwords. Password sign-in is paused for ${LOCK_MINUTES} minutes (the email-code sign-in still works).`, userId: user.id, ip: input.ip, userAgent: input.userAgent });
+        }
+      }
+    }
+    await record(false, locked ? "locked" : "bad_password");
+    throw Errors.unauthorized(GENERIC_LOGIN_ERROR);
+  }
+  // The password is proven: from here the account's real state may be told.
+  if (locked) {
     await record(false, "locked");
-    const mins = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
-    throw Errors.unauthorized(`Too many failed attempts. Account locked for ${mins} more minute${mins === 1 ? "" : "s"}.`);
+    const mins = Math.ceil((user.lockedUntil!.getTime() - Date.now()) / 60000);
+    throw Errors.unauthorized(`Too many failed attempts. The account is locked for ${mins} more minute${mins === 1 ? "" : "s"}.`);
   }
   if (user.status !== "ACTIVE") {
     await record(false, "inactive");
     throw Errors.unauthorized("Your account is not active. Please contact the Foundation.");
   }
-  const ok = await verifyPassword(input.password, user.passwordHash);
-  if (!ok) {
-    const failed = user.failedLoginCount + 1;
-    await db.user.update({
-      where: { id: user.id },
-      data: {
-        failedLoginCount: failed,
-        lockedUntil: failed >= MAX_FAILED_LOGINS ? new Date(Date.now() + LOCK_MINUTES * 60000) : null,
-      },
-    });
-    await record(false, "bad_password");
-    throw Errors.unauthorized(
-      failed >= MAX_FAILED_LOGINS ? `Too many failed attempts. Account locked for ${LOCK_MINUTES} minutes.` : "Invalid email/mobile or password"
-    );
+
+  if (isAdminRole(user.role)) {
+    const { adminPasswordSignIn } = await import("@/server/admin-auth");
+    await db.user.update({ where: { id: user.id }, data: { failedLoginCount: 0, lockedUntil: null } });
+    const res = await adminPasswordSignIn(user, { ip: input.ip, userAgent: input.userAgent, deviceId: input.deviceId, next: input.next });
+    if (res.kind === "challenge") {
+      await record(true, "password_ok_second_factor_pending");
+      return { kind: "challenge", user: { id: user.id, name: user.name, role: user.role }, challengeToken: res.challengeToken, challengeExpiresAt: res.expiresAt };
+    }
+    return { kind: "session", user: { id: user.id, name: user.name, role: user.role }, token: res.session.token, expiresAt: res.session.expiresAt, sessionId: res.session.sessionId, redirect: res.session.redirect };
   }
 
   await db.user.update({ where: { id: user.id }, data: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() } });
   await record(true);
-  const session = await createSession(user.id, { ip: input.ip, userAgent: input.userAgent, remember: input.remember });
+  const session = await createSession(user.id, { ip: input.ip, userAgent: input.userAgent, remember: input.remember, role: user.role, authMethod: "PASSWORD" });
   await audit({ user: { id: user.id, name: user.name, role: user.role }, action: "login", module: "auth", recordType: "User", recordId: user.id, description: `${user.name} logged in`, ip: input.ip, userAgent: input.userAgent });
-  return { user, ...session };
+  return { kind: "session", user: { id: user.id, name: user.name, role: user.role }, ...session };
 }
 
 export async function logout(token: string, user?: { id: string; name: string; role: string } | null, meta: RequestMeta = {}) {
@@ -157,10 +204,15 @@ export async function requestPasswordReset(identifier: string, meta: RequestMeta
   const user = await db.user.findFirst({ where: { deletedAt: null, status: "ACTIVE", OR: [{ email }, ...(mobiles.length ? [{ mobile: { in: mobiles } }] : [])] } });
   // Always respond identically to avoid account enumeration.
   if (!user) return;
+  // With passwordless administrator sign-in, a password reset would be a way around the email code.
+  if (isAdminRole(user.role) && !adminPasswordLoginEnabled()) return;
   const token = randomBytes(32).toString("base64url");
   await db.passwordReset.create({ data: { userId: user.id, tokenHash: hashResetToken(token), expiresAt: new Date(Date.now() + 30 * 60000) } });
   const link = absoluteUrl(`/reset-password?token=${token}`);
-  await notify({ userId: user.id, email: user.email, mobile: user.mobile, event: "PASSWORD_RESET", data: { name: user.name, link } });
+  // The link is a credential: stored redacted (the notification log is readable by staff), sent only
+  // by email/SMS (no in-app copy), never resendable from the log.
+  const channels: NotificationChannel[] = [...(user.email && (await isEmailConfigured()) ? (["EMAIL"] as NotificationChannel[]) : []), ...(user.mobile ? await getPhoneChannels() : [])];
+  if (channels.length) await notify({ userId: user.id, email: user.email, mobile: user.mobile, event: "PASSWORD_RESET", data: { name: user.name, link }, channels, redact: ["link"] });
   await audit({ user: { id: user.id, name: user.name, role: user.role }, action: "password_reset_requested", module: "auth", recordType: "User", recordId: user.id, description: `${user.name} requested a password reset`, ...meta });
 }
 

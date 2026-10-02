@@ -3,6 +3,7 @@ import { db, type Prisma } from "@/lib/db";
 import { Errors } from "@/lib/api/errors";
 import { formatDate, toNumber } from "@/lib/utils";
 import { dateRangeSchema, resolveDateRange, optionalUuid } from "@/lib/api/query";
+import { csvCell } from "@/lib/csv";
 
 // ───────────────────────────── Definitions ─────────────────────────────
 
@@ -598,9 +599,9 @@ function cellText(col: ReportColumn, v: string | number | null): string {
 }
 
 export function reportToCsv(result: ReportResult): string {
-  const esc = (s: string) => (/[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
-  const lines = [result.columns.map((c) => esc(c.label)).join(",")];
-  for (const row of result.rows) lines.push(result.columns.map((c) => esc(typeof row[c.key] === "number" ? String(row[c.key]) : cellText(c, row[c.key] ?? null))).join(","));
+  // csvCell quotes as needed and defuses text that a spreadsheet would run as a formula.
+  const lines = [result.columns.map((c) => csvCell(c.label)).join(",")];
+  for (const row of result.rows) lines.push(result.columns.map((c) => (typeof row[c.key] === "number" ? String(row[c.key]) : csvCell(cellText(c, row[c.key] ?? null)))).join(","));
   return "﻿" + lines.join("\r\n") + "\r\n";
 }
 

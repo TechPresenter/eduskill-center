@@ -5,6 +5,7 @@ import { Errors } from "@/lib/api/errors";
 import { audit, type AuditActor } from "@/lib/audit";
 import { slugify } from "@/lib/utils";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid, optionalBool } from "@/lib/api/query";
+import { csvCell as safeCsvCell } from "@/lib/csv";
 
 export interface Ctx {
   user: AuditActor;
@@ -487,8 +488,7 @@ export async function importLocationsCsv(csvText: string, opts: { commit: boolea
 }
 
 function csvCell(v: unknown): string {
-  const s = v === null || v === undefined ? "" : String(v);
-  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  return safeCsvCell(v === null || v === undefined ? "" : typeof v === "number" ? v : String(v));
 }
 
 /** Full hierarchy export (one row per block, or per district when it has no blocks). */

@@ -1,12 +1,8 @@
 import { apiHandler, parseQuery } from "@/lib/api/handler";
 import { audit } from "@/lib/audit";
+import { csvFromRecords } from "@/lib/csv";
 import { titleCase } from "@/lib/utils";
 import { CENTRE_STEP_OF, centreApplicationListSchema, listCentreApplications } from "@/server/centre-applications";
-
-function csvCell(v: unknown) {
-  const s = v === null || v === undefined ? "" : String(v);
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
 
 /** CSV export of centre applications using the same filters as the list (max 5000 rows). */
 export const GET = apiHandler({ permission: "centre_applications.export" }, async ({ req, user, ip, userAgent }) => {
@@ -48,8 +44,7 @@ export const GET = apiHandler({ permission: "centre_applications.export" }, asyn
     }
     if (page >= res.meta.totalPages) break;
   }
-  const headers = rows[0] ? Object.keys(rows[0]) : ["applicationNo"];
-  const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => csvCell(r[h])).join(","))].join("\r\n");
+  const csv = csvFromRecords(rows, ["applicationNo"]);
   await audit({
     user: user!,
     action: "export",

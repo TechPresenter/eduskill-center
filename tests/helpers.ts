@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
+import { createSession, resolveSessionByToken, type AuthUser } from "@/lib/auth/session";
 import { ALL_PERMISSIONS } from "@/lib/rbac/permissions";
 import { createCenter } from "@/server/centers";
 import { createBatch } from "@/server/batches";
@@ -123,4 +124,56 @@ export async function addStudentDocuments(studentId: string, types: string[]) {
   for (const type of types) {
     await db.studentDocument.create({ data: { studentId, type, name: `${type}.pdf`, url: `/api/files/private/students/${studentId}/${type}.pdf`, mimeType: "application/pdf", size: 10 } });
   }
+}
+
+/** A random 10-digit Indian mobile in E.164 (`+91` + first digit + 9 random digits). */
+export function randomMobile(first: "6" | "7" | "8" | "9" = "9") {
+  return `+91${first}${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`;
+}
+
+export const ADMIN_TEST_PASSWORD = "Admin@12345";
+
+/**
+ * An administrator account created directly in the database: a SUPER_ADMIN, or a STAFF member whose
+ * role has the given tier (`level`) and permissions. `staffRow` gives a Super Admin a Staff record too
+ * (legacy installs have them), so staff-profile guards can be exercised against it.
+ */
+export async function makeAdminAccount(
+  opts: { role?: "SUPER_ADMIN" | "STAFF"; level?: number; permissions?: string[]; staffRow?: boolean; totpSecretEnc?: string | null; mobile?: string | null } = {}
+) {
+  const role = opts.role ?? "SUPER_ADMIN";
+  const tag = uid("adm");
+  const email = `${tag}@admin.test`;
+  let roleId: string | null = null;
+  if (role === "STAFF" && (opts.level !== undefined || opts.permissions?.length)) {
+    if (opts.permissions?.length) await ensurePermissions();
+    const r = await db.role.create({ data: { name: `Role ${tag}`, slug: `role-${tag}`, level: opts.level ?? 3 } });
+    roleId = r.id;
+    if (opts.permissions?.length) {
+      const perms = await db.permission.findMany({ where: { key: { in: opts.permissions } }, select: { id: true } });
+      await db.rolePermission.createMany({ data: perms.map((p) => ({ roleId: r.id, permissionId: p.id })) });
+    }
+  }
+  const user = await db.user.create({
+    data: {
+      name: `Admin ${tag}`,
+      email,
+      mobile: opts.mobile === undefined ? randomMobile("8") : opts.mobile,
+      passwordHash: await hashPassword(ADMIN_TEST_PASSWORD),
+      role,
+      ...(opts.totpSecretEnc ? { totpSecretEnc: opts.totpSecretEnc, totpEnabledAt: new Date() } : {}),
+      ...(role === "STAFF" || opts.staffRow ? { staff: { create: { employeeCode: uid("EMP").toUpperCase(), roleId } } } : {}),
+    },
+    include: { staff: true },
+  });
+  return { user, email, staffId: user.staff?.id ?? null };
+}
+
+/** Signs an administrator in directly (fresh session) and returns the resolved AuthUser. */
+export async function adminAuthUser(userId: string, opts: { mfa?: boolean } = {}): Promise<AuthUser> {
+  const u = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { role: true } });
+  const s = await createSession(userId, { role: u.role, authMethod: "EMAIL_OTP", mfa: opts.mfa ?? false });
+  const resolved = await resolveSessionByToken(s.token);
+  if (!resolved) throw new Error("The test session did not resolve");
+  return resolved;
 }

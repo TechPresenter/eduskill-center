@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const SESSION_COOKIE = "esk_session";
 const PROTECTED_PREFIXES = ["/admin", "/student", "/trainer"];
+/** Keep in step with ADMIN_LOGIN_PATH in src/lib/auth/policy.ts (the edge runtime cannot import it). */
+const ADMIN_LOGIN_PATH = "/login/admin";
 const AUTH_PAGES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
 /**
@@ -23,12 +25,13 @@ export default function proxy(req: NextRequest) {
 
   if (!hasSession && PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
     const url = req.nextUrl.clone();
-    url.pathname = "/login";
+    // The admin area has its own sign-in (email code + authenticator); everyone else uses /login.
+    url.pathname = pathname === "/admin" || pathname.startsWith("/admin/") ? ADMIN_LOGIN_PATH : "/login";
     url.search = `?next=${encodeURIComponent(pathname + search)}`;
     return NextResponse.redirect(url);
   }
 
-  if (hasSession && AUTH_PAGES.includes(pathname) && !req.nextUrl.searchParams.has("switch")) {
+  if (hasSession && [...AUTH_PAGES, ADMIN_LOGIN_PATH].includes(pathname) && !req.nextUrl.searchParams.has("switch")) {
     // Logged-in users hitting auth pages are redirected by the page itself (it knows the role).
     return NextResponse.next();
   }

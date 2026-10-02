@@ -448,6 +448,8 @@ export async function approveTrainerApplication(id: string, ctx: Ctx, opts: { no
         ? `\n\nLogin: ${out.user.email ?? out.user.mobile ?? out.app.mobile}\nTemporary password: ${out.tempPassword}\nPlease change it after your first login.`
         : "",
     },
+    // The temporary password is delivered but never stored in the notification log.
+    redact: ["credentials"],
   });
   return out.trainer;
 }

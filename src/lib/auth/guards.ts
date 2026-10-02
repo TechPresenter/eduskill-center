@@ -2,13 +2,14 @@ import { redirect } from "next/navigation";
 import type { UserRole } from "@/generated/prisma/enums";
 import { getSessionUser, portalHome, type AuthUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/rbac/permissions";
+import { ADMIN_LOGIN_PATH } from "@/lib/auth/policy";
 
 /** Server-component guard: redirects to login when unauthenticated, or to the user's own portal when the role does not match. */
-export async function requireUser(opts: { roles?: UserRole[]; redirectTo?: string } = {}): Promise<AuthUser> {
+export async function requireUser(opts: { roles?: UserRole[]; redirectTo?: string; loginPath?: string } = {}): Promise<AuthUser> {
   const user = await getSessionUser();
   if (!user) {
     const next = opts.redirectTo ? `?next=${encodeURIComponent(opts.redirectTo)}` : "";
-    redirect(`/login${next}`);
+    redirect(`${opts.loginPath ?? "/login"}${next}`);
   }
   if (opts.roles && !opts.roles.includes(user.role)) {
     redirect(portalHome(user.role));
@@ -17,10 +18,18 @@ export async function requireUser(opts: { roles?: UserRole[]; redirectTo?: strin
 }
 
 export async function requireAdmin(permission?: string | string[], redirectTo?: string): Promise<AuthUser> {
-  const user = await requireUser({ roles: ["SUPER_ADMIN", "STAFF"], redirectTo });
+  // Signed-out (or timed-out) administrators go to Secure Admin Login, not the student screen.
+  const user = await requireUser({ roles: ["SUPER_ADMIN", "STAFF"], redirectTo, loginPath: ADMIN_LOGIN_PATH });
   if (permission && !hasPermission(user, permission)) {
     redirect("/admin/forbidden");
   }
+  return user;
+}
+
+/** Super Admin only pages (Security Center settings, email configuration). */
+export async function requireSuperAdmin(redirectTo?: string): Promise<AuthUser> {
+  const user = await requireAdmin(undefined, redirectTo);
+  if (user.role !== "SUPER_ADMIN") redirect("/admin/forbidden");
   return user;
 }
 

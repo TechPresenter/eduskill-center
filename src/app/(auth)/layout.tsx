@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowLeft, GraduationCap, MapPin, UserPlus } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { getBranding, type Branding } from "@/lib/settings";
 import { BrandMark } from "@/components/brand";
 import { SectionBg } from "@/components/site/decor";
+import { AuthAsideCopy } from "@/components/auth/auth-aside-copy";
 
 /**
  * Auth shell. On a phone this is deliberately one calm column — brand, one card, nothing else to
@@ -10,28 +11,11 @@ import { SectionBg } from "@/components/site/decor";
  * account is actually for, so signing in feels like entering the Foundation rather than hitting a
  * lone form on a grey field.
  *
- * The panel is inline SVG and CSS gradients only (see `SectionBg`): no image request, no client JS,
- * no blur — and it is `hidden` below `lg`, so the phone pays nothing for it beyond a little markup.
+ * The panel is inline SVG and CSS gradients only (see `SectionBg`): no image request, no blur — and
+ * it is `hidden` below `lg`, so the phone pays nothing for it beyond a little markup. Its words come
+ * from `AuthAsideCopy`, the one small client piece: Secure Admin Login (/login/admin) gets its own
+ * copy, every other auth screen keeps the public one.
  */
-
-/** What the account is for. Every line describes a feature this platform actually ships. */
-const STEPS = [
-  {
-    icon: UserPlus,
-    title: "One account, one login",
-    body: "Students, volunteer trainers and Foundation staff all sign in here.",
-  },
-  {
-    icon: MapPin,
-    title: "Apply at a centre near you",
-    body: "Pick a course and a training centre in your own block or district.",
-  },
-  {
-    icon: GraduationCap,
-    title: "Follow your whole journey",
-    body: "Application status, batch schedule, attendance and certificates in one place.",
-  },
-];
 
 function AuthAside({ branding }: { branding: Branding }) {
   return (
@@ -44,26 +28,7 @@ function AuthAside({ branding }: { branding: Branding }) {
           <BrandMark branding={branding} light />
         </Link>
 
-        <div className="max-w-md">
-          <h2 className="text-h1 text-white">Skills that open the next door.</h2>
-          <p className="text-body-lg mt-4 text-white/75">
-            Your account is how you apply, learn and prove what you have learned — from the first form to the certificate.
-          </p>
-
-          <ul className="mt-10 space-y-6">
-            {STEPS.map((s) => (
-              <li key={s.title} className="flex gap-4">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white/10 text-white ring-1 ring-white/15 ring-inset" aria-hidden>
-                  <s.icon className="h-5 w-5" />
-                </span>
-                <span className="min-w-0">
-                  <span className="text-h4 block text-white">{s.title}</span>
-                  <span className="text-body-sm mt-1 block text-white/70">{s.body}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <AuthAsideCopy />
 
         <p className="text-caption text-white/55">
           © {new Date().getFullYear()} {branding.siteName}

@@ -26,7 +26,30 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(self), payment=(self)" },
   { key: "X-DNS-Prefetch-Control", value: "on" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+  // Deliberately no script-src / style-src / img-src: Razorpay Checkout, the Leaflet tiles and the
+  // inline styles Next emits would all need allow-listing. These three directives are safe as-is.
+  { key: "Content-Security-Policy", value: "frame-ancestors 'self'; base-uri 'self'; object-src 'none'" },
 ];
+
+/**
+ * Stricter headers for the admin area, every sign-in page and the admin/auth APIs: never framed
+ * (clickjacking on approve/send buttons), no window.opener link to other origins, forms post only
+ * here, and nothing cached by a shared or back/forward cache.
+ *
+ * Next applies every matching `headers()` entry in order and a later entry REPLACES an earlier
+ * one's value for the same key (src: next/dist/server/lib/router-utils/resolve-routes.js). So these
+ * entries come after the site-wide one, reuse its exact key spelling to override X-Frame-Options
+ * and Content-Security-Policy, and leave Strict-Transport-Security and the others untouched.
+ * In production Next still sets its own Cache-Control on dynamically rendered pages
+ * ("private, no-cache, no-store, …"); the value here matters for the API routes.
+ */
+const sensitiveHeaders = [
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Cache-Control", value: "no-store" },
+];
+const SENSITIVE_SOURCES = ["/admin/:path*", "/login/:path*", "/api/admin/:path*", "/api/auth/:path*"];
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -47,12 +70,20 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react", "recharts", "date-fns"],
     // The persistent dev cache grew past 5 GB and filled the disk; keep the dev cache in memory only.
     turbopackFileSystemCacheForDev: false,
+    // src/proxy.ts runs on every /api request, and Next buffers a proxied request body only up to
+    // this size (default 10 MB) — anything larger reaches the route handler TRUNCATED, so a 40 MB
+    // course material upload would fail its checks as a corrupt file. 55 MB covers the largest
+    // upload preset (material, 50 MB in src/lib/storage) plus multipart overhead. The web server
+    // in front must allow at least as much (nginx `client_max_body_size`, see DEPLOYMENT.md).
+    proxyClientMaxBodySize: "55mb",
   },
   async headers() {
     // Next applies `basePath` to headers()/redirects()/rewrites() sources automatically, so these
     // stay base-path-free: "/sw.js" matches /center/sw.js when basePath is "/center".
     return [
       { source: "/(.*)", headers: securityHeaders },
+      // Must stay AFTER the site-wide entry so DENY / frame-ancestors 'none' win (see sensitiveHeaders).
+      ...SENSITIVE_SOURCES.map((source) => ({ source, headers: sensitiveHeaders })),
       {
         source: "/sw.js",
         headers: [

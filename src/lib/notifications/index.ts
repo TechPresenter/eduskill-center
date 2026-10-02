@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { getSettingsGroup } from "@/lib/settings";
+import { getSettingsGroup, loadSettings } from "@/lib/settings";
 import { absoluteUrl } from "@/lib/utils";
 import { toDialDigits } from "@/lib/phone";
 import type { NotificationChannel } from "@/generated/prisma/enums";
@@ -34,7 +34,38 @@ export type NotifyEvent =
   | "CENTRE_APPLICATION_STATUS"
   | "STAFF_ALERT"
   | "ANNOUNCEMENT"
-  | "GENERIC";
+  | "GENERIC"
+  // Administrator security. Locked: never overridable from the template editor, never resendable.
+  | "ADMIN_LOGIN_OTP"
+  | "EMAIL_CHANGE_OTP"
+  | "NEW_DEVICE_LOGIN"
+  | "TWO_FACTOR_ENABLED"
+  | "TWO_FACTOR_DISABLED"
+  | "TWO_FACTOR_RESET"
+  | "BACKUP_CODES_REGENERATED"
+  | "BACKUP_CODE_USED"
+  | "LOGIN_EMAIL_CHANGED"
+  | "SECURITY_ALERT";
+
+/**
+ * Security messages whose wording cannot be overridden from Admin → Notifications → Templates
+ * (an override could drop the code — locking administrators out — or add a phishing link) and that
+ * can never be resent from the log (they carry codes, links or expire in minutes).
+ */
+export const LOCKED_EVENTS: ReadonlySet<NotifyEvent> = new Set<NotifyEvent>([
+  "LOGIN_OTP",
+  "PASSWORD_RESET",
+  "ADMIN_LOGIN_OTP",
+  "EMAIL_CHANGE_OTP",
+  "NEW_DEVICE_LOGIN",
+  "TWO_FACTOR_ENABLED",
+  "TWO_FACTOR_DISABLED",
+  "TWO_FACTOR_RESET",
+  "BACKUP_CODES_REGENERATED",
+  "BACKUP_CODE_USED",
+  "LOGIN_EMAIL_CHANGED",
+  "SECURITY_ALERT",
+]);
 
 export interface EventTemplate {
   name: string;
@@ -256,6 +287,76 @@ export const DEFAULT_TEMPLATES: Record<NotifyEvent, EventTemplate> = {
     sms: "{{body}}",
     variables: ["title", "body"],
   },
+  ADMIN_LOGIN_OTP: {
+    name: "Admin sign-in code (Passwordless Secure Login)",
+    subject: "Your {{siteName}} admin sign-in code",
+    body: "Hello {{name}},\n\nUse this code to sign in to the {{siteName}} admin panel:\n\n{{code}}\n\nIt expires in {{minutes}} minutes and works once.\n\nRequested from: {{device}} · IP {{ip}} · {{time}}\n\nNobody from the Foundation will ever ask you for this code. If you did not try to sign in, ignore this email — your account stays safe without the code.\n\n{{siteName}}",
+    sms: "{{code}} is your {{siteName}} admin sign-in code. Valid {{minutes}} min. Never share it.",
+    variables: ["name", "code", "minutes", "device", "ip", "time", "siteName"],
+  },
+  EMAIL_CHANGE_OTP: {
+    name: "Confirm new admin login email",
+    subject: "Confirm your new {{siteName}} login email",
+    body: "Hello {{name}},\n\nEnter this code in the admin panel to make {{newEmail}} your login email:\n\n{{code}}\n\nIt expires in {{minutes}} minutes. If you did not ask for this, ignore this email.\n\n{{siteName}}",
+    sms: "{{code}} confirms your new {{siteName}} login email. Valid {{minutes}} min.",
+    variables: ["name", "newEmail", "code", "minutes", "siteName"],
+  },
+  NEW_DEVICE_LOGIN: {
+    name: "New device sign-in (admin)",
+    subject: "New sign-in to your {{siteName}} admin account",
+    body: "Hello {{name}},\n\nYour admin account was just signed in from a device we have not seen before.\n\nDevice: {{device}}\nIP address: {{ip}}\nTime: {{time}}\nMethod: {{method}}\n\nIf this was you, no action is needed. If it was not, open Admin → My account → Security to sign out every device, and tell your Super Admin immediately.\n\n{{siteName}}",
+    sms: "{{siteName}}: new sign-in to your admin account from {{device}} at {{time}}. Not you? Tell your Super Admin now.",
+    variables: ["name", "device", "ip", "time", "method", "siteName"],
+  },
+  TWO_FACTOR_ENABLED: {
+    name: "Two-factor authentication switched on",
+    subject: "Two-factor authentication is now on for your {{siteName}} account",
+    body: "Hello {{name}},\n\nAn authenticator app is now required to sign in to your admin account ({{time}}). Keep your backup codes somewhere safe — each one works once if you lose your phone.\n\nIf you did not do this, tell your Super Admin immediately.\n\n{{siteName}}",
+    sms: "{{siteName}}: two-factor authentication switched on for your account.",
+    variables: ["name", "time", "siteName"],
+  },
+  TWO_FACTOR_DISABLED: {
+    name: "Two-factor authentication switched off",
+    subject: "Two-factor authentication was switched off for your {{siteName}} account",
+    body: "Hello {{name}},\n\nYour authenticator app is no longer required to sign in ({{time}}).\n\nIf you did not do this, tell your Super Admin immediately.\n\n{{siteName}}",
+    sms: "{{siteName}}: two-factor authentication switched off for your account.",
+    variables: ["name", "time", "siteName"],
+  },
+  TWO_FACTOR_RESET: {
+    name: "Two-factor authentication reset by a Super Admin",
+    subject: "Your {{siteName}} two-factor authentication was reset",
+    body: "Hello {{name}},\n\n{{actor}} reset two-factor authentication on your admin account ({{time}}). Every device was signed out. Set up your authenticator app again the next time you sign in.\n\nIf you did not ask for this, contact the Foundation immediately.\n\n{{siteName}}",
+    sms: "{{siteName}}: your two-factor authentication was reset by {{actor}}.",
+    variables: ["name", "actor", "time", "siteName"],
+  },
+  BACKUP_CODES_REGENERATED: {
+    name: "New 2FA backup codes created",
+    subject: "New backup codes were created for your {{siteName}} account",
+    body: "Hello {{name}},\n\nNew two-factor backup codes were created for your admin account ({{time}}). The old codes no longer work.\n\nIf you did not do this, tell your Super Admin immediately.\n\n{{siteName}}",
+    sms: "{{siteName}}: new 2FA backup codes created for your account.",
+    variables: ["name", "time", "siteName"],
+  },
+  BACKUP_CODE_USED: {
+    name: "2FA backup code used",
+    subject: "A backup code was used to sign in to your {{siteName}} account",
+    body: "Hello {{name}},\n\nA two-factor backup code was used to sign in to your admin account.\n\nDevice: {{device}}\nIP address: {{ip}}\nTime: {{time}}\nBackup codes left: {{remaining}}\n\nIf you have lost your phone, set up your authenticator again from Admin → My account → Security. If this was not you, tell your Super Admin immediately.\n\n{{siteName}}",
+    sms: "{{siteName}}: a 2FA backup code was used to sign in ({{remaining}} left).",
+    variables: ["name", "device", "ip", "time", "remaining", "siteName"],
+  },
+  LOGIN_EMAIL_CHANGED: {
+    name: "Admin login email changed",
+    subject: "Your {{siteName}} login email was changed",
+    body: "Hello {{name}},\n\nThe login email of your admin account was changed from {{oldEmail}} to {{newEmail}} ({{time}}). Sign-in codes now go to the new address, and every device was signed out.\n\nIf you did not do this, contact the Foundation immediately.\n\n{{siteName}}",
+    sms: "{{siteName}}: your login email was changed to {{newEmail}}.",
+    variables: ["name", "oldEmail", "newEmail", "time", "siteName"],
+  },
+  SECURITY_ALERT: {
+    name: "Security alert (Super Admins)",
+    subject: "[{{siteName}} security] {{title}}",
+    body: "{{title}}\n\n{{body}}\n\nTime: {{time}}\n\nReview it in the Security Center: {{link}}\n\nThis is an automatic security notification for the Foundation's administrators.",
+    sms: "{{siteName}} security: {{title}}",
+    variables: ["title", "body", "time", "link", "siteName"],
+  },
 };
 
 export function renderTemplate(template: string, data: Record<string, unknown>): string {
@@ -288,9 +389,14 @@ interface CommsConfig {
   emailEnabled: boolean;
   smtpHost: string;
   smtpPort: number;
+  /** "ssl" (implicit TLS, 465) or "starttls" (mandatory upgrade, 587). */
+  smtpSecurity: "ssl" | "starttls";
   smtpUser: string;
   smtpPass: string;
   smtpFrom: string;
+  fromName: string;
+  fromEmail: string;
+  replyTo: string;
   smsEnabled: boolean;
   smsProvider: string;
   smsApiKey: string;
@@ -306,16 +412,29 @@ interface CommsConfig {
 
 async function getCommsConfig(): Promise<CommsConfig> {
   const s = await getSettingsGroup("comms");
+  const stored = await loadSettings();
   const str = (k: string, env?: string) => String(s[`comms.${k}`] || (env ? process.env[env] ?? "" : ""));
   const bool = (k: string) => s[`comms.${k}`] === true;
   const smtpHost = str("smtpHost", "SMTP_HOST");
+  // A port saved in Settings wins; otherwise SMTP_PORT from the server .env (the 587 default used
+  // to mask it, so an env-only setup on port 465 silently connected on 587).
+  const savedPort = stored.has("comms.smtpPort") ? Number(stored.get("comms.smtpPort")) : NaN;
+  const smtpPort = Number.isFinite(savedPort) && savedPort > 0 ? savedPort : Number(process.env.SMTP_PORT || 587);
+  const savedSecurity = stored.get("comms.smtpSecurity");
+  const smtpSecurity: "ssl" | "starttls" = savedSecurity === "ssl" || savedSecurity === "starttls" ? savedSecurity : smtpPort === 465 ? "ssl" : "starttls";
+  const smtpFrom = str("smtpFrom", "SMTP_FROM");
+  const legacy = /^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/.exec(smtpFrom);
   return {
     emailEnabled: bool("emailEnabled") || (!!process.env.SMTP_HOST && s["comms.emailEnabled"] !== false),
     smtpHost,
-    smtpPort: Number(s["comms.smtpPort"] || process.env.SMTP_PORT || 587),
+    smtpPort,
+    smtpSecurity,
     smtpUser: str("smtpUser", "SMTP_USER"),
     smtpPass: str("smtpPass", "SMTP_PASS"),
-    smtpFrom: str("smtpFrom", "SMTP_FROM"),
+    smtpFrom,
+    fromName: String(stored.get("comms.smtpFromName") ?? "") || legacy?.[1]?.trim() || String(s["comms.smtpFromName"] ?? ""),
+    fromEmail: String(stored.get("comms.smtpFromEmail") ?? "") || legacy?.[2]?.trim() || (smtpFrom.includes("@") && !legacy ? smtpFrom.trim() : "") || String(s["comms.smtpFromEmail"] ?? ""),
+    replyTo: String(s["comms.smtpReplyTo"] ?? ""),
     smsEnabled: bool("smsEnabled"),
     smsProvider: str("smsProvider"),
     smsApiKey: str("smsApiKey"),
@@ -362,7 +481,8 @@ export async function getPhoneChannels(): Promise<NotificationChannel[]> {
 
 async function resolveTemplate(event: NotifyEvent, channel: NotificationChannel) {
   const def = DEFAULT_TEMPLATES[event];
-  const custom = await db.notificationTemplate.findFirst({ where: { event, channel, isActive: true } });
+  // Locked security templates always use the built-in wording, even if an old override exists.
+  const custom = LOCKED_EVENTS.has(event) ? null : await db.notificationTemplate.findFirst({ where: { event, channel, isActive: true } });
   if (custom) return { subject: custom.subject ?? def.subject, body: custom.body };
   const body = channel === "SMS" || channel === "WHATSAPP" ? def.sms : def.body;
   return { subject: def.subject, body };
@@ -370,18 +490,79 @@ async function resolveTemplate(event: NotifyEvent, channel: NotificationChannel)
 
 // ───────────── Channel senders ─────────────
 
-async function sendEmail(cfg: CommsConfig, to: string, subject: string, text: string) {
+/** Rejects CR/LF and other control characters in anything that becomes a mail header. */
+function headerSafe(value: string, what: string): string {
+  if (/[\r\n\0]/.test(value)) throw new Error(`Invalid characters in ${what}`);
+  return value.trim();
+}
+
+async function transportFor(cfg: CommsConfig) {
   if (!cfg.smtpHost) throw new Error("SMTP is not configured");
   const nodemailer = await import("nodemailer");
-  const transporter = nodemailer.createTransport({
+  return nodemailer.createTransport({
     host: cfg.smtpHost,
     port: cfg.smtpPort,
-    secure: cfg.smtpPort === 465,
+    secure: cfg.smtpSecurity === "ssl",
+    // STARTTLS is REQUIRED, not opportunistic: sign-in codes never travel in clear text.
+    requireTLS: cfg.smtpSecurity === "starttls",
     auth: cfg.smtpUser ? { user: cfg.smtpUser, pass: cfg.smtpPass } : undefined,
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 30_000,
   });
-  await transporter.sendMail({
-    from: cfg.smtpFrom || cfg.smtpUser,
-    to,
+}
+
+function fromOf(cfg: CommsConfig): { name: string; address: string } | string {
+  const address = headerSafe(cfg.fromEmail || cfg.smtpUser, "From email");
+  if (!address) throw new Error("No From email is configured");
+  const name = headerSafe(cfg.fromName, "From name");
+  // An address object lets nodemailer encode the display name — no header injection via the name.
+  return name ? { name, address } : address;
+}
+
+export interface MailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+}
+
+export interface MailMessage {
+  to: string[];
+  cc?: string[];
+  bcc?: string[];
+  subject: string;
+  text: string;
+  html?: string;
+  replyTo?: string | null;
+  attachments?: MailAttachment[];
+}
+
+/**
+ * Sends one email through the configured SMTP account and returns the server's Message-ID.
+ * Throws on failure. Used by the manual composer (Admin → Send Email) and every notification.
+ */
+export async function sendMail(msg: MailMessage): Promise<{ messageId: string | null; accepted: string[]; rejected: string[] }> {
+  const cfg = await getCommsConfig();
+  const transporter = await transportFor(cfg);
+  const replyTo = msg.replyTo ?? (cfg.replyTo || undefined);
+  const info = await transporter.sendMail({
+    from: fromOf(cfg),
+    to: msg.to.map((a) => headerSafe(a, "To")),
+    cc: msg.cc?.length ? msg.cc.map((a) => headerSafe(a, "CC")) : undefined,
+    bcc: msg.bcc?.length ? msg.bcc.map((a) => headerSafe(a, "BCC")) : undefined,
+    replyTo: replyTo ? headerSafe(replyTo, "Reply-To") : undefined,
+    subject: headerSafe(msg.subject, "Subject"),
+    text: msg.text,
+    html: msg.html,
+    attachments: msg.attachments?.map((a) => ({ filename: headerSafe(a.filename, "attachment name"), content: a.content, contentType: a.contentType })),
+  });
+  const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => (typeof x === "string" ? x : String((x as { address?: string }).address ?? ""))) : []);
+  return { messageId: info.messageId ?? null, accepted: list(info.accepted), rejected: list(info.rejected) };
+}
+
+async function sendEmail(_cfg: CommsConfig, to: string, subject: string, text: string) {
+  await sendMail({
+    to: [to],
     subject,
     text,
     html: `<div style="font-family:Inter,Arial,sans-serif;font-size:15px;line-height:1.6;color:#172033">${text
@@ -584,5 +765,80 @@ export async function notifyStaff(input: StaffAlertInput): Promise<void> {
 /** Sends a raw email immediately (used for tests from the admin settings page). Throws on failure. */
 export async function sendTestEmail(to: string) {
   const cfg = await getCommsConfig();
-  await sendEmail(cfg, to, "EduSkill test email", "This is a test email from your EduSkill platform. Email delivery is working.");
+  const siteName = String((await getSettingsGroup("branding"))["branding.siteName"] ?? "EduSkill India Foundation");
+  await sendEmail(
+    cfg,
+    to,
+    `${siteName}: test email`,
+    `This is a test email from the ${siteName} admin panel (${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST).\n\nEmail delivery is working: admin sign-in codes and security alerts will reach this mailbox.`
+  );
+}
+
+/** Whether an SMTP host is configured (Settings or server .env). Never reveals the values. */
+export async function isEmailConfigured(): Promise<boolean> {
+  try {
+    return !!(await getCommsConfig()).smtpHost;
+  } catch {
+    return false;
+  }
+}
+
+/** Where the SMTP configuration comes from — booleans only, for the Email configuration page. */
+export async function emailConfigStatus() {
+  const cfg = await getCommsConfig();
+  const stored = await loadSettings();
+  return {
+    configured: !!cfg.smtpHost,
+    hostFrom: stored.get("comms.smtpHost") ? "settings" : process.env.SMTP_HOST ? "env" : "none",
+    passwordSet: !!cfg.smtpPass,
+    passwordFrom: stored.get("comms.smtpPass") ? "settings" : process.env.SMTP_PASS ? "env" : "none",
+    port: cfg.smtpPort,
+    tls: cfg.smtpSecurity === "ssl" ? "SSL/TLS" : "STARTTLS (required)",
+    fromName: cfg.fromName,
+    fromAddress: cfg.fromEmail || cfg.smtpUser || "",
+    replyTo: cfg.replyTo,
+    routineEmailEnabled: cfg.emailEnabled,
+  };
+}
+
+/**
+ * Sends one security email (a sign-in code, a new-device notice…) and reports whether it was
+ * delivered, so the caller can raise an alert when it was not. The stored notification row is
+ * redacted (`redact`), the message is EMAIL-only (no in-app copy of a code), and it goes out even
+ * when routine email notifications are switched off. Never throws.
+ */
+export async function sendSecurityEmail(input: { userId?: string | null; email: string; event: NotifyEvent; data: Record<string, unknown>; redact?: string[] }): Promise<{ ok: boolean; error?: string }> {
+  let rowId: string | null = null;
+  try {
+    const cfg = await getCommsConfig();
+    const siteName = String((await getSettingsGroup("branding"))["branding.siteName"] ?? "EduSkill India Foundation");
+    const data = { siteName, ...input.data };
+    const secret = new Set(input.redact ?? []);
+    const stored = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, secret.has(k) ? REDACTED : v]));
+    const tpl = await resolveTemplate(input.event, "EMAIL");
+    const title = renderTemplate(tpl.subject, data).trim() || DEFAULT_TEMPLATES[input.event].name;
+    const body = renderTemplate(tpl.body, data).trim();
+    const row = await db.notification.create({
+      data: {
+        userId: input.userId ?? null,
+        channel: "EMAIL",
+        recipient: input.email,
+        title: renderTemplate(tpl.subject, stored).trim() || DEFAULT_TEMPLATES[input.event].name,
+        body: renderTemplate(tpl.body, stored).trim(),
+        templateKey: `${input.event}:EMAIL`,
+        data: JSON.parse(JSON.stringify(stored)),
+        status: "PENDING",
+      },
+      select: { id: true },
+    });
+    rowId = row.id;
+    await sendEmail(cfg, input.email, title, body);
+    await db.notification.update({ where: { id: row.id }, data: { status: "SENT", sentAt: new Date() } });
+    return { ok: true };
+  } catch (err) {
+    const error = String(err instanceof Error ? err.message : err).slice(0, 500);
+    if (rowId) await db.notification.update({ where: { id: rowId }, data: { status: "FAILED", error } }).catch(() => undefined);
+    else console.error("[sendSecurityEmail] failed:", error);
+    return { ok: false, error };
+  }
 }

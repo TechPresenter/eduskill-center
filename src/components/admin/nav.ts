@@ -2,7 +2,8 @@
 
 import {
   Award, BarChart3, Bell, BookOpen, Building2, CalendarDays, ClipboardCheck, ClipboardList, Coins, CreditCard, FileText, FolderTree, GraduationCap, HandCoins, HelpCircle,
-  History, Image as ImageIcon, KeyRound, LayoutDashboard, LifeBuoy, Map, Menu, Newspaper, School, Settings, ShieldCheck, Tags, TrendingUp, UserCheck, UserCog, UserPen, UsersRound,
+  History, Image as ImageIcon, KeyRound, LayoutDashboard, LifeBuoy, Mail, Map, Menu, Newspaper, School, Settings, ShieldAlert, ShieldCheck, Tags, TrendingUp, UserCheck, UserCog, UserPen,
+  UsersRound,
 } from "lucide-react";
 import type { NavGroup, NavItem } from "@/components/portal/shell";
 
@@ -65,6 +66,8 @@ export const ADMIN_NAV: NavGroup[] = [
     title: "Communication",
     items: [
       { label: "Notifications", href: "/admin/notifications", icon: Bell, permission: "notifications.view" },
+      // Compose and send an email through the Foundation's SMTP account, plus the sent history.
+      { label: "Send Email", href: "/admin/email", icon: Mail, permission: "email.send" },
       { label: "Support & Enquiries", href: "/admin/support", icon: LifeBuoy, permission: "support.view" },
     ],
   },
@@ -74,6 +77,8 @@ export const ADMIN_NAV: NavGroup[] = [
       { label: "Staff", href: "/admin/staff", icon: UserCog, permission: "users.view" },
       { label: "Roles", href: "/admin/roles", icon: ShieldCheck, permission: "roles.view" },
       { label: "Permissions", href: "/admin/permissions", icon: KeyRound, permission: "roles.view" },
+      // Administrator sessions, sign-in activity, security alerts and the 2FA / sign-in policy.
+      { label: "Security Center", href: "/admin/security", icon: ShieldAlert, permission: "security.view" },
       { label: "Settings", href: "/admin/settings", icon: Settings, permission: "settings.view" },
       { label: "Audit Logs", href: "/admin/audit-logs", icon: History, permission: "audit_logs.view" },
     ],

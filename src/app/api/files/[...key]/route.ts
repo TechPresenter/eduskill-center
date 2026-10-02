@@ -65,5 +65,10 @@ async function canAccessPrivate(key: string, user: NonNullable<Awaited<ReturnTyp
     // Study material: any logged-in student/trainer/staff
     return true;
   }
+  if (scope === "email") {
+    // Admin → Send Email attachments: the sender, or anyone who may read the sent history.
+    if (!isAdmin) return false;
+    return ownerId === user.id || hasPermission(user, "email.view");
+  }
   return isAdmin;
 }

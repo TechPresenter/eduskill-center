@@ -5,7 +5,7 @@ import type { UserRole } from "@/generated/prisma/enums";
 import { ApiError, Errors } from "@/lib/api/errors";
 import { getSessionUser, type AuthUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/rbac/permissions";
-import { enforceRateLimit } from "@/lib/rate-limit";
+import { enforceRateLimit, enforceRateLimitStrict } from "@/lib/rate-limit";
 
 export type RouteParams = Record<string, string | string[]>;
 
@@ -23,15 +23,42 @@ export interface ApiOptions {
   roles?: UserRole[];
   /** Any-of permission check (only meaningful for admin/staff). */
   permission?: string | string[];
-  rateLimit?: { limit: number; windowSec: number; keyBy?: "ip" | "user"; name?: string };
+  rateLimit?: {
+    limit: number;
+    windowSec: number;
+    keyBy?: "ip" | "user";
+    name?: string;
+    /** Refuse (429) when the limiter itself fails — for sign-in codes and second factors. */
+    failClosed?: boolean;
+  };
   /** Same-origin enforcement for state-changing requests (default true). Disable for gateway webhooks. */
   csrf?: boolean;
 }
 
+const IP_SHAPE = /^[0-9a-fA-F:.]{2,45}$/;
+
+/**
+ * The client's IP address, as the trusted reverse proxy saw it.
+ *
+ * X-Forwarded-For is a list every proxy APPENDS to — and a client can send its own value first.
+ * Trusting the left-most entry (as this used to) let anyone pick their own IP, which defeated every
+ * per-IP rate limit and poisoned login history. With TRUSTED_PROXY_HOPS proxies in front (default
+ * 1: nginx, which appends `$remote_addr`), the real client is the entry that many places from the
+ * RIGHT. X-Real-IP is used only when TRUST_X_REAL_IP=1, i.e. the proxy is known to overwrite it.
+ */
 export function getClientIp(req: NextRequest): string {
+  const hops = Number.parseInt(process.env.TRUSTED_PROXY_HOPS ?? "1", 10);
   const xf = req.headers.get("x-forwarded-for");
-  if (xf) return xf.split(",")[0]!.trim();
-  return req.headers.get("x-real-ip") ?? req.headers.get("cf-connecting-ip") ?? "0.0.0.0";
+  if (xf && Number.isFinite(hops) && hops > 0) {
+    const parts = xf.split(",").map((p) => p.trim()).filter(Boolean);
+    const ip = parts[parts.length - hops];
+    if (ip && IP_SHAPE.test(ip)) return ip;
+  }
+  if (process.env.TRUST_X_REAL_IP === "1") {
+    const real = req.headers.get("x-real-ip")?.trim();
+    if (real && IP_SHAPE.test(real)) return real;
+  }
+  return "0.0.0.0";
 }
 
 function zodDetails(err: ZodError): Record<string, string> {
@@ -63,10 +90,9 @@ export function errorResponse(err: unknown): NextResponse {
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === "P2002") {
       const target = Array.isArray(err.meta?.target) ? (err.meta?.target as string[]).join(", ") : undefined;
-      return NextResponse.json(
-        { success: false, error: { code: "CONFLICT", message: target ? `A record with the same ${target} already exists.` : "Duplicate record.", details: err.meta } },
-        { status: 409 }
-      );
+      // err.meta is NOT sent: under the Prisma driver adapter it carries raw database messages and
+      // constraint names.
+      return NextResponse.json({ success: false, error: { code: "CONFLICT", message: target ? `A record with the same ${target} already exists.` : "Duplicate record." } }, { status: 409 });
     }
     if (err.code === "P2025") {
       return NextResponse.json({ success: false, error: { code: "NOT_FOUND", message: "Record not found." } }, { status: 404 });
@@ -85,12 +111,19 @@ export function errorResponse(err: unknown): NextResponse {
   );
 }
 
+const SENSITIVE_API = /^\/api\/(admin|auth)(\/|$)/;
+
 function assertSameOrigin(req: NextRequest) {
   const method = req.method.toUpperCase();
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") return;
   const fetchSite = req.headers.get("sec-fetch-site");
   if (fetchSite && fetchSite === "cross-site") throw Errors.forbidden("Cross-site request blocked");
   const origin = req.headers.get("origin");
+  // Sign-in and admin endpoints accept browser requests only: every current browser sends Origin
+  // (or at least Sec-Fetch-Site) on a POST, and an opaque "null" origin (sandboxed frame, data: URL)
+  // is cross-site by definition.
+  const sensitive = SENSITIVE_API.test(req.nextUrl.pathname);
+  if (origin === "null" || (sensitive && !origin && !fetchSite)) throw Errors.forbidden("Cross-site request blocked");
   if (origin) {
     let originHost: string | null = null;
     try {
@@ -98,8 +131,8 @@ function assertSameOrigin(req: NextRequest) {
     } catch {
       originHost = null;
     }
-    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-    if (originHost && host && originHost !== host) throw Errors.forbidden("Cross-site request blocked");
+    const host = (req.headers.get("x-forwarded-host") ?? req.headers.get("host"))?.split(",")[0]?.trim();
+    if (!originHost || (host && originHost !== host)) throw Errors.forbidden("Cross-site request blocked");
   }
 }
 
@@ -132,7 +165,9 @@ export function apiHandler<P extends RouteParams = RouteParams>(
       if (opts.rateLimit) {
         const rl = opts.rateLimit;
         const subject = rl.keyBy === "user" && user ? `u:${user.id}` : `ip:${ip}`;
-        await enforceRateLimit(`${rl.name ?? req.nextUrl.pathname}:${subject}`, rl.limit, rl.windowSec);
+        const key = `${rl.name ?? req.nextUrl.pathname}:${subject}`;
+        if (rl.failClosed) await enforceRateLimitStrict(key, rl.limit, rl.windowSec);
+        else await enforceRateLimit(key, rl.limit, rl.windowSec);
       }
 
       const result = await fn({ req, params, user, ip, userAgent });

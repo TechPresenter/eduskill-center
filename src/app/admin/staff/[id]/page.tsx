@@ -6,6 +6,7 @@ import { hasPermission } from "@/lib/rbac/permissions";
 import { formatDate, formatDateTime, formatNumber, titleCase } from "@/lib/utils";
 import { getStaff } from "@/server/staff";
 import { listRoles } from "@/server/roles";
+import { twoFactorStatus } from "@/server/two-factor";
 import { PageHeader, KeyValue, Avatar } from "@/components/ui/misc";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { StatusBadge, Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/t
 import { orNotFound } from "@/components/admin/shared/server";
 import { IconTile } from "@/components/admin/content/app-list";
 import { StaffHeaderActions, StaffPermissionsCard, StaffRoleCard, type StaffProfile } from "@/components/admin/staff/staff-detail";
+import { TwoFactorBadge } from "@/components/admin/security/labels";
 
 export const metadata: Metadata = { title: "Staff Member · Foundation Admin" };
 
@@ -22,9 +24,14 @@ export default async function StaffDetailPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const [staff, roles] = await Promise.all([orNotFound(getStaff(id)), listRoles()]);
   const superAdmin = user.role === "SUPER_ADMIN";
-  const perms = { update: hasPermission(user, "users.update"), superAdmin: superAdmin && hasPermission(user, "users.update"), delete: superAdmin && hasPermission(user, "users.delete"), isSelf: staff.userId === user.id };
+  const isSelf = staff.userId === user.id;
+  // Super Admin viewing ANOTHER administrator: Reset 2FA and Sign out all devices (Security Center APIs).
+  const perms = { update: hasPermission(user, "users.update"), superAdmin: superAdmin && hasPermission(user, "users.update"), delete: superAdmin && hasPermission(user, "users.delete"), isSelf, security: superAdmin && !isSelf };
+  // 2FA status is Security Center information: shown to those who may open the Security Center.
+  const tfa = hasPermission(user, "security.view") ? await twoFactorStatus(staff.userId) : null;
   const profile: StaffProfile = {
     id: staff.id,
+    userId: staff.userId,
     employeeCode: staff.employeeCode,
     name: staff.user.name,
     email: staff.user.email ?? "",
@@ -35,6 +42,8 @@ export default async function StaffDetailPage({ params }: { params: Promise<{ id
     roleId: staff.roleId,
     permissions: staff.permissions,
     rolePermissions: staff.rolePermissions,
+    activeSessions: staff.activeSessions,
+    twoFactor: tfa ? { enabled: tfa.enabled, backupCodesRemaining: tfa.backupCodesRemaining, required: tfa.required } : null,
   };
   const effective = new Set([...staff.rolePermissions, ...staff.permissions]);
   const subtitle = [staff.employeeCode, staff.designation, staff.department].filter(Boolean).join(" · ");
@@ -54,6 +63,7 @@ export default async function StaffDetailPage({ params }: { params: Promise<{ id
             <Avatar name={staff.user.name} src={staff.user.avatarUrl} size={44} />
             {staff.user.name}
             <StatusBadge status={staff.user.status} />
+            {tfa && <TwoFactorBadge enabled={tfa.enabled} />}
             {perms.isSelf && <Badge tone="info">This is you</Badge>}
           </span>
         }
@@ -74,6 +84,7 @@ export default async function StaffDetailPage({ params }: { params: Promise<{ id
           <div className="mt-2 flex flex-wrap gap-1.5">
             <StatusBadge status={staff.user.status} />
             {staff.role ? <Badge tone="navy">{staff.role.name}</Badge> : <Badge tone="neutral">No role</Badge>}
+            {tfa && <TwoFactorBadge enabled={tfa.enabled} />}
             {perms.isSelf && <Badge tone="info">This is you</Badge>}
           </div>
         </div>
@@ -103,6 +114,21 @@ export default async function StaffDetailPage({ params }: { params: Promise<{ id
               <KeyValue label="Mobile" value={staff.user.mobile ? <a href={`tel:${staff.user.mobile}`} className="text-navy tabular-nums hover:underline">{staff.user.mobile}</a> : "—"} />
               <KeyValue label="Employee code" value={<span className="font-mono">{staff.employeeCode}</span>} />
               <KeyValue label="Account status" value={<StatusBadge status={staff.user.status} />} />
+              {tfa && (
+                <KeyValue
+                  label="Two-factor authentication"
+                  value={
+                    <span className="flex flex-wrap items-center gap-2">
+                      <TwoFactorBadge enabled={tfa.enabled} backupCodesLeft={tfa.enabled ? tfa.backupCodesRemaining : undefined} />
+                      {tfa.enabled && tfa.enabledAt && <span className="text-caption text-muted">since {formatDate(tfa.enabledAt)}</span>}
+                      {!tfa.enabled && tfa.required && <span className="text-caption text-muted">Required: set up at next sign-in</span>}
+                      <Link href={`/admin/security/sessions?userId=${staff.userId}`} className="ring-focus inline-flex min-h-11 items-center rounded-md text-caption font-semibold text-navy hover:underline md:min-h-0">
+                        Sessions
+                      </Link>
+                    </span>
+                  }
+                />
+              )}
               <KeyValue label="Created" value={formatDateTime(staff.user.createdAt)} />
             </CardBody>
           </Card>

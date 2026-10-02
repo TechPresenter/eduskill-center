@@ -128,7 +128,7 @@ export async function requestLoginOtp(input: { admissionNo: string; mobile: stri
 
   // A second tap inside the resend window keeps the code already on its way instead of texting another.
   const latest = await db.loginOtp.findFirst({
-    where: { userId: user.id, consumedAt: null, expiresAt: { gt: new Date() } },
+    where: { userId: user.id, purpose: "STUDENT_LOGIN", consumedAt: null, expiresAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
     select: { createdAt: true },
   });
@@ -138,10 +138,11 @@ export async function requestLoginOtp(input: { admissionNo: string; mobile: stri
   const now = new Date();
   await db.$transaction([
     // Only the newest code is ever valid: earlier unconsumed ones expire now.
-    db.loginOtp.updateMany({ where: { userId: user.id, consumedAt: null, expiresAt: { gt: now } }, data: { expiresAt: now } }),
+    db.loginOtp.updateMany({ where: { userId: user.id, purpose: "STUDENT_LOGIN", consumedAt: null, expiresAt: { gt: now } }, data: { expiresAt: now } }),
     db.loginOtp.create({
       data: {
         userId: user.id,
+        purpose: "STUDENT_LOGIN",
         codeHash: hashLoginOtp(user.id, code),
         expiresAt: new Date(now.getTime() + OTP_TTL_MINUTES * 60_000),
         ip: input.ip ?? null,
@@ -185,7 +186,7 @@ export async function verifyLoginOtp(input: { admissionNo: string; mobile: strin
   const { user } = match;
 
   const otp = await db.loginOtp.findFirst({
-    where: { userId: user.id, consumedAt: null, expiresAt: { gt: new Date() } },
+    where: { userId: user.id, purpose: "STUDENT_LOGIN", consumedAt: null, expiresAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
   });
   if (!otp) {
@@ -220,7 +221,7 @@ export async function verifyLoginOtp(input: { admissionNo: string; mobile: strin
   // Password counters are left alone: this sign-in proves the phone, not the password.
   await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
   await record(true, "otp");
-  const session = await createSession(user.id, { ip: input.ip, userAgent: input.userAgent });
+  const session = await createSession(user.id, { ip: input.ip, userAgent: input.userAgent, role: user.role, authMethod: "SMS_OTP" });
   await audit({
     user: { id: user.id, name: user.name, role: user.role },
     action: "login",

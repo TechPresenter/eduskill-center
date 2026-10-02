@@ -8,7 +8,7 @@ import { generateEmployeeCode } from "@/lib/ids";
 import { hashPassword, passwordIssue } from "@/lib/auth/password";
 import { revokeAllSessions } from "@/lib/auth/session";
 import { normalizeEmail, normalizeMobile } from "@/server/auth";
-import { mobileVariants } from "@/lib/phone";
+import { mobileVariants, samePhone } from "@/lib/phone";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid } from "@/lib/api/query";
 import { emailSchema, optionalPhone } from "@/lib/validation/common";
 import { assertPermissionKeys, ensurePermissionRows } from "@/server/roles";
@@ -100,7 +100,18 @@ async function validateRole(roleId: string | null | undefined) {
   if (!roleId) return null;
   const role = await db.role.findUnique({ where: { id: roleId } });
   if (!role) throw Errors.validation("Please correct the highlighted fields.", { roleId: "Select a valid role" });
+  // Super Admin is an account type, not a staff role: a leftover "Super Admin" role row must never
+  // be handed to ordinary staff.
+  if (role.slug === "super-admin") throw Errors.validation("Please correct the highlighted fields.", { roleId: "Super Admin is not a staff role. Choose Admin, Manager, Staff or a department role." });
   return role;
+}
+
+/** The platform must always keep one active Super Admin. */
+async function assertNotLastSuperAdmin(userId: string) {
+  const target = await db.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (target?.role !== "SUPER_ADMIN") return;
+  const others = await db.user.count({ where: { role: "SUPER_ADMIN", status: "ACTIVE", deletedAt: null, id: { not: userId } } });
+  if (others === 0) throw Errors.badRequest("This is the only active Super Admin. Create another Super Admin first.");
 }
 
 // ───────────────────────────── Queries ─────────────────────────────
@@ -182,6 +193,14 @@ export async function updateStaff(id: string, input: StaffUpdateInput, ctx: Ctx)
   if (!existing) throw Errors.notFound("Staff member");
   const email = normalizeEmail(input.email);
   const mobile = input.mobile ? normalizeMobile(input.mobile) : null;
+  // Whoever controls an administrator's email controls their sign-in codes and password resets:
+  // nobody but a Super Admin may touch a Super Admin, and only a Super Admin changes login contacts.
+  const target = await db.user.findUniqueOrThrow({ where: { id: existing.userId }, select: { role: true, email: true, mobile: true } });
+  if (target.role === "SUPER_ADMIN" && ctx.user.role !== "SUPER_ADMIN") throw Errors.forbidden("Only a Super Admin can edit a Super Admin.");
+  // Older rows keep bare digits while input is normalised to E.164, so compare numbers, not strings.
+  const mobileChanged = mobile ? !samePhone(mobile, target.mobile) : !!target.mobile;
+  const contactChanged = email !== (target.email ?? "") || mobileChanged;
+  if (contactChanged && ctx.user.role !== "SUPER_ADMIN") throw Errors.forbidden("Only a Super Admin can change a staff member's login email or mobile.");
   await assertUniqueContact(email, mobile, existing.userId);
   const staff = await db.$transaction(async (tx) => {
     await tx.user.update({ where: { id: existing.userId }, data: { name: input.name, email, mobile } });
@@ -199,6 +218,14 @@ export async function updateStaff(id: string, input: StaffUpdateInput, ctx: Ctx)
     ip: ctx.ip,
     userAgent: ctx.userAgent,
   });
+  if (target.email && email !== target.email) {
+    // A login email change ends every session and tells the OLD address.
+    await revokeAllSessions(existing.userId);
+    const { sendSecurityEmail } = await import("@/lib/notifications");
+    const { istTime, raiseSecurityAlert } = await import("@/server/security-alerts");
+    void sendSecurityEmail({ userId: existing.userId, email: target.email, event: "LOGIN_EMAIL_CHANGED", data: { name: input.name, oldEmail: target.email, newEmail: email, time: istTime() } });
+    await raiseSecurityAlert({ type: "LOGIN_EMAIL_CHANGED", severity: "warning", title: `${ctx.user.name} changed the login email of ${input.name}`, detail: `New address: ${email}. All of their sessions were signed out.`, userId: existing.userId, ip: ctx.ip, userAgent: ctx.userAgent });
+  }
   return serializeStaff(staff);
 }
 
@@ -229,6 +256,7 @@ export async function setStaffStatus(id: string, status: UserStatus, ctx: Ctx) {
   const existing = await db.staff.findFirst({ where: { id, deletedAt: null }, include: { user: { select: { id: true, name: true, status: true } } } });
   if (!existing) throw Errors.notFound("Staff member");
   if (existing.userId === ctx.user.id) throw Errors.badRequest("You cannot change the status of your own account.");
+  if (status !== "ACTIVE") await assertNotLastSuperAdmin(existing.userId);
   await db.user.update({ where: { id: existing.userId }, data: { status } });
   if (status !== "ACTIVE") await revokeAllSessions(existing.userId);
   await audit({ user: ctx.user, action: status === "ACTIVE" ? "activate" : "deactivate", module: "users", recordType: "Staff", recordId: id, description: `${ctx.user.name} set ${existing.user.name}'s account to ${status}`, oldValue: { status: existing.user.status }, newValue: { status }, ip: ctx.ip, userAgent: ctx.userAgent });
@@ -253,6 +281,7 @@ export async function deleteStaff(id: string, ctx: Ctx) {
   const existing = await db.staff.findFirst({ where: { id, deletedAt: null }, include: { user: { select: { id: true, name: true, email: true } } } });
   if (!existing) throw Errors.notFound("Staff member");
   if (existing.userId === ctx.user.id) throw Errors.badRequest("You cannot delete your own account.");
+  await assertNotLastSuperAdmin(existing.userId);
   await db.$transaction([
     db.staffPermission.deleteMany({ where: { staffId: id } }),
     db.staff.update({ where: { id }, data: { deletedAt: new Date(), roleId: null } }),

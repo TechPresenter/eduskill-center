@@ -37,6 +37,7 @@ https://eduskillindia.org/center
 | 15 | Troubleshooting |
 | 16 | विकल्प: subdomain |
 | 17 | AI सहायक (चैटबॉट) चालू करना |
+| 18 | Admin security: Email OTP, 2FA, Security Center, Send Email |
 
 ---
 
@@ -172,7 +173,8 @@ sudo -u eduskill nano .env
 | `PORT` | `3001` |
 | `DATABASE_URL` | step 4 वाला |
 | `AUTH_SECRET` | नीचे वाली command से बनाएँ |
-| `SEED_SUPER_ADMIN_EMAIL` / `..._PASSWORD` | पहला admin |
+| `DATA_ENCRYPTION_KEY` | `openssl rand -base64 32` — एक बार बनाएँ, फिर कभी न बदलें (section 18.1) |
+| `SEED_SUPER_ADMIN_EMAIL` / `..._PASSWORD` | पहला admin — email `info@eduskillindia.com` (login code इसी पर आता है) |
 | `SEED_DEMO` | `"false"` — production में demo data नहीं चाहिए |
 
 ```bash
@@ -328,13 +330,17 @@ https://eduskillindia.org
 
 ## 10. पहली बार login
 
-1. `https://eduskillindia.org/center/login` खोलें।
-2. `.env` वाले `SEED_SUPER_ADMIN_EMAIL` और `SEED_SUPER_ADMIN_PASSWORD` से login करें।
+1. `https://eduskillindia.org/center/login` खोलें (admin का अपना page `/center/login/admin` है,
+   पर SMTP भरने से पहले email code नहीं जा सकता — इसलिए पहली बार password से)।
+2. `.env` वाले `SEED_SUPER_ADMIN_EMAIL` और `SEED_SUPER_ADMIN_PASSWORD` से login करें
+   (`ADMIN_PASSWORD_LOGIN=on` होना चाहिए, जो default है)।
 3. **तुरंत password बदलें** — ऊपर दाएँ avatar → Account (`/center/admin/account`) → Change Password।
 4. **Admin → Settings → Branding** में logo, favicon, संस्था का नाम, पता और
    social links upload करें। पूरी साइट की branding यहीं से चलती है।
 5. **Admin → Settings → Communication** में SMTP भरें और "Send test email" दबाएँ,
-   वरना किसी applicant को confirmation mail नहीं जाएगा।
+   वरना किसी applicant को confirmation mail नहीं जाएगा — और admins को login code भी नहीं।
+   `info@eduskillindia.com` (Hostinger) की पूरी values section 18.3 में हैं। उसके बाद अपना
+   2FA set up करें (section 18.4)।
 6. **Admin → Settings → Payments** में gateway चुनें (`manual` या Razorpay)।
 7. **Admin → Staff** से Foundation staff के accounts बनाएँ और permissions दें।
 
@@ -383,6 +389,8 @@ sudo -u eduskill -H bash -lc 'cd /var/www/center && ./deploy/deploy.sh'
 करता है। हर step चलाने से **पहले** print करता है कि वह क्या करने जा रहा है।
 
 - पहले सिर्फ़ देखना है कि क्या-क्या होगा? → `./deploy/deploy.sh --dry-run`
+- **Admin security वाला release** (Email OTP / 2FA / Send Email) पहली बार deploy किया है? तो
+  उसके बाद एक बार `npm run security:migrate` भी चलाएँ — section 18.2।
 - Files खुद rsync कर दी हैं? → `./deploy/deploy.sh --no-pull`
 - Script root के रूप में चलने से मना कर देता है (यह जानबूझकर है)।
 
@@ -455,7 +463,7 @@ step 8 और 9 दोहरा दें। (पूरी तरह मिट�
 | **`ERR_TOO_MANY_REDIRECTS` सिर्फ़ `/center` पर** | vhost में `/center` → `/center/` का 301/RewriteRule जोड़ा गया है, जो app के `/center/` → `/center` (308) से टकराता है | vhost से वह redirect हटा दें। `deploy/` की दोनों फ़ाइलें पहले से सही हैं: `/center` को redirect नहीं, proxy किया जाता है |
 | **Login के बाद फिर login page** (loop) | Cookie का path या `APP_URL` गलत | `.env` में `APP_URL="https://eduskillindia.org/center"` और `BASE_PATH="/center"`; दोबारा build + restart; browser के cookies साफ़ करें |
 | **Login पर "Cross-site request blocked"** | Proxy असली `Host` header आगे नहीं भेज रहा | nginx: `proxy_set_header Host $host;` / Apache: `ProxyPreserveHost On` |
-| **File upload पर 413 या "Request Entity Too Large"** | Web server की body limit कम है | nginx: `client_max_body_size 25m;` / Apache: `LimitRequestBody 26214400`; फिर reload |
+| **File upload पर 413 या "Request Entity Too Large"** | Web server की body limit कम है | nginx: `client_max_body_size 25m;` / Apache: `LimitRequestBody 26214400`; फिर reload। Course material (50 MB तक) upload करना हो तो `60m` / `62914560` रखें |
 | **Email/certificate में गलत link** | `APP_URL` में `/center` नहीं है | `.env` ठीक करें, service restart; पुराने certificates दोबारा generate करें |
 | **Uploads पर "read-only file system"** | systemd `ProtectSystem=strict` में storage path नहीं जोड़ा | unit की `ReadWritePaths=` में सही path डालें, `daemon-reload`, restart |
 | **Service start होते ही मर जाती है** | `.env` नहीं मिल रहा, या DB तक पहुँच नहीं | `journalctl -u eduskill-center -n 80 --no-pager`; DB connection अलग से test करें |
@@ -575,6 +583,181 @@ request का खर्च शून्य। इसका मतलब है 
 
 ---
 
+## 18. Admin security: Email OTP, 2FA, Security Center, Send Email
+
+इस release से administrators (Super Admin और Foundation Staff) का login बदल गया है:
+
+- **Secure Admin Login** — `https://eduskillindia.org/center/login/admin`। Admin अपना registered
+  email डालता है और उसी mailbox में आया **6-digit code** डालकर अंदर आता है (Passwordless Secure
+  Login)। Students और trainers पहले की तरह `/center/login` से ही login करते हैं।
+- **2FA (authenticator app)** — email code के बाद Google Authenticator / Microsoft Authenticator
+  का 6-digit code। हर admin खुद चालू कर सकता है; Super Admin इसे सबके लिए ज़रूरी कर सकता है।
+- **Security Center** (`/center/admin/security`) — चालू sessions, login activity, administrators
+  (lock / unlock, 2FA reset), security alerts। हर ज़रूरी घटना की email Super Admins और security
+  alert address (default `info@eduskillindia.com`) पर जाती है।
+- **Send Email** (`/center/admin/email`) — admin पैनल से ही professional email लिखना, preview,
+  test email, draft, templates, signature और पूरी sent history। सब कुछ ऊपर वाले SMTP से जाता है।
+- Admin session **30 मिनट** बिना activity के और अधिकतम **12 घंटे** बाद अपने आप खत्म हो जाता है।
+
+### 18.1 `.env` में नए variables
+
+```bash
+cd /var/www/center
+openssl rand -base64 32          # DATA_ENCRYPTION_KEY के लिए — output copy करें
+sudo -u eduskill nano .env
+```
+
+| Variable | Value | मतलब |
+|---|---|---|
+| `DATA_ENCRYPTION_KEY` | `openssl rand -base64 32` का output | 2FA secrets और Settings में save हुए SMTP/SMS/WhatsApp passwords इसी से encrypt होते हैं। `AUTH_SECRET` से **अलग** होना चाहिए |
+| `TRUSTED_PROXY_HOPS` | `1` | App के आगे कितने proxy हैं (इस VPS पर nginx या Apache = 1; Cloudflare + nginx = 2)। Login history, rate limit और new-device alert का IP इसी से तय होता है |
+| `TRUST_X_REAL_IP` | nginx: `1` / Apache: खाली | सिर्फ़ तब `1` जब proxy `X-Real-IP` को **overwrite** करता हो (`deploy/nginx-center.conf` करता है, Apache वाली file नहीं) |
+| `ADMIN_PASSWORD_LOGIN` | `on` | `on` = admin password से भी login कर सकता है (2FA चालू हो तो उसके बाद authenticator भी)। `off` = सिर्फ़ email code + authenticator |
+| `ADMIN_IDLE_MINUTES` | `30` | इतने मिनट बिना activity के admin sign out (5–480) |
+| `ADMIN_SESSION_HOURS` | `12` | Admin session इससे ज़्यादा कभी नहीं चलता (1–72) |
+| `SEED_SUPER_ADMIN_EMAIL` | `info@eduskillindia.com` | पहला Super Admin। Login code इसी mailbox में आता है — असली mailbox रखें |
+
+```bash
+sudo systemctl restart eduskill-center      # ये runtime values हैं — दोबारा build की ज़रूरत नहीं
+```
+
+> **`DATA_ENCRYPTION_KEY` एक बार बनाइए और फिर कभी मत बदलिए।** किसी ने 2FA set up कर लिया या
+> Settings में SMTP password save हो गया, उसके बाद key बदली या खो गई तो हर stored secret पढ़ा
+> नहीं जा सकेगा: हर 2FA वाले admin का 2FA reset करना पड़ेगा (18.6) और SMTP password दोबारा
+> भरना पड़ेगा। Database backup के साथ इस key को भी सुरक्षित (अलग) जगह रखें — बिना key के
+> backup से 2FA वापस नहीं आता।
+
+### 18.2 इस release के बाद एक बार: `security:migrate`
+
+`./deploy/deploy.sh` से update करने के बाद (migrations लग जाने पर) **एक बार** चलाएँ। पहले
+`--dry-run` से देखें कि क्या बदलेगा:
+
+```bash
+sudo -u eduskill -H bash -lc 'cd /var/www/center && npm run security:migrate -- --dry-run'
+sudo -u eduskill -H bash -lc 'cd /var/www/center && npm run security:migrate'
+```
+
+यह script (`scripts/apply-admin-security.ts`):
+
+1. नई permissions जोड़ता है — `security.view`, `security.manage`, `email.view`, `email.send`, `email.templates`।
+2. **Admin / Manager / Staff** tier roles बनाता है (अगर नहीं हैं)। पहले से मौजूद किसी role की
+   permissions **नहीं बदलता** — सिर्फ़ उसका tier level ठीक करता है।
+3. Notification log में पुरानी rows से password-reset links और trainers के temporary passwords हटाता है।
+4. Audit log में गलती से save हुए password hash को `[redacted]` कर देता है।
+
+हर बदलाव Audit Log में "System" के नाम से दर्ज होता है। दोबारा चलाने पर कुछ नहीं बदलता।
+
+### 18.3 SMTP setup — `info@eduskillindia.com` (Hostinger)
+
+Super Admin के रूप में **Admin → Settings → Communication**
+(`https://eduskillindia.org/center/admin/settings/comms`) खोलें। यह page सिर्फ़ Super Admin को दिखता है:
+
+| Field | Value |
+|---|---|
+| Email notifications enabled | ✓ |
+| SMTP host | `smtp.hostinger.com` |
+| SMTP port | `465` |
+| Encryption | **SSL/TLS (port 465)** — या port `587` के साथ **STARTTLS** |
+| SMTP user | `info@eduskillindia.com` |
+| SMTP password | उस mailbox का password (Hostinger hPanel → Emails → `info@eduskillindia.com`) |
+| From name | `EduSkill India Foundation` |
+| From email | `info@eduskillindia.com` (SMTP user से अलग address तभी, जब mailbox उस address से भेज सकता हो) |
+| Reply-To email | ख़ाली छोड़ें (जवाब From पर आएँगे), या कोई और mailbox |
+
+**Save** दबाएँ, फिर **Send test email** — अपने inbox में mail आना चाहिए।
+
+- Password **encrypted** save होता है (`DATA_ENCRYPTION_KEY` से) और फिर कभी दिखाया नहीं जाता;
+  field में "Stored – type to replace" दिखेगा। बदलना हो तो नया password टाइप करके Save करें।
+  `.env` में key नहीं है तो page पर पीली चेतावनी दिखती है — पहले 18.1 पूरा करें।
+- Port और Encryption का जोड़ा मिलना चाहिए: `465` ↔ SSL/TLS, `587` ↔ STARTTLS। STARTTLS में
+  connection TLS पर upgrade हुए बिना password नहीं भेजा जाता।
+- Mail spam में जाए तो Hostinger hPanel में domain के SPF / DKIM (और DMARC) DNS records जाँचें।
+- `.env` के `SMTP_*` सिर्फ़ fallback हैं; Settings में भरी values उन पर हमेशा भारी पड़ती हैं।
+
+**Signature और limits:** Admin → Settings → **Email Signature & Limits**
+(`/center/admin/settings/email`) — Send Email में जुड़ने वाला signature (HTML), "Add signature"
+default में tick हो या नहीं, और (सिर्फ़ Super Admin) प्रति email अधिकतम recipients, attachment
+size और हर admin की daily limit।
+
+**Send Email** (`/center/admin/email`) सिर्फ़ उन्हीं को दिखता है जिनके पास `email.send`
+permission है (Admin → Roles)। 10 से ज़्यादा recipients पर भेजने से पहले अलग से confirm माँगा
+जाता है, और हर भेजी गई email History में Message ID और delivery status के साथ रहती है।
+
+### 18.4 पहली बार 2FA set up करना (Super Admin)
+
+1. 18.1 पूरा हो (`DATA_ENCRYPTION_KEY` + restart) और 18.3 का test email पहुँच गया हो।
+2. `https://eduskillindia.org/center/login/admin` → email → mailbox में आया 6-digit code → अंदर।
+   (SMTP अभी नहीं चल रहा तो `ADMIN_PASSWORD_LOGIN=on` के साथ password से भी login हो सकता है — उसी page
+   पर password वाला link `/center/login` खोलता है।)
+3. ऊपर दाएँ avatar → **My Account → Security** (`/center/admin/account/security`) →
+   **Set up authenticator**।
+4. Phone में Google Authenticator / Microsoft Authenticator खोलें, QR code scan करें (या दिखाई गई
+   key हाथ से डालें) और app का 6-digit code डालें।
+5. **Backup codes** दिखेंगे — सिर्फ़ इसी एक बार। Print करें या password manager में रखें। हर code
+   एक ही बार चलता है; phone खो जाए तो यही अंदर आने का रास्ता है।
+6. Sign out करके दोबारा login करें: email code के बाद अब authenticator का code माँगा जाएगा।
+
+### 18.5 "सबके लिए 2FA ज़रूरी" — किस क्रम में चालू करें
+
+ग़लत क्रम में चालू करने से admins बाहर रह सकते हैं, इसलिए यही क्रम रखें:
+
+1. **पहले खुद** — 18.4 पूरा करें और backup codes सुरक्षित रखें।
+2. बाकी administrators से भी 18.4 करवाएँ। Security Center → **Administrators**
+   (`/center/admin/security/admins`) में हर admin का 2FA status दिखता है।
+3. फिर **Admin → Settings → Security** (`/center/admin/settings/security`) में
+   "Require an authenticator app (2FA) for every administrator" चालू करके Save करें। जिनका 2FA
+   अभी नहीं है, उन्हें अगली sign-in पर ही set-up करवाया जाएगा।
+4. जब सबका 2FA चल रहा हो और SMTP भरोसेमंद हो, तब चाहें तो `.env` में `ADMIN_PASSWORD_LOGIN=off`
+   करके `sudo systemctl restart eduskill-center` — अब admin सिर्फ़ email code + authenticator से
+   अंदर आएँगे और admin password reset भी बंद हो जाएगा।
+
+> `DATA_ENCRYPTION_KEY` के बिना "Require 2FA" switch लागू ही नहीं होता — ताकि key के बिना कोई
+> enroll न कर पाए और सारे admins बाहर न हो जाएँ।
+
+### 18.6 Admin बाहर रह गया? — recovery script (सिर्फ़ server से)
+
+Email नहीं पहुँच रहा, phone खो गया, backup codes भी नहीं, या अकेला Super Admin lock हो गया —
+तब server पर SSH करके यह script चलाएँ। इसका कोई web page या API नहीं है; server access ही
+इसकी अनुमति है। हर action Audit Log में जाता है और Super Admins को **critical alert** email जाती है।
+
+```bash
+cd /var/www/center
+# हालत देखें: 2FA on/off, lock, चालू sessions (कोई secret print नहीं होता)
+sudo -u eduskill -H bash -lc 'cd /var/www/center && npm run security:recovery -- status info@eduskillindia.com'
+
+# गलत password / गलत codes से लगा lock और email-code की hourly सीमा हटाएँ
+sudo -u eduskill -H bash -lc 'cd /var/www/center && npm run security:recovery -- unlock info@eduskillindia.com'
+
+# Authenticator + backup codes हटाएँ, हर device से sign out (अगली login पर नया set-up)
+sudo -u eduskill -H bash -lc 'cd /var/www/center && npm run security:recovery -- reset-2fa info@eduskillindia.com'
+
+# एक बार चलने वाला sign-in link (15 मिनट वैध) — email/SMTP ख़राब हो तब
+sudo -u eduskill -H bash -lc 'cd /var/www/center && npm run security:recovery -- login-link info@eduskillindia.com'
+```
+
+- `login-link` एक `https://eduskillindia.org/center/login/admin/recover?token=…` link print करता है।
+  यह **password जैसा** है: single use, 15 मिनट बाद बेकार। खुद खोलें या phone / आमने-सामने दें —
+  email, WhatsApp या ticket में कभी paste न करें। Link `.env` के `APP_URL` से बनता है, इसलिए
+  `APP_URL` सही (https, `/center` सहित) होना चाहिए।
+- Link से अंदर आने पर सीधे My Account → Security खुलता है — वहाँ 2FA दोबारा set up करें या backup codes नए बनाएँ।
+- दूसरा Super Admin मौजूद हो तो script की ज़रूरत नहीं: Security Center → Administrators से
+  unlock / 2FA reset हो जाता है।
+
+### 18.7 Troubleshooting
+
+| लक्षण | असली वजह | समाधान |
+|---|---|---|
+| **Login code email में नहीं आता** | SMTP नहीं भरा / गलत है, या mail spam में गया | Settings → Communication में "Send test email"; Admin → Notifications → Log में FAILED row की error पढ़ें; spam folder देखें। अंदर ही न आ पाएँ तो `ADMIN_PASSWORD_LOGIN=on` के साथ password से, या 18.6 का `login-link` |
+| **2FA set-up पर "encryption not configured" जैसा message** | `.env` में `DATA_ENCRYPTION_KEY` नहीं है | 18.1 — key डालें, restart |
+| **Authenticator का code हमेशा गलत** | Phone का समय मेल नहीं खाता | Phone में Date & time → "Set automatically" चालू करें। 5 गलत codes के बाद थोड़ी देर का lock लगता है — `security:recovery -- unlock` |
+| **Key बदलने के बाद कोई 2FA code नहीं चलता, SMTP भी बंद** | `DATA_ENCRYPTION_KEY` बदल गई | पुरानी key वापस रखें। वह नहीं है तो हर admin का `reset-2fa` करें और SMTP password दोबारा save करें |
+| **Login Activity में हर visitor का एक ही IP; सबको "Too many requests"** | `TRUSTED_PROXY_HOPS` गलत, या proxy `X-Forwarded-For` नहीं भेज रहा | nginx में `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` (deploy की file में है); proxies की सही गिनती डालें, restart |
+| **Admin बार-बार अपने आप sign out** | 30 मिनट idle timeout | ज़रूरत हो तो `ADMIN_IDLE_MINUTES` बढ़ाएँ (max 480), restart |
+| **Admin page किसी दूसरी site के iframe में नहीं खुलता** | जानबूझकर: admin और login pages `X-Frame-Options: DENY` भेजते हैं (clickjacking से बचाव) | यह bug नहीं है |
+| **25 MB से बड़ा course material upload 413 देता है** | App 50 MB तक लेता है, पर web server की limit 25 MB है | nginx: `client_max_body_size 60m;` / Apache: `LimitRequestBody 62914560`; फिर reload |
+
+---
+
 ## फ़ाइलें जो इस deployment के लिए बनी हैं
 
 | File | किसलिए |
@@ -586,3 +769,5 @@ request का खर्च शून्य। इसका मतलब है 
 | `deploy/.env.production.example` | production `.env` का template |
 | `deploy/postgres-setup.sql` | अलग database + DB user बनाने के लिए |
 | `deploy/deploy.sh` | हर बार update करने की script |
+| `scripts/apply-admin-security.ts` | `npm run security:migrate` — admin security release का एक-बार data migration (section 18.2) |
+| `scripts/admin-recovery.ts` | `npm run security:recovery` — lock हुए admin के लिए server-only recovery (section 18.6) |

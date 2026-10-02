@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, Pencil, Power, RefreshCw, Save, ShieldAlert, Trash2 } from "lucide-react";
+import { KeyRound, LogOut, Pencil, Power, RefreshCw, Save, ShieldAlert, ShieldOff, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Field, FormGrid } from "@/components/ui/form";
@@ -11,7 +11,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { Select } from "@/components/ui/select";
 import { Alert } from "@/components/ui/feedback";
 import { StickyActionBar } from "@/components/ui/sticky-action-bar";
-import { DropdownItem } from "@/components/ui/dropdown";
+import { DropdownItem, DropdownSeparator } from "@/components/ui/dropdown";
 import { SaveStatus } from "@/components/admin/content/app-list";
 import { useUnsavedChangesWarning } from "@/components/admin/content/use-unsaved";
 import { toast } from "@/components/ui/toast";
@@ -21,9 +21,12 @@ import { ConfirmAction } from "@/components/admin/shared/confirm-action";
 import { RecordActions } from "@/components/admin/shared/record-actions";
 import { PermissionMatrix } from "@/components/admin/shared/permission-matrix";
 import { generatePassword, TemporaryPasswordModal, type RoleOption } from "@/components/admin/staff/staff-form";
+import { resetTwoFactorRequest, signOutEverywhereRequest, useConfirmedRequest, type ConfirmedRequest } from "@/components/admin/security/security-actions";
 
 export interface StaffProfile {
   id: string;
+  /** The login account (User) id — the Security Center APIs act on users, not staff records. */
+  userId: string;
   employeeCode: string;
   name: string;
   email: string;
@@ -34,6 +37,9 @@ export interface StaffProfile {
   roleId: string | null;
   permissions: string[];
   rolePermissions: string[];
+  activeSessions: number;
+  /** Two-factor status; null when the viewer may not see it (no security.view). */
+  twoFactor: { enabled: boolean; backupCodesRemaining: number; required: boolean } | null;
 }
 
 export interface StaffPerms {
@@ -41,6 +47,8 @@ export interface StaffPerms {
   superAdmin: boolean;
   delete: boolean;
   isSelf: boolean;
+  /** Super Admin viewing ANOTHER administrator: Reset 2FA and Sign out all devices. */
+  security: boolean;
 }
 
 function ProfileForm({ staff, onDone, onCancel }: { staff: StaffProfile; onDone: () => void; onCancel: () => void }) {
@@ -148,9 +156,14 @@ export function StaffHeaderActions({ staff, perms, variant = "buttons" }: { staf
   const [edit, setEdit] = React.useState(false);
   const [reset, setReset] = React.useState(false);
   const [temp, setTemp] = React.useState<string | null>(null);
+  // Security actions keep their confirmation OUTSIDE the "…" menu, so closing the menu cannot unmount it.
+  const security = useConfirmedRequest();
   const active = staff.status === "ACTIVE";
   const statusActions = perms.superAdmin && !perms.isSelf;
-  if (variant === "menu" && !perms.update && !perms.superAdmin) return null;
+  const securityItems = perms.security ? (
+    <SecurityMenuItems staff={staff} onAsk={security.ask} />
+  ) : null;
+  if (variant === "menu" && !perms.update && !perms.superAdmin && !perms.security) return null;
   return (
     <>
       {variant === "buttons" && perms.update && (
@@ -163,9 +176,15 @@ export function StaffHeaderActions({ staff, perms, variant = "buttons" }: { staf
           Reset password
         </Button>
       )}
-      {variant === "buttons" && statusActions && (
+      {variant === "buttons" && (statusActions || perms.security) && (
         <RecordActions label="More actions">
-          <StatusMenuItems staff={staff} perms={perms} active={active} />
+          {securityItems}
+          {statusActions && (
+            <>
+              {securityItems && <DropdownSeparator />}
+              <StatusMenuItems staff={staff} perms={perms} active={active} />
+            </>
+          )}
         </RecordActions>
       )}
       {variant === "menu" && (
@@ -180,9 +199,11 @@ export function StaffHeaderActions({ staff, perms, variant = "buttons" }: { staf
               Reset password
             </DropdownItem>
           )}
+          {securityItems}
           {statusActions && <StatusMenuItems staff={staff} perms={perms} active={active} />}
         </RecordActions>
       )}
+      {security.dialog}
       <Modal open={edit} onClose={() => setEdit(false)} title="Edit profile" size="lg">
         <ProfileForm
           staff={staff}
@@ -205,6 +226,31 @@ export function StaffHeaderActions({ staff, perms, variant = "buttons" }: { staf
         />
       </Modal>
       {temp && <TemporaryPasswordModal open onClose={() => setTemp(null)} password={temp} email={staff.email} title="New temporary password" />}
+    </>
+  );
+}
+
+/**
+ * Super Admin → another administrator: sign out everywhere and reset 2FA. The rows only choose the
+ * request; the confirmation is rendered by the caller, outside the menu.
+ */
+function SecurityMenuItems({ staff, onAsk }: { staff: StaffProfile; onAsk: (r: ConfirmedRequest) => void }) {
+  const tfa = staff.twoFactor;
+  return (
+    <>
+      <DropdownItem
+        icon={<LogOut className="h-4 w-4" />}
+        disabled={staff.activeSessions === 0}
+        description={staff.activeSessions === 0 ? "Not signed in anywhere" : `${staff.activeSessions} active session${staff.activeSessions === 1 ? "" : "s"}`}
+        onClick={() => onAsk(signOutEverywhereRequest({ id: staff.userId, name: staff.name, activeSessions: staff.activeSessions, twoFactor: tfa?.enabled }))}
+      >
+        Sign out all devices
+      </DropdownItem>
+      {tfa?.enabled && (
+        <DropdownItem danger icon={<ShieldOff className="h-4 w-4" />} onClick={() => onAsk(resetTwoFactorRequest({ id: staff.userId, name: staff.name, backupCodesLeft: tfa.backupCodesRemaining, required: tfa.required }))}>
+          Reset 2FA
+        </DropdownItem>
+      )}
     </>
   );
 }

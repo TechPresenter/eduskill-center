@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { Errors } from "@/lib/api/errors";
+import { keyedHash } from "@/lib/crypto";
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -45,4 +46,37 @@ export async function checkRateLimit(key: string, limit: number, windowSec: numb
 export async function enforceRateLimit(key: string, limit: number, windowSec: number): Promise<void> {
   const result = await checkRateLimit(key, limit, windowSec);
   if (!result.allowed) throw Errors.tooMany(result.retryAfterSec);
+}
+
+/**
+ * Like enforceRateLimit, but a limiter failure (database error) REFUSES the request instead of
+ * allowing it. Used for sign-in codes and second factors, where an outage must not quietly remove
+ * brute-force protection.
+ */
+export async function enforceRateLimitStrict(key: string, limit: number, windowSec: number): Promise<void> {
+  let result: RateLimitResult;
+  try {
+    const rows = await db.$queryRaw<{ count: number; retry_after: number }[]>`
+      INSERT INTO "rate_limits" ("key", "count", "reset_at")
+      VALUES (${key}, 1, LOCALTIMESTAMP + make_interval(secs => ${windowSec}::double precision))
+      ON CONFLICT ("key") DO UPDATE SET
+        "count" = CASE WHEN "rate_limits"."reset_at" < LOCALTIMESTAMP THEN 1 ELSE "rate_limits"."count" + 1 END,
+        "reset_at" = CASE WHEN "rate_limits"."reset_at" < LOCALTIMESTAMP
+          THEN LOCALTIMESTAMP + make_interval(secs => ${windowSec}::double precision)
+          ELSE "rate_limits"."reset_at" END
+      RETURNING "count", GREATEST(1, CEIL(EXTRACT(EPOCH FROM ("reset_at" - LOCALTIMESTAMP))))::int AS retry_after`;
+    const row = rows[0];
+    if (!row) throw new Error("rate limiter returned no row");
+    const count = Number(row.count);
+    result = { allowed: count <= limit, remaining: Math.max(0, limit - count), retryAfterSec: Number(row.retry_after) };
+  } catch (err) {
+    console.error("[rate-limit] strict check failed, refusing request:", err instanceof Error ? err.message : err);
+    throw Errors.tooMany(60);
+  }
+  if (!result.allowed) throw Errors.tooMany(result.retryAfterSec);
+}
+
+/** A rate-limit key that does not store the identifier (an email address) in plain text. */
+export function hashedRateKey(prefix: string, identifier: string): string {
+  return `${prefix}:${keyedHash("rate-limit", identifier.trim().toLowerCase()).slice(0, 32)}`;
 }
