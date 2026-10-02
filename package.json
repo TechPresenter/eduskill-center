@@ -24,6 +24,7 @@
     "content:shiksha": "tsx scripts/apply-shiksha-mission.ts",
     "content:education": "tsx scripts/apply-education-categories.ts",
     "content:fees": "tsx scripts/apply-monthly-fees.ts",
+    "content:programs": "tsx scripts/apply-skill-ai-programs.ts",
     "content:course-cover": "tsx scripts/apply-course-cover.ts"
   },
   "dependencies": {

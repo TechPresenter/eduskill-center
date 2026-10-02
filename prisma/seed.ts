@@ -1080,6 +1080,16 @@ async function main() {
     log(`Class 5+ catalogue skipped: ${err instanceof Error ? err.message : String(err)} (run "npm run content:education" later)`);
   }
 
+  // Computer & Skill Development Training and AI Workshop & Training — real programmes, listed
+  // right after Shiksha Mission, so they run after it (it owns sortOrder 0).
+  try {
+    const { applySkillAiPrograms } = await import("../scripts/apply-skill-ai-programs");
+    const r = await applySkillAiPrograms({ quiet: true });
+    log(`Skill & AI programmes ready (${r.created} created, ${r.updated} updated)`);
+  } catch (err) {
+    log(`Skill & AI programmes skipped: ${err instanceof Error ? err.message : String(err)} (run "npm run content:programs" later)`);
+  }
+
   if (SEED_DEMO) {
     // Generates the branded cover art and the sample document files the demo rows point at,
     // so no demo screen ever shows a missing image or a broken "view document" link.
