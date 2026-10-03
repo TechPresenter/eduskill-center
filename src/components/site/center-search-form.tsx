@@ -133,8 +133,10 @@ export function CenterSearchForm({ initial = {}, compact, className, submitLabel
 
   const dropdowns = (
     <>
-      <LocationCascade value={loc} onChange={setLoc} onNames={rememberNames} withCenters bare className="contents" />
-      <CourseSelect value={courseId} onChange={setCourseId} placeholder="Any course" />
+      {/* Every state and district, not only those with a centre: a visitor looks for their own area,
+          and an area without a centre yet gets a clear "none here yet" result instead of a dead list. */}
+      <LocationCascade value={loc} onChange={setLoc} onNames={rememberNames} blockMode="select" shortPlaceholders bare className="contents" />
+      <CourseSelect value={courseId} onChange={setCourseId} placeholder="Course" />
     </>
   );
 

@@ -32,7 +32,7 @@ export function HeroFinderCard({ title }: { title: string }) {
         </h2>
       </div>
       <div className="space-y-3">
-        <LocationCascade value={loc} onChange={setLoc} withCenters bare className="space-y-3" placeholderPrefix="Select" />
+        <LocationCascade value={loc} onChange={setLoc} blockMode="select" bare className="space-y-3" placeholderPrefix="Select" />
         <CourseSelect value={courseId} onChange={setCourseId} placeholder="Any course" />
         <Button type="submit" fullWidth size="lg" loading={busy} leftIcon={<Search className="h-4 w-4" />}>
           Find Training Center

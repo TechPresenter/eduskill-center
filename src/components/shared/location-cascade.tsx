@@ -38,6 +38,11 @@ interface LocationCascadeProps {
   blockMode?: "select" | "type";
   labels?: { state?: string; district?: string; block?: string };
   placeholderPrefix?: string;
+  /**
+   * One-word placeholders ("State", "District", "Block") for narrow inline rows such as the public
+   * centre search, where "Select state first" would be cut to "Select sta".
+   */
+  shortPlaceholders?: boolean;
   disabled?: boolean;
   /**
    * Render selects without <Field> labels (compact inline usage). Defaults to a responsive grid
@@ -74,7 +79,7 @@ function load(kind: "states" | "districts" | "blocks", parentId: string | undefi
  * State → District → Block cascading selects backed by the database (never hard-coded).
  * Use `depth` to stop at state or district (e.g. trainer volunteer levels).
  */
-export function LocationCascade({ value, onChange, depth = "block", required, errors, withCenters = false, blockMode, labels, placeholderPrefix = "Select", disabled, bare, className, onNames }: LocationCascadeProps) {
+export function LocationCascade({ value, onChange, depth = "block", required, errors, withCenters = false, blockMode, labels, placeholderPrefix = "Select", shortPlaceholders, disabled, bare, className, onNames }: LocationCascadeProps) {
   const typeBlock = (blockMode ?? (bare || withCenters ? "select" : "type")) === "type";
   const blockError = errors?.blockId ?? errors?.blockName;
   const [states, setStates] = React.useState<LocationOption[]>([]);
@@ -133,7 +138,7 @@ export function LocationCascade({ value, onChange, depth = "block", required, er
       value={value.stateId ?? ""}
       onChange={(e) => onChange({ stateId: e.target.value || undefined, districtId: undefined, blockId: undefined, blockName: undefined })}
       options={states.map((s) => ({ value: s.id, label: s.name }))}
-      placeholder={`${placeholderPrefix} state`}
+      placeholder={shortPlaceholders ? "State" : `${placeholderPrefix} state`}
       required={required}
       disabled={disabled}
       invalid={!!errors?.stateId}
@@ -146,7 +151,7 @@ export function LocationCascade({ value, onChange, depth = "block", required, er
       value={value.districtId ?? ""}
       onChange={(e) => onChange({ stateId: value.stateId, districtId: e.target.value || undefined, blockId: undefined, blockName: undefined })}
       options={districts.map((d) => ({ value: d.id, label: d.name }))}
-      placeholder={loading.d ? "Loading…" : value.stateId ? `${placeholderPrefix} district` : "Select state first"}
+      placeholder={loading.d ? "Loading…" : shortPlaceholders ? "District" : value.stateId ? `${placeholderPrefix} district` : "Select state first"}
       // The placeholder says "Loading…" visually; aria-busy says the same thing to a screen reader.
       aria-busy={loading.d || undefined}
       required={required}
@@ -172,7 +177,7 @@ export function LocationCascade({ value, onChange, depth = "block", required, er
       value={value.blockId ?? ""}
       onChange={(e) => onChange({ ...value, blockId: e.target.value || undefined, blockName: undefined })}
       options={blocks.map((b) => ({ value: b.id, label: b.name }))}
-      placeholder={loading.b ? "Loading…" : value.districtId ? `${placeholderPrefix} block` : "Select district first"}
+      placeholder={loading.b ? "Loading…" : shortPlaceholders ? "Block" : value.districtId ? `${placeholderPrefix} block` : "Select district first"}
       aria-busy={loading.b || undefined}
       required={required}
       disabled={disabled || !value.districtId}

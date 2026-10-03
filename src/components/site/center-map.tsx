@@ -194,7 +194,7 @@ export function CenterMap({
     <div className={cn("space-y-4", className)}>
       {filters && (
         <form onSubmit={apply} className="card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6" aria-label="Filter map">
-          <LocationCascade value={loc} onChange={setLoc} withCenters bare className="contents" />
+          <LocationCascade value={loc} onChange={setLoc} blockMode="select" shortPlaceholders bare className="contents" />
           <CourseSelect value={courseId} onChange={setCourseId} placeholder="Any course" />
           <div className="flex gap-2 sm:col-span-2 lg:col-span-2">
             <Button type="submit" className="flex-1" leftIcon={<MapPin className="h-4 w-4" />}>

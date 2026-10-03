@@ -752,7 +752,7 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
               </button>
 
               <div className={cn("space-y-4", filtersOpen ? "block" : "hidden", "lg:block")}>
-                <LocationCascade value={location} onChange={setLocation} withCenters className="grid grid-cols-1 gap-4 sm:grid-cols-3" />
+                <LocationCascade value={location} onChange={setLocation} blockMode="select" className="grid grid-cols-1 gap-4 sm:grid-cols-3" />
                 <FormGrid cols={1}>
                   <Field label="Course" htmlFor="courseFilter">
                     <Select id="courseFilter" value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} options={courseOptions.map((c) => ({ value: c.id, label: c.name }))} placeholder="Any course" />

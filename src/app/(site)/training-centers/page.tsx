@@ -2,7 +2,7 @@ import { Suspense, cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SectionHeading } from "@/components/site/section-heading";
-import { Compass, List, Map as MapIcon, RotateCcw, SearchX, UserPlus } from "lucide-react";
+import { Building2, Compass, List, Map as MapIcon, RotateCcw, SearchX, UserPlus } from "lucide-react";
 import { getSection } from "@/lib/cms";
 import { getSessionUser } from "@/lib/auth/session";
 import { absoluteUrl, buildQuery, cn } from "@/lib/utils";
@@ -154,6 +154,9 @@ async function CenterResults({ q, states, user }: { q: CenterSearchQuery; states
                   </ButtonLink>
                   <ButtonLink href={`/training-centers${buildQuery({ view: "map" })}`} variant="outline" size="md" leftIcon={<MapIcon className="h-4 w-4" />}>
                     Search on the map
+                  </ButtonLink>
+                  <ButtonLink href="/open-a-centre" variant="outline" size="md" leftIcon={<Building2 className="h-4 w-4" />}>
+                    Open a centre here
                   </ButtonLink>
                 </>
               ) : (
