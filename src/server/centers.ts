@@ -22,10 +22,13 @@ export interface Ctx {
  * case-insensitively or added to it — see resolveBlockId). Runs before any transaction, as
  * resolveBlockId requires. A block is required: every centre row has a real blockId.
  */
-async function resolveHierarchy(loc: { stateId: string; districtId: string; blockId?: string | null; blockName?: string | null }) {
+async function resolveHierarchy(loc: { stateId: string; districtId: string; blockId?: string | null; blockName?: string | null }, opts: { actor: AuditActor; currentBlockId?: string | null }) {
   const district = await db.district.findFirst({ where: { id: loc.districtId, stateId: loc.stateId }, include: { state: true } });
   if (!district) throw Errors.validation("Please correct the highlighted fields.", { districtId: "District must belong to the selected state" });
-  const blockId = await resolveBlockId({ districtId: district.id, blockId: loc.blockId, blockName: loc.blockName }, { source: "the training centre form" });
+  const blockId = await resolveBlockId(
+    { districtId: district.id, blockId: loc.blockId, blockName: loc.blockName },
+    { source: "the training centre form", actor: opts.actor, currentBlockId: opts.currentBlockId }
+  );
   if (!blockId) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Select or type your block" });
   return { state: district.state, district, blockId };
 }
@@ -40,7 +43,7 @@ async function uniqueSlug(base: string, excludeId?: string) {
 }
 
 export async function createCenter(input: CenterInput, ctx: Ctx) {
-  const { state, district, blockId } = await resolveHierarchy(input);
+  const { state, district, blockId } = await resolveHierarchy(input, { actor: ctx.user });
   const slug = await uniqueSlug(input.name);
   const center = await db.$transaction(async (tx) => {
     const { code, sequence } = await generateCenterCode(state.code, district.code, tx);
@@ -95,7 +98,7 @@ export async function updateCenter(id: string, input: Partial<CenterInput>, ctx:
     districtId,
     blockId: blockGiven ? input.blockId : existing.blockId,
     blockName: blockGiven ? input.blockName : undefined,
-  });
+  }, { actor: ctx.user, currentBlockId: existing.blockId });
   const slug = input.name && input.name !== existing.name ? await uniqueSlug(input.name, id) : undefined;
   const center = await db.$transaction(async (tx) => {
     const updated = await tx.center.update({

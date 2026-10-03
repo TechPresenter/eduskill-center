@@ -23,7 +23,8 @@ import { raiseSecurityAlert } from "@/server/security-alerts";
  *   - More than BULK_CONFIRM_THRESHOLD recipients needs an explicit confirmation flag.
  *   - Per-admin limits: 10 sends a minute, and email.dailyLimitPerAdmin a day.
  *   - Attachments are private files under private/email/<adminId>/ — only the sender's own uploads
- *     can be attached — with a total size cap (email.maxAttachmentMb).
+ *     (or those already on a draft the sender may edit) can be attached — with a total size cap
+ *     (email.maxAttachmentMb). The name recipients see keeps the extension of the stored file.
  */
 
 export interface Ctx {
@@ -65,6 +66,8 @@ export const sendSchema = composeSchema.extend({
 
 export const testSchema = composeSchema.extend({
   testTo: z.string().trim().toLowerCase().refine((v) => isValidAddress(v), "Enter a valid email address"),
+  /** The draft being tested, so its stored attachments may be sent; the draft itself is left as is. */
+  draftId: z.string().uuid().optional().nullable(),
 });
 
 // ───────────────────────────── helpers ─────────────────────────────
@@ -98,12 +101,39 @@ function validateRecipients(input: { to: string[]; cc: string[]; bcc: string[] }
   return unique.size;
 }
 
-/** The sender may only attach their own uploads (private/email/<their id>/…). */
-function assertOwnAttachments(refs: AttachmentRef[], ctx: Ctx) {
+/**
+ * The sender may only attach their own uploads (private/email/<their id>/…), plus the attachments
+ * already stored on a draft they are allowed to edit or send (`allowedKeys` — a Super Admin working
+ * on another administrator's draft).
+ */
+function assertOwnAttachments(refs: AttachmentRef[], ctx: Ctx, allowedKeys: ReadonlySet<string> = new Set()) {
   const prefix = `private/email/${ctx.user.id}/`;
   for (const a of refs) {
-    if (!a.key.startsWith(prefix) || a.key.includes("..")) throw Errors.forbidden("That attachment does not belong to you. Upload it again.");
+    if (a.key.includes("..")) throw Errors.forbidden("That attachment does not belong to you. Upload it again.");
+    if (!a.key.startsWith(prefix) && !allowedKeys.has(a.key)) throw Errors.forbidden("That attachment does not belong to you. Upload it again.");
   }
+}
+
+/**
+ * The file name recipients see. The extension always comes from the server-generated storage key —
+ * the one the upload was checked against — never from the client, so `x.txt` cannot be delivered as
+ * `Fee_Receipt.html`. The rest of the name is reduced to letters, digits, marks, spaces and . _ - ( ).
+ */
+export function normalizeAttachmentRef(a: AttachmentRef): AttachmentRef {
+  const ext = (a.key.split("/").pop() ?? "").split(".").pop()?.toLowerCase() ?? "";
+  if (!(ATTACHMENT_EXTS as readonly string[]).includes(ext)) throw Errors.badRequest("That attachment type is not allowed.");
+  const base =
+    (a.name.split(/[\\/]/).pop() ?? "")
+      .replace(/\.[^.]*$/, "")
+      .replace(/[^\p{L}\p{M}\p{N} ._()-]+/gu, "_")
+      .replace(/^[\s.]+|[\s.]+$/g, "")
+      .slice(0, 150) || "attachment";
+  return { ...a, name: `${base}.${ext}` };
+}
+
+/** Keys of the attachments stored on an existing email row. */
+function storedAttachmentKeys(m: { attachments: Prisma.JsonValue }): Set<string> {
+  return new Set(serializeMessage(m).attachments.map((a) => a.key).filter((k): k is string => typeof k === "string"));
 }
 
 async function loadAttachments(refs: AttachmentRef[], maxMb: number): Promise<MailAttachment[]> {
@@ -147,7 +177,17 @@ export async function uploadEmailAttachment(file: File, ctx: Ctx) {
 // ───────────────────────────── drafts ─────────────────────────────
 
 export async function saveDraft(input: ComposeInput & { draftId?: string | null }, ctx: Ctx) {
-  assertOwnAttachments(input.attachments, ctx);
+  // The draft is loaded (and its ownership checked) first: its own stored attachments may be kept
+  // even when another administrator uploaded them.
+  const existing = input.draftId
+    ? await db.emailMessage.findFirst({ where: { id: input.draftId, status: "DRAFT", deletedAt: null }, select: { id: true, createdById: true, attachments: true } })
+    : null;
+  if (input.draftId) {
+    if (!existing) throw Errors.notFound("Draft");
+    if (existing.createdById !== ctx.user.id && ctx.user.role !== "SUPER_ADMIN") throw Errors.forbidden("You can only edit your own drafts.");
+  }
+  assertOwnAttachments(input.attachments, ctx, existing ? storedAttachmentKeys(existing) : undefined);
+  const attachments = input.attachments.map(normalizeAttachmentRef);
   const data = {
     toAddresses: input.to,
     ccAddresses: input.cc,
@@ -155,13 +195,10 @@ export async function saveDraft(input: ComposeInput & { draftId?: string | null 
     subject: input.subject,
     html: sanitizeEmailHtml(input.html),
     includeSignature: input.includeSignature,
-    attachments: input.attachments as unknown as Prisma.InputJsonValue,
+    attachments: attachments as unknown as Prisma.InputJsonValue,
     templateId: input.templateId ?? null,
   };
-  if (input.draftId) {
-    const existing = await db.emailMessage.findFirst({ where: { id: input.draftId, status: "DRAFT", deletedAt: null }, select: { id: true, createdById: true } });
-    if (!existing) throw Errors.notFound("Draft");
-    if (existing.createdById !== ctx.user.id && ctx.user.role !== "SUPER_ADMIN") throw Errors.forbidden("You can only edit your own drafts.");
+  if (existing) {
     return serializeMessage(await db.emailMessage.update({ where: { id: existing.id }, data }));
   }
   const draft = await db.emailMessage.create({ data: { ...data, status: "DRAFT", createdById: ctx.user.id } });
@@ -188,14 +225,30 @@ async function deliver(input: ComposeInput, recipients: { to: string[]; cc: stri
   const status = await emailConfigStatus();
   if (!status.configured) throw Errors.badRequest("Email is not configured. A Super Admin must set up SMTP in Admin → Settings → Communication first.");
   const limits = await emailLimits();
-  assertOwnAttachments(input.attachments, ctx);
+  // The draft (when sending from one) is checked first: the attachments stored on it may be sent by
+  // whoever may send the draft, even when another administrator uploaded them.
+  let draftId: string | null = null;
+  let draftKeys: Set<string> | undefined;
+  if (opts.draftId) {
+    const draft = await db.emailMessage.findFirst({ where: { id: opts.draftId, status: "DRAFT", deletedAt: null }, select: { id: true, createdById: true, attachments: true } });
+    const mayUse = !!draft && (draft.createdById === ctx.user.id || ctx.user.role === "SUPER_ADMIN");
+    if (!opts.isTest) {
+      if (!draft) throw Errors.notFound("Draft");
+      if (!mayUse) throw Errors.forbidden("You can only send your own drafts.");
+      draftId = draft.id;
+    }
+    // A test send leaves the draft where it is; it only borrows the draft's stored attachments.
+    if (draft && mayUse) draftKeys = storedAttachmentKeys(draft);
+  }
+  assertOwnAttachments(input.attachments, ctx, draftKeys);
+  const refs = input.attachments.map(normalizeAttachmentRef);
 
   await enforceRateLimit(`email-send:u:${ctx.user.id}`, 10, 60);
   const sentToday = await db.emailMessage.count({ where: { sentById: ctx.user.id, sentAt: { gte: startOfIstDay() }, status: { in: ["SENT", "SENDING"] } } });
   if (sentToday >= limits.dailyLimit) throw Errors.tooMany(3600);
 
   const rendered = await renderEmail(input);
-  const attachments = await loadAttachments(input.attachments, limits.maxAttachmentMb);
+  const attachments = await loadAttachments(refs, limits.maxAttachmentMb);
   const subject = opts.isTest ? `[TEST] ${input.subject}` : input.subject;
 
   // Sending always creates a new history row. A draft it came from is removed only once the email
@@ -210,52 +263,53 @@ async function deliver(input: ComposeInput, recipients: { to: string[]; cc: stri
     html: rendered.body,
     text: rendered.text,
     includeSignature: input.includeSignature,
-    attachments: input.attachments as unknown as Prisma.InputJsonValue,
+    attachments: refs as unknown as Prisma.InputJsonValue,
     fromAddress: status.fromAddress || null,
     replyTo: status.replyTo || null,
     templateId: input.templateId ?? null,
     sentById: ctx.user.id,
     sentAt: new Date(),
   };
-  let draftId: string | null = null;
-  if (opts.draftId && !opts.isTest) {
-    const draft = await db.emailMessage.findFirst({ where: { id: opts.draftId, status: "DRAFT", deletedAt: null }, select: { id: true, createdById: true } });
-    if (!draft) throw Errors.notFound("Draft");
-    if (draft.createdById !== ctx.user.id && ctx.user.role !== "SUPER_ADMIN") throw Errors.forbidden("You can only send your own drafts.");
-    draftId = draft.id;
-  }
   const row = await db.emailMessage.create({ data: { ...data, createdById: ctx.user.id } });
 
+  // Only the SMTP hand-off can fail the send. Once the server has accepted the message it has gone
+  // out, so a database hiccup afterwards must never report "could not be sent" (the admin would send
+  // it again and every recipient would get it twice).
+  let res: Awaited<ReturnType<typeof sendMail>>;
   try {
-    const res = await sendMail({ to: recipients.to, cc: recipients.cc, bcc: recipients.bcc, subject, text: rendered.text, html: rendered.html, attachments });
-    const partial = res.rejected.length > 0;
-    const updated = await db.emailMessage.update({
-      where: { id: row.id },
-      data: { status: "SENT", messageId: res.messageId, error: partial ? `Rejected by the server: ${res.rejected.join(", ")}`.slice(0, 1000) : null },
-    });
-    if (draftId) await db.emailMessage.update({ where: { id: draftId }, data: { deletedAt: new Date() } });
-    await audit({
-      user: ctx.user,
-      action: opts.isTest ? "email_test" : "email_send",
-      module: "email",
-      recordType: "EmailMessage",
-      recordId: row.id,
-      description: `${ctx.user.name} ${opts.isTest ? "sent a test of" : "sent"} "${input.subject}" to ${recipients.to.length + recipients.cc.length + recipients.bcc.length} recipient(s)`,
-      newValue: { to: recipients.to, cc: recipients.cc, bccCount: recipients.bcc.length, attachments: input.attachments.map((a) => a.name), messageId: res.messageId },
-      ip: ctx.ip,
-      userAgent: ctx.userAgent,
-    });
-    return serializeMessage(updated);
+    res = await sendMail({ to: recipients.to, cc: recipients.cc, bcc: recipients.bcc, subject, text: rendered.text, html: rendered.html, attachments });
   } catch (err) {
     const error = String(err instanceof Error ? err.message : err).slice(0, 1000);
     const failed = await db.emailMessage.update({ where: { id: row.id }, data: { status: "FAILED", error } });
     await audit({ user: ctx.user, action: "email_failed", module: "email", recordType: "EmailMessage", recordId: row.id, description: `Email "${input.subject}" from ${ctx.user.name} could not be sent: ${error}`, ip: ctx.ip, userAgent: ctx.userAgent });
     return serializeMessage(failed);
   }
+
+  const partial = res.rejected.length > 0;
+  const sentData = { status: "SENT" as const, messageId: res.messageId, error: partial ? `Rejected by the server: ${res.rejected.join(", ")}`.slice(0, 1000) : null };
+  const updated = await db.emailMessage.update({ where: { id: row.id }, data: sentData }).catch((e: unknown) => {
+    console.error("[email] sent, but the history row could not be marked SENT", row.id, e);
+    return { ...row, ...sentData };
+  });
+  if (draftId) {
+    await db.emailMessage.update({ where: { id: draftId }, data: { deletedAt: new Date() } }).catch((e: unknown) => console.error("[email] sent, but the draft could not be removed", draftId, e));
+  }
+  await audit({
+    user: ctx.user,
+    action: opts.isTest ? "email_test" : "email_send",
+    module: "email",
+    recordType: "EmailMessage",
+    recordId: row.id,
+    description: `${ctx.user.name} ${opts.isTest ? "sent a test of" : "sent"} "${input.subject}" to ${recipients.to.length + recipients.cc.length + recipients.bcc.length} recipient(s)`,
+    newValue: { to: recipients.to, cc: recipients.cc, bccCount: recipients.bcc.length, attachments: refs.map((a) => a.name), messageId: res.messageId },
+    ip: ctx.ip,
+    userAgent: ctx.userAgent,
+  });
+  return serializeMessage(updated);
 }
 
 export async function sendTestComposedEmail(input: z.infer<typeof testSchema>, ctx: Ctx) {
-  return deliver(input, { to: [input.testTo], cc: [], bcc: [] }, ctx, { isTest: true });
+  return deliver(input, { to: [input.testTo], cc: [], bcc: [] }, ctx, { isTest: true, draftId: input.draftId });
 }
 
 export async function sendComposedEmail(input: z.infer<typeof sendSchema>, ctx: Ctx) {

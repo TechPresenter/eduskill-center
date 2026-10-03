@@ -49,6 +49,9 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     stateId: s.stateId ?? "",
     districtId: s.districtId ?? "",
     blockId: s.blockId ?? "",
+    // The saved block's name too: a block deactivated since is no longer in the suggestions, and the
+    // Block box would otherwise show empty.
+    blockName: s.block?.name ?? "",
     villageTown: s.villageTown ?? "",
     address: s.address ?? "",
     pincode: s.pincode ?? "",

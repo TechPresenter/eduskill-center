@@ -6,7 +6,8 @@ import { Errors } from "@/lib/api/errors";
 import { audit, type AuditActor } from "@/lib/audit";
 import { generateEmployeeCode } from "@/lib/ids";
 import { hashPassword, passwordIssue } from "@/lib/auth/password";
-import { revokeAllSessions } from "@/lib/auth/session";
+import { revokeAllSessions, type AuthUser } from "@/lib/auth/session";
+import { deviceLabel, maskIp } from "@/lib/auth/device";
 import { normalizeEmail, normalizeMobile } from "@/server/auth";
 import { mobileVariants, samePhone } from "@/lib/phone";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid } from "@/lib/api/query";
@@ -17,6 +18,20 @@ export interface Ctx {
   user: AuditActor;
   ip?: string | null;
   userAgent?: string | null;
+}
+
+/** Who is looking: a Super Admin sees everything; everyone else follows the Security Center rules. */
+export type StaffViewer = Pick<AuthUser, "id" | "role">;
+
+const isSuperViewer = (viewer: StaffViewer) => viewer.role === "SUPER_ADMIN";
+
+/**
+ * Sign-in rows as a viewer may see them. As in the Security Center, only a Super Admin sees full IP
+ * addresses, raw user agents and device hashes; everyone else gets the masked network and a device label.
+ */
+function loginRowsFor<T extends { ip: string | null; userAgent: string | null; deviceIdHash: string | null }>(viewer: StaffViewer, rows: T[]): T[] {
+  if (isSuperViewer(viewer)) return rows;
+  return rows.map((h) => ({ ...h, ip: h.ip ? maskIp(h.ip) : null, userAgent: h.userAgent ? deviceLabel(h.userAgent) : null, deviceIdHash: null }));
 }
 
 // ───────────────────────────── Schemas ─────────────────────────────
@@ -78,7 +93,7 @@ export function generateTempPassword(length = 12) {
 
 const staffInclude = {
   user: { select: { id: true, name: true, email: true, mobile: true, status: true, avatarUrl: true, lastLoginAt: true, createdAt: true, role: true } },
-  role: { select: { id: true, name: true, slug: true, isSystem: true } },
+  role: { select: { id: true, name: true, slug: true, isSystem: true, level: true } },
   permissions: { select: { permission: { select: { key: true } } } },
 } satisfies Prisma.StaffInclude;
 
@@ -116,10 +131,14 @@ async function assertNotLastSuperAdmin(userId: string) {
 
 // ───────────────────────────── Queries ─────────────────────────────
 
-export async function listStaff(q: StaffListQuery) {
+export async function listStaff(q: StaffListQuery, viewer: StaffViewer) {
   const where: Prisma.StaffWhereInput = { deletedAt: null };
   if (q.roleId) where.roleId = q.roleId;
-  if (q.status) where.user = { status: { in: q.status.split(",").filter(Boolean) as UserStatus[] } };
+  const userWhere: Prisma.UserWhereInput = {};
+  if (q.status) userWhere.status = { in: q.status.split(",").filter(Boolean) as UserStatus[] };
+  // A Super Admin's staff record (legacy installs have one) is visible to Super Admins only.
+  if (!isSuperViewer(viewer)) userWhere.role = "STAFF";
+  if (Object.keys(userWhere).length) where.user = userWhere;
   if (q.department) where.department = { contains: q.department, mode: "insensitive" };
   if (q.q) where.OR = [{ employeeCode: { contains: q.q, mode: "insensitive" } }, { designation: { contains: q.q, mode: "insensitive" } }, { user: { name: { contains: q.q, mode: "insensitive" } } }, { user: { email: { contains: q.q, mode: "insensitive" } } }, { user: { mobile: { contains: q.q } } }];
   const orderBy = buildOrderBy(q.sort, q.order, ["createdAt", "employeeCode", "designation", "department"] as const, "createdAt");
@@ -127,21 +146,34 @@ export async function listStaff(q: StaffListQuery) {
   return paged(rows.map(serializeStaff), total, q);
 }
 
-export async function getStaff(id: string) {
+export async function getStaff(id: string, viewer: StaffViewer) {
   const s = await db.staff.findFirst({ where: { id, deletedAt: null }, include: staffInclude });
   if (!s) throw Errors.notFound("Staff member");
+  // Nobody but a Super Admin sees a Super Admin's sign-ins, devices, sessions or 2FA state.
+  if (s.user.role === "SUPER_ADMIN" && !isSuperViewer(viewer)) throw Errors.notFound("Staff member");
   const [rolePermissions, loginHistory, sessions, recentAudit] = await Promise.all([
     s.roleId ? db.rolePermission.findMany({ where: { roleId: s.roleId }, select: { permission: { select: { key: true } } } }) : Promise.resolve([]),
     db.loginHistory.findMany({ where: { userId: s.userId }, orderBy: { createdAt: "desc" }, take: 20 }),
     db.session.count({ where: { userId: s.userId, revokedAt: null, expiresAt: { gt: new Date() } } }),
     db.auditLog.findMany({ where: { userId: s.userId }, orderBy: { createdAt: "desc" }, take: 10, select: { id: true, action: true, module: true, description: true, createdAt: true } }),
   ]);
-  return { ...serializeStaff(s), rolePermissions: rolePermissions.map((p) => p.permission.key).sort(), loginHistory, activeSessions: sessions, recentAudit };
+  return { ...serializeStaff(s), rolePermissions: rolePermissions.map((p) => p.permission.key).sort(), loginHistory: loginRowsFor(viewer, loginHistory), activeSessions: sessions, recentAudit };
 }
 
-export async function staffLoginHistory(userId: string, q: { page: number; limit: number }) {
+export async function staffLoginHistory(userId: string, q: { page: number; limit: number }, viewer: StaffViewer) {
   const [items, total] = await Promise.all([db.loginHistory.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, ...getPaging(q) }), db.loginHistory.count({ where: { userId } })]);
-  return paged(items, total, q);
+  return paged(loginRowsFor(viewer, items), total, q);
+}
+
+/**
+ * The tier rule (permissions.ts): a member acts only on staff of a LOWER tier, or on their own
+ * profile. A Super Admin edits anyone. A missing or removed role counts as the lowest tier (3).
+ */
+export function canEditStaffProfile(actor: { id: string; role: string; security?: { tier: number } }, target: { userId: string; role: { level: number } | null }): boolean {
+  if (actor.role === "SUPER_ADMIN") return true;
+  if (target.userId === actor.id) return true;
+  const actorTier = actor.security?.tier ?? 3;
+  return (target.role?.level ?? 3) > actorTier;
 }
 
 // ───────────────────────────── Mutations ─────────────────────────────
@@ -197,6 +229,7 @@ export async function updateStaff(id: string, input: StaffUpdateInput, ctx: Ctx)
   // nobody but a Super Admin may touch a Super Admin, and only a Super Admin changes login contacts.
   const target = await db.user.findUniqueOrThrow({ where: { id: existing.userId }, select: { role: true, email: true, mobile: true } });
   if (target.role === "SUPER_ADMIN" && ctx.user.role !== "SUPER_ADMIN") throw Errors.forbidden("Only a Super Admin can edit a Super Admin.");
+  if (!canEditStaffProfile(ctx.user, existing)) throw Errors.forbidden("You can only edit staff below your own tier.");
   // Older rows keep bare digits while input is normalised to E.164, so compare numbers, not strings.
   const mobileChanged = mobile ? !samePhone(mobile, target.mobile) : !!target.mobile;
   const contactChanged = email !== (target.email ?? "") || mobileChanged;

@@ -24,7 +24,9 @@ export type SecurityAlertType =
   | "ACCOUNT_UNLOCKED"
   | "BULK_EMAIL_SENT"
   | "SESSIONS_REVOKED"
-  | "RECOVERY_LOGIN";
+  | "RECOVERY_LOGIN"
+  /** A secret setting cannot be decrypted with the current DATA_ENCRYPTION_KEY. */
+  | "SECRET_UNREADABLE";
 
 export interface SecurityAlertInput {
   type: SecurityAlertType;

@@ -325,10 +325,23 @@ export function invalidateSettingsCache() {
   cache = null;
 }
 
+/**
+ * Secret settings whose stored value could not be decrypted on the last load (DATA_ENCRYPTION_KEY lost
+ * or changed). Readers get "" for them — which every consumer must treat as "not configured", never as
+ * a usable key — and the Security Center lists them. Key names only, never values.
+ */
+let undecryptable = new Set<string>();
+const alertedUndecryptable = new Set<string>();
+
+export function undecryptableSecretKeys(): string[] {
+  return [...undecryptable].sort();
+}
+
 export async function loadSettings(force = false): Promise<Map<string, unknown>> {
   if (!force && cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.map;
   const rows = await db.setting.findMany({ select: { key: true, value: true } });
   const map = new Map<string, unknown>();
+  const failed = new Set<string>();
   for (const r of rows) {
     let value: unknown = r.value;
     // Secrets are stored encrypted (enc:v1:…); everything that reads settings gets plaintext.
@@ -338,12 +351,53 @@ export async function loadSettings(force = false): Promise<Map<string, unknown>>
       } catch (err) {
         console.error(`[settings] could not decrypt ${r.key}:`, err instanceof Error ? err.message : err);
         value = "";
+        failed.add(r.key);
       }
     }
     map.set(r.key, value);
   }
   cache = { at: Date.now(), map };
+  undecryptable = failed;
+  // One critical alert per key per process (the alert code reads settings itself, hence the guard and
+  // the dynamic import, which also keeps this module free of a static cycle).
+  for (const key of failed) {
+    if (alertedUndecryptable.has(key)) continue;
+    alertedUndecryptable.add(key);
+    const label = SETTING_DEFAULTS[key]?.label ?? key;
+    void import("@/server/security-alerts")
+      .then(({ raiseSecurityAlert }) =>
+        raiseSecurityAlert({
+          type: "SECRET_UNREADABLE",
+          severity: "critical",
+          title: `The saved "${label}" cannot be decrypted`,
+          detail: `Setting ${key} was encrypted with a different DATA_ENCRYPTION_KEY. It is treated as not configured until a Super Admin saves it again in Admin → Settings.`,
+        })
+      )
+      .catch(() => undefined);
+  }
   return map;
+}
+
+/**
+ * Problems with the secret settings stored in the database, for the Security Center (Super Admin):
+ * values that cannot be decrypted, and values still stored as plain text (saved before
+ * DATA_ENCRYPTION_KEY existed — `npm run security:migrate` encrypts them). Names keys, never values.
+ */
+export async function storedSecretIssues(): Promise<string[]> {
+  await loadSettings();
+  const issues = undecryptableSecretKeys().map(
+    (k) => `${SETTING_DEFAULTS[k]?.label ?? k} (${k}) cannot be decrypted with the current DATA_ENCRYPTION_KEY and is treated as not set. Save it again in Admin → Settings.`
+  );
+  if (isEncryptionConfigured()) {
+    const secretKeys = Object.entries(SETTING_DEFAULTS).filter(([, d]) => d.secret).map(([k]) => k);
+    const rows = await db.setting.findMany({ where: { key: { in: secretKeys } }, select: { key: true, value: true } });
+    for (const r of rows) {
+      if (typeof r.value === "string" && r.value !== "" && !isEncrypted(r.value)) {
+        issues.push(`${SETTING_DEFAULTS[r.key]?.label ?? r.key} (${r.key}) is stored as plain text. Run npm run security:migrate on the server, or save it again in Admin → Settings, to encrypt it.`);
+      }
+    }
+  }
+  return issues;
 }
 
 /** True when the key has a stored row (as opposed to falling back to its default). */

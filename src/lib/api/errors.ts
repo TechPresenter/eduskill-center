@@ -13,6 +13,11 @@ export class ApiError extends Error {
 export const Errors = {
   badRequest: (message = "Bad request", details?: unknown) => new ApiError(400, message, "BAD_REQUEST", details),
   unauthorized: (message = "Authentication required") => new ApiError(401, message, "UNAUTHORIZED"),
+  /**
+   * No (valid) session at all. Kept distinct from `unauthorized`, which services also use for a
+   * wrong code or password: only this code tells the client its session has ended.
+   */
+  sessionRequired: () => new ApiError(401, "Authentication required", "SESSION_REQUIRED"),
   forbidden: (message = "You do not have permission to perform this action") =>
     new ApiError(403, message, "FORBIDDEN"),
   notFound: (what = "Resource") => new ApiError(404, `${what} not found`, "NOT_FOUND"),

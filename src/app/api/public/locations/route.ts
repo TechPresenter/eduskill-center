@@ -48,6 +48,8 @@ export const GET = apiHandler({ auth: "none", csrf: false }, async ({ req }) => 
     const blocks = await db.block.findMany({
       where: { districtId: q.districtId, isActive: true, ...(centerFilter ? { centers: { some: { deletedAt: null, status: "ACTIVE" } } } : {}) },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      // Bounded: blocks can be typed in by the public, so the list must never grow without limit.
+      take: 500,
       select: { id: true, name: true, slug: true, districtId: true },
     });
     return { blocks };

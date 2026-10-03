@@ -69,7 +69,7 @@ function formatClock(totalSec: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-export function IdleTimeout({ idleMinutes, loginPath }: { idleMinutes: number; loginPath: string }) {
+export function IdleTimeout({ idleMinutes, loginPath, sessionId }: { idleMinutes: number; loginPath: string; sessionId: string }) {
   const idleMsRef = React.useRef(idleMinutes * 60_000);
   const lastActivityRef = React.useRef(0);
   const writtenActivityRef = React.useRef(0);
@@ -114,10 +114,20 @@ export function IdleTimeout({ idleMinutes, loginPath }: { idleMinutes: number; l
       endingRef.current = true;
       warningRef.current = false;
       if (!remote) {
+        let someoneElse = false;
         try {
-          await api.post("/api/auth/logout", undefined, { signal: AbortSignal.timeout(8_000) });
+          // Names THIS tab's session: if the browser has since signed in as someone else (a student
+          // on a shared centre computer, after this admin session ran out), the server leaves that
+          // newer session alone and says so.
+          const res = await api.post<{ skipped?: boolean } | null>("/api/auth/logout", { sessionId }, { signal: AbortSignal.timeout(8_000) });
+          someoneElse = res?.skipped === true;
         } catch {
           /* Already signed out, or offline: the session is over either way and login follows. */
+        }
+        if (someoneElse) {
+          // Not this tab's session to clean up after: no cache purge, no sign-out broadcast.
+          goToLogin(reason);
+          return;
         }
         // The same clean-up the shell's LogoutButton does before the next person signs in.
         window.dispatchEvent(new CustomEvent("esk:logout", { detail: { reason } }));
@@ -126,7 +136,7 @@ export function IdleTimeout({ idleMinutes, loginPath }: { idleMinutes: number; l
       }
       goToLogin(reason);
     },
-    [goToLogin]
+    [goToLogin, sessionId]
   );
 
   /** Tells the server this person is still here. A ping already in flight is shared, never doubled. */
@@ -149,6 +159,15 @@ export function IdleTimeout({ idleMinutes, loginPath }: { idleMinutes: number; l
             void endSession("expired");
             return "expired" as const;
           }
+          if (err instanceof ApiClientError && err.status === 403) {
+            // The cookie now holds a different account (someone signed in as a student or trainer in
+            // another tab after this admin session ended). Leave that session alone: no logout, no
+            // cache purge, no sign-out broadcast — just stop showing this admin page.
+            endingRef.current = true;
+            warningRef.current = false;
+            goToLogin("expired");
+            return "expired" as const;
+          }
           // Offline or rate limited: back off instead of retrying every tick.
           nextPingAllowedRef.current = Date.now() + (err instanceof ApiClientError && err.status === 429 ? 60_000 : 15_000);
           return "failed" as const;
@@ -159,7 +178,7 @@ export function IdleTimeout({ idleMinutes, loginPath }: { idleMinutes: number; l
       pingRef.current = run;
       return run;
     },
-    [endSession]
+    [endSession, goToLogin]
   );
 
   /** One heartbeat: share activity, keep the server alive, open/close the warning, sign out at the limit. */
@@ -195,12 +214,14 @@ export function IdleTimeout({ idleMinutes, loginPath }: { idleMinutes: number; l
 
   React.useEffect(() => {
     const now = Date.now();
-    // Loading an admin page is activity, and that request already refreshed the session server-side.
+    // Loading an admin page is activity. It is NOT a keep-alive: the server only refreshes
+    // lastSeenAt on a request when the last write is over a minute old, so the page load may not have
+    // moved the server's deadline at all. The trailing-ping rule in check() sends a real keep-alive
+    // within a minute instead, which keeps the server's deadline at or after this timer's.
     lastActivityRef.current = Math.max(now, readNumber(ACTIVITY_KEY));
-    lastPingRef.current = Math.max(now, readNumber(PING_KEY));
+    lastPingRef.current = readNumber(PING_KEY);
     writtenActivityRef.current = lastActivityRef.current;
     writeStorage(ACTIVITY_KEY, String(lastActivityRef.current));
-    writeStorage(PING_KEY, String(lastPingRef.current));
 
     const onActivity = () => {
       if (endingRef.current) return;

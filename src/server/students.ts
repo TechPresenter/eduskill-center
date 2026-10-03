@@ -27,7 +27,11 @@ export async function getStudentProfile(studentId: string) {
 export async function updateStudentProfile(studentId: string, input: StudentProfileInput, actor: AuditActor, meta: { ip?: string | null; userAgent?: string | null } = {}) {
   const student = await db.student.findUnique({ where: { id: studentId }, include: { user: true } });
   if (!student) throw Errors.notFound("Student");
-  const district = await db.district.findFirst({ where: { id: input.districtId, stateId: input.stateId }, select: { id: true } });
+  // A deactivated district (or state) takes no new students; one already on it may still save.
+  const district = await db.district.findFirst({
+    where: { id: input.districtId, stateId: input.stateId, ...(input.districtId === student.districtId ? {} : { isActive: true, state: { isActive: true } }) },
+    select: { id: true },
+  });
   if (!district) throw Errors.validation("Please correct the highlighted fields.", { districtId: "District must belong to the selected state" });
   const mobile = normalizeMobile(input.mobile);
   const email = input.email ? normalizeEmail(input.email) : null;
@@ -42,7 +46,11 @@ export async function updateStudentProfile(studentId: string, input: StudentProf
   // The block picked from the district's list, or typed — found in the district case-insensitively
   // or added to it. Last of the checks, so a refused save adds no block; before the transaction, as
   // resolveBlockId requires.
-  const blockId = await resolveBlockId({ districtId: district.id, blockId: input.blockId, blockName: input.blockName }, { source: "the student profile form" });
+  // The student is the one typing: a new block is audited under their name, and capped per student.
+  const blockId = await resolveBlockId(
+    { districtId: district.id, blockId: input.blockId, blockName: input.blockName },
+    { source: "the student profile form", actor, quotaKey: `u:${actor.id}`, currentBlockId: student.blockId }
+  );
   if (!blockId) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Select or type your block" });
   const updated = await db.$transaction(async (tx) => {
     await tx.user.update({ where: { id: student.userId }, data: { name: input.name, mobile, email, avatarUrl: input.photoUrl ?? student.user.avatarUrl } });
@@ -219,7 +227,8 @@ export async function getStudentAdmin(id: string) {
  */
 async function editedLocation(
   existing: { stateId: string | null; districtId: string | null; blockId: string | null },
-  input: { stateId?: string; districtId?: string; blockId?: string; blockName?: string }
+  input: { stateId?: string; districtId?: string; blockId?: string; blockName?: string },
+  actor: AuditActor
 ) {
   const blockGiven = !!(input.blockId || input.blockName);
   const moved = (input.stateId && input.stateId !== existing.stateId) || (input.districtId && input.districtId !== existing.districtId);
@@ -235,7 +244,7 @@ async function editedLocation(
   const district = await db.district.findFirst({ where: { id: districtId, stateId }, select: { id: true } });
   if (!district) throw invalid("districtId", "District must belong to the selected state");
   if (blockGiven) {
-    const blockId = await resolveBlockId({ districtId, blockId: input.blockId, blockName: input.blockName }, { source: "the admin student form" });
+    const blockId = await resolveBlockId({ districtId, blockId: input.blockId, blockName: input.blockName }, { source: "the admin student form", actor, currentBlockId: existing.blockId });
     return { stateId, districtId, blockId };
   }
   if (existing.blockId && !(await db.block.findFirst({ where: { id: existing.blockId, districtId }, select: { id: true } }))) {
@@ -247,7 +256,7 @@ async function editedLocation(
 export async function adminUpdateStudent(id: string, input: AdminStudentUpdateInput, ctx: Ctx) {
   const student = await db.student.findFirst({ where: { id, deletedAt: null }, include: { user: true } });
   if (!student) throw Errors.notFound("Student");
-  const loc = await editedLocation(student, input);
+  const loc = await editedLocation(student, input, ctx.user);
   const data: Prisma.StudentUpdateInput = {};
   for (const k of ["name", "guardianName", "guardianRelation", "gender", "villageTown", "address", "pincode", "qualification", "institution", "passingYear", "familyIncome", "occupation", "areaType", "trainingRequirement", "scholarshipRequired", "photoUrl"] as const) {
     if (input[k] !== undefined) (data as Record<string, unknown>)[k] = input[k];

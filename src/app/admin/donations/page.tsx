@@ -2,7 +2,8 @@ import { HandCoins, HandHeart, SearchX } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/guards";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { formatDate, formatDateTime, formatINR, formatNumber, titleCase } from "@/lib/utils";
-import { donationListSchema, listCampaigns, listDonations } from "@/server/donations-admin";
+// maskPan: the list shows only a PAN's last 4 characters (ABCDE1234F → ••••••234F).
+import { donationListSchema, listCampaigns, listDonations, maskPan } from "@/server/donations-admin";
 import { PageHeader } from "@/components/ui/misc";
 import { StatusBadge, Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -20,12 +21,6 @@ import { flattenSearchParams, parseListQuery, withParams, type RawSearchParams }
 export const metadata = { title: "Donations" };
 
 const STATUS_TILE: Record<string, TileTone> = { COMPLETED: "success", PENDING: "warning", FAILED: "danger" };
-
-/** A PAN is a tax identifier: the list shows only its last 4 characters (ABCDE1234F → ••••••234F). */
-function maskPan(pan: string): string {
-  const v = pan.replace(/\s+/g, "");
-  return v.length <= 4 ? "••••" : `${"•".repeat(Math.min(v.length - 4, 6))}${v.slice(-4)}`;
-}
 
 export default async function DonationsPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
   const user = await requireAdmin("donations.view");

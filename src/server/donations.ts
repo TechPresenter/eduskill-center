@@ -197,6 +197,8 @@ export async function verifyDonationPayment(donationId: string, input: z.infer<t
   if (donation.gateway !== "razorpay") throw Errors.badRequest("This donation is not an online payment.");
   if (donation.gatewayOrderId !== input.razorpay_order_id) throw Errors.badRequest("Order mismatch.");
   const cfg = await getGatewayConfig();
+  // Before the signature check, so a genuine donation is not marked FAILED while the secret is missing.
+  if (!cfg.razorpay.keySecret) throw Errors.badRequest("Online payment verification is not configured. If money was deducted it will be reconciled.");
   const ok = verifyRazorpayCheckoutSignature({ orderId: input.razorpay_order_id, paymentId: input.razorpay_payment_id, signature: input.razorpay_signature, secret: cfg.razorpay.keySecret });
   if (!ok) {
     await db.donation.update({ where: { id: donation.id }, data: { status: "FAILED", gatewayPaymentId: input.razorpay_payment_id } }).catch(() => undefined);

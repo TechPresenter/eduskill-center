@@ -15,6 +15,9 @@
  *  4. Leaked password hashes in the audit log: any passwordHash / password_hash key (and a raw
  *     password string under password / tempPassword / newPassword / currentPassword) inside
  *     old_value / new_value is set to "[redacted]".
+ *  5. Secret settings saved before DATA_ENCRYPTION_KEY existed (SMTP password, SMS / WhatsApp keys,
+ *     Razorpay secrets) are still plain text in the settings table: each is encrypted in place.
+ *     Skipped, with a warning, when DATA_ENCRYPTION_KEY is not set.
  *
  * Every change is written to the audit log as a System action — without the secret itself.
  * Idempotent: a second run finds nothing to change.
@@ -29,6 +32,8 @@ import { db, type Prisma } from "../src/lib/db";
 import { audit, AUDIT_REDACTED } from "../src/lib/audit";
 import { ALL_PERMISSIONS, DEFAULT_STAFF_ROLES } from "../src/lib/rbac/permissions";
 import { REDACTED } from "../src/lib/notifications";
+import { encryptSecret, isEncrypted, isEncryptionConfigured } from "../src/lib/crypto";
+import { invalidateSettingsCache, SETTING_DEFAULTS } from "../src/lib/settings";
 
 export interface ApplyAdminSecurityResult {
   permissionsCreated: number;
@@ -40,6 +45,10 @@ export interface ApplyAdminSecurityResult {
   resetLinksHidden: number;
   tempPasswordsRemoved: number;
   auditLogsRedacted: number;
+  /** Keys of secret settings encrypted in place (never their values). */
+  secretsEncrypted: string[];
+  /** True when step 5 could not run because DATA_ENCRYPTION_KEY is not set. */
+  secretsSkippedNoKey: boolean;
 }
 
 const BATCH = 500;
@@ -236,6 +245,29 @@ async function scrubAuditLogs(dry: boolean, r: ApplyAdminSecurityResult) {
   }
 }
 
+export async function encryptPlaintextSecrets(dry: boolean, r: ApplyAdminSecurityResult) {
+  const secretKeys = Object.entries(SETTING_DEFAULTS).filter(([, d]) => d.secret).map(([k]) => k);
+  const rows = await db.setting.findMany({ where: { key: { in: secretKeys } }, select: { id: true, key: true, value: true } });
+  const plain = rows.filter((row) => typeof row.value === "string" && row.value !== "" && !isEncrypted(row.value));
+  if (plain.length === 0) return;
+  if (!isEncryptionConfigured()) {
+    r.secretsSkippedNoKey = true;
+    console.log(`  ! ${plain.length} secret setting(s) are plain text (${plain.map((p) => p.key).join(", ")}) but DATA_ENCRYPTION_KEY is not set — not encrypted.`);
+    return;
+  }
+  for (const row of plain) {
+    r.secretsEncrypted.push(row.key);
+    console.log(`  ~ setting ${row.key}: encrypted`);
+    if (dry) continue;
+    // Conditional on the value read, so a value saved meanwhile (already encrypted) is never touched.
+    const done = await db.setting.updateMany({ where: { id: row.id, value: { equals: row.value as Prisma.InputJsonValue } }, data: { value: encryptSecret(row.value as string) } });
+    if (done.count === 1) {
+      await audit({ action: "secret_encrypted", module: "settings", recordType: "Setting", recordId: row.key, description: `System encrypted the stored value of setting ${row.key}` });
+    }
+  }
+  if (!dry) invalidateSettingsCache();
+}
+
 export async function applyAdminSecurity(opts: { dryRun?: boolean } = {}): Promise<ApplyAdminSecurityResult> {
   const dry = !!opts.dryRun;
   const r: ApplyAdminSecurityResult = {
@@ -248,6 +280,8 @@ export async function applyAdminSecurity(opts: { dryRun?: boolean } = {}): Promi
     resetLinksHidden: 0,
     tempPasswordsRemoved: 0,
     auditLogsRedacted: 0,
+    secretsEncrypted: [],
+    secretsSkippedNoKey: false,
   };
   console.log("1. Permissions");
   await ensurePermissions(dry, r);
@@ -257,6 +291,8 @@ export async function applyAdminSecurity(opts: { dryRun?: boolean } = {}): Promi
   await scrubNotifications(dry, r);
   console.log("4. Audit log");
   await scrubAuditLogs(dry, r);
+  console.log("5. Secret settings stored as plain text");
+  await encryptPlaintextSecrets(dry, r);
   return r;
 }
 
@@ -271,7 +307,8 @@ if (process.argv[1] && path.resolve(process.argv[1]).endsWith(path.join("scripts
           (r.rolesSkipped.length ? `\n  SKIPPED       ${r.rolesSkipped.join("; ")}` : "") +
           `\n  other roles   ${r.otherRolesFixed} given tier 3` +
           `\n  notifications ${r.resetLinksHidden} reset link(s) hidden, ${r.tempPasswordsRemoved} temporary password(s) removed` +
-          `\n  audit log     ${r.auditLogsRedacted} entr${r.auditLogsRedacted === 1 ? "y" : "ies"} redacted`
+          `\n  audit log     ${r.auditLogsRedacted} entr${r.auditLogsRedacted === 1 ? "y" : "ies"} redacted` +
+          `\n  secrets       ${r.secretsEncrypted.length ? `encrypted ${r.secretsEncrypted.join(", ")}` : r.secretsSkippedNoKey ? "NOT encrypted (set DATA_ENCRYPTION_KEY and run again)" : "none stored as plain text"}`
       );
       await db.$disconnect();
     })

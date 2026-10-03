@@ -82,11 +82,14 @@ export function verifyRazorpayCheckoutSignature(input: {
   signature: string;
   secret: string;
 }): boolean {
+  // An HMAC keyed with "" is computable by anyone: an unset or unreadable secret never verifies.
+  if (!input.secret) return false;
   const expected = createHmac("sha256", input.secret).update(`${input.orderId}|${input.paymentId}`).digest("hex");
   return safeEqual(expected, input.signature);
 }
 
 export function verifyRazorpayWebhookSignature(rawBody: string, signature: string, secret: string): boolean {
+  if (!secret) return false;
   const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
   return safeEqual(expected, signature);
 }

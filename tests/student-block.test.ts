@@ -71,13 +71,15 @@ describe("typable block – student profile", () => {
     const a = await freshStudent(loc);
     const first = await saveProfile(loc, a, { blockName: "Haringhata  Block" });
 
-    // A real Block row in that district, with the spaces tidied, active and audited as System.
+    // A real Block row in that district, with the spaces tidied, active and audited under the
+    // student who typed it.
     expect(first.profileCompleted).toBe(true);
     expect(first.block?.districtId).toBe(loc.district.id);
     expect(first.block?.name).toBe("Haringhata Block");
     expect(first.block?.isActive).toBe(true);
     const log = await db.auditLog.findFirst({ where: { recordType: "Block", recordId: first.blockId! } });
-    expect(log?.actorName).toBe("System");
+    expect(log?.actorName).toBe(a.user.name);
+    expect(log?.userId).toBe(a.user.id);
     expect(log?.description).toContain("student profile");
 
     // Another student types it differently: same block, no duplicate.
@@ -231,5 +233,75 @@ describe("typable block – admin student edit", () => {
       whatsapp: "+919876501234",
       scholarshipRequired: true,
     });
+  });
+});
+
+describe("typed blocks — retired blocks, the daily quota and spelling", () => {
+  it("never hands a deactivated block to a new student, but lets a student already on it save", async () => {
+    const loc = await makeLocation();
+    const a = await freshStudent(loc);
+    const first = await saveProfile(loc, a, { blockName: "Ramnagr" });
+    await db.block.update({ where: { id: first.blockId! }, data: { isActive: false } });
+
+    const b = await freshStudent(loc);
+    for (const block of [{ blockName: "ramnagr" }, { blockId: first.blockId! }]) {
+      await expect(saveProfile(loc, b, block)).rejects.toMatchObject({ status: 422, details: { blockId: expect.stringMatching(/no longer in use/i) } });
+    }
+    expect(await blocksNamed(loc.district.id, "Ramnagr")).toHaveLength(1);
+
+    // The form sends the saved block's id (and its name for display); typing the same name works too.
+    expect((await saveProfile(loc, a, { blockId: first.blockId!, blockName: "Ramnagr" })).blockId).toBe(first.blockId);
+    expect((await saveProfile(loc, a, { blockName: "Ramnagr" })).blockId).toBe(first.blockId);
+  });
+
+  it("takes no new students into a deactivated district, but lets one already there save", async () => {
+    const loc = await makeLocation();
+    const there = await freshStudent(loc);
+    const elsewhere = await freshStudent(await makeLocation());
+    await db.district.update({ where: { id: loc.district.id }, data: { isActive: false } });
+    await expect(saveProfile(loc, elsewhere, { blockId: loc.block.id })).rejects.toMatchObject({ status: 422, details: { districtId: expect.any(String) } });
+    expect((await saveProfile(loc, there, { blockId: loc.block.id })).districtId).toBe(loc.district.id);
+  });
+
+  it("caps how many new blocks one student can add in a day", async () => {
+    const loc = await makeLocation();
+    const s = await freshStudent(loc);
+    for (const name of ["Quota Block A", "Quota Block B", "Quota Block C"]) {
+      expect((await saveProfile(loc, s, { blockName: name })).block?.name).toBe(name);
+    }
+    await expect(saveProfile(loc, s, { blockName: "Quota Block D" })).rejects.toMatchObject({ status: 422, details: { blockId: expect.stringMatching(/too many new blocks/i) } });
+    expect(await blocksNamed(loc.district.id, "Quota Block D")).toHaveLength(0);
+    // Existing blocks are unaffected by the quota.
+    expect((await saveProfile(loc, s, { blockName: "Quota Block A" })).block?.name).toBe("Quota Block A");
+  });
+
+  it("treats the precomposed and the combining nukta as one spelling, including older rows", async () => {
+    const loc = await makeLocation();
+    const precomposed = "ज़मानिया"; // ज़मानिया with U+095B
+    const combining = "ज़मानिया"; // ज + nukta + मानिया
+    expect(precomposed).not.toBe(combining);
+
+    const a = await freshStudent(loc);
+    const first = await saveProfile(loc, a, { blockName: precomposed });
+    const b = await freshStudent(loc);
+    expect((await saveProfile(loc, b, { blockName: combining })).blockId).toBe(first.blockId);
+
+    // A row saved before names were normalised, in the precomposed spelling, is found as well.
+    const other = await makeLocation();
+    const legacy = await db.block.create({ data: { districtId: other.district.id, name: "फ़तेहपुर", slug: uid("legacy") } });
+    const c = await freshStudent(other);
+    expect((await saveProfile(other, c, { blockName: "फ़तेहपुर" })).blockId).toBe(legacy.id);
+  });
+
+  it("refuses punctuation-only names and stacked combining marks, but not real Devanagari", () => {
+    const loc = { state: { id: "x" }, district: { id: "x" } } as unknown as Loc;
+    const s = { student: { name: "S", mobile: "+919000000000" }, user: { email: null } } as unknown as Made;
+    const parse = (blockName: string) => studentProfileSchema.safeParse(profileBody(loc, s, { blockName })).error?.issues.find((i) => i.path.join(".") === "blockName")?.message;
+    expect(parse("..")).toBeDefined();
+    expect(parse("--")).toBeDefined();
+    expect(parse("Ź̂̃̄̅algo")).toBeDefined();
+    // Consonant + nukta + vowel sign + anusvara is three marks in a row: allowed.
+    expect(parse("ज़ींद")).toBeUndefined();
+    expect(parse("Ranaghat - II")).toBeUndefined();
   });
 });

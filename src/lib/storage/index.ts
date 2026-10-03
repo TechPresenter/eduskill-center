@@ -55,13 +55,24 @@ function sanitizeKey(key: string): string {
   return normalized;
 }
 
+/**
+ * The key exactly as the storage driver will read it (backslashes become `/`, leading slashes are
+ * dropped, traversal and odd characters are refused with a 400). Access checks MUST run on this
+ * value, never on the raw request path: `/private/...` and `\private/...` name the same file as
+ * `private/...`.
+ */
+export function normalizeKey(key: string): string {
+  return sanitizeKey(key);
+}
+
 export function mimeFromKey(key: string): string {
   const ext = key.split(".").pop()?.toLowerCase() ?? "";
   return MIME_BY_EXT[ext] ?? "application/octet-stream";
 }
 
 export function isPrivateKey(key: string): boolean {
-  return key.startsWith("private/");
+  // Normalised the way the driver resolves keys, so a leading `/` or `\` cannot hide a private key.
+  return key.replace(/\\/g, "/").replace(/^\/+/, "").startsWith("private/");
 }
 
 /**

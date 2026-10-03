@@ -1,7 +1,7 @@
 import { apiHandler, parseBody } from "@/lib/api/handler";
 import { deleteStaff, getStaff, staffUpdateSchema, updateStaff } from "@/server/staff";
 
-export const GET = apiHandler<{ id: string }>({ permission: "users.view" }, async ({ params }) => getStaff(params.id));
+export const GET = apiHandler<{ id: string }>({ permission: "users.view" }, async ({ params, user }) => getStaff(params.id, user!));
 
 export const PUT = apiHandler<{ id: string }>({ permission: "users.update" }, async ({ req, params, user, ip, userAgent }) => {
   const body = await parseBody(req, staffUpdateSchema);

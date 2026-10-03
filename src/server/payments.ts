@@ -170,6 +170,10 @@ export async function verifyOnlinePayment(input: { paymentId: string; studentId:
   if (!payment) throw Errors.notFound("Payment");
   if (payment.gatewayOrderId !== input.razorpayOrderId) throw Errors.badRequest("Order mismatch");
   const cfg = await getGatewayConfig();
+  // Checked BEFORE the signature: during a misconfiguration (secret cleared, or undecryptable after a
+  // DATA_ENCRYPTION_KEY change) a genuine payment must not be marked FAILED — the webhook or a
+  // manual reconciliation settles it once the secret is back.
+  if (!cfg.razorpay.keySecret) throw Errors.badRequest("Online payment verification is not configured. If money was deducted it will be reconciled.");
   const ok = verifyRazorpayCheckoutSignature({ orderId: input.razorpayOrderId, paymentId: input.razorpayPaymentId, signature: input.razorpaySignature, secret: cfg.razorpay.keySecret });
   if (!ok) {
     await db.payment.update({ where: { id: payment.id }, data: { status: "FAILED", failureReason: "Signature verification failed" } });

@@ -53,7 +53,8 @@ export const TRAINER_TRANSITIONS: Record<TrainerApplicationStatus, TrainerApplic
  */
 export async function resolveTrainerLocation(
   level: TrainerLevel,
-  ids: { stateId: string; districtId?: string | null; blockId?: string | null; blockName?: string | null }
+  ids: { stateId: string; districtId?: string | null; blockId?: string | null; blockName?: string | null },
+  opts: { quotaKey?: string | null } = {}
 ) {
   const state = await db.state.findFirst({ where: { id: ids.stateId, isActive: true } });
   if (!state) throw Errors.validation("Please correct the highlighted fields.", { stateId: "Select a valid state" });
@@ -68,7 +69,7 @@ export async function resolveTrainerLocation(
   if (level === "BLOCK") {
     blockId = await resolveBlockId(
       { districtId: districtId!, blockId: ids.blockId, blockName: ids.blockName },
-      { source: "the Become a Trainer application" }
+      { source: "the Become a Trainer application", quotaKey: opts.quotaKey }
     );
     if (!blockId) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Select or type your block" });
   }
@@ -153,7 +154,7 @@ export async function submitTrainerApplication(input: TrainerApplicationServiceI
 
   // A typed block is found in the district or added to it, so this runs after the duplicate checks
   // (a refused application adds no block) and before the transaction (resolveBlockId's rule).
-  const loc = await resolveTrainerLocation(input.level, input);
+  const loc = await resolveTrainerLocation(input.level, input, { quotaKey: meta.ip ? `ip:${meta.ip}` : null });
 
   const app = await db.$transaction(async (tx) => {
     const applicationNo = await generateTrainerApplicationNo(tx);

@@ -55,13 +55,19 @@ export const optionalPhone = z
 export const blockNameSchema = z
   .string()
   .trim()
-  .transform((v) => v.replace(/\s+/g, " "))
+  // NFC: a nukta typed precomposed (ज़) or as letter + combining nukta is the same name.
+  .transform((v) => v.normalize("NFC").replace(/\s+/g, " "))
   .pipe(
     z
       .string()
       .min(2, "Enter your block name")
       .max(80, "Block name is too long")
       .regex(/^[\p{L}\p{M}\p{N} .\-()'&/]+$/u, "Use letters, numbers and spaces only")
+      // A name, not punctuation ("..", "--") — and no stacked combining marks ("Zalgo" text) that
+      // would spill over neighbouring rows. Four in a row, not three: real Devanagari such as ज़ीं
+      // is consonant + nukta + vowel sign + anusvara.
+      .refine((v) => (v.match(/\p{L}/gu)?.length ?? 0) >= 2, "Enter your block name")
+      .refine((v) => !/\p{M}{4,}/u.test(v), "Use letters, numbers and spaces only")
   );
 /** `""` and `null` mean "not given". */
 export const optionalBlockName = z.union([z.literal(""), blockNameSchema]).optional().nullable().transform((v) => v || undefined);

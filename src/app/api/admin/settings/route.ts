@@ -1,11 +1,30 @@
 import { apiHandler, parseBody } from "@/lib/api/handler";
 import { Errors } from "@/lib/api/errors";
 import { audit } from "@/lib/audit";
-import { getAllSettings, isSuperAdminOnlySetting, SETTING_DEFAULTS, SETTING_GROUPS, setSettings } from "@/lib/settings";
+import { getAllSettings, isSuperAdminOnlyGroup, isSuperAdminOnlySetting, SETTING_DEFAULTS, SETTING_GROUPS, setSettings } from "@/lib/settings";
 import { normalizeSettingValues, settingsUpdateSchema } from "@/app/admin/settings/lib";
 import { raiseSecurityAlert } from "@/server/security-alerts";
 
-export const GET = apiHandler({ permission: "settings.view" }, async () => ({ groups: SETTING_GROUPS, values: await getAllSettings() }));
+/**
+ * The settings a role may see — exactly what the settings pages show it. Groups that are entirely
+ * Super Admin only (Communication, Security) send staff to /admin/forbidden, so their values are left
+ * out of the API answer too, not just masked. A Super-Admin-only key inside a shared group stays: the
+ * page shows it read-only (and a secret is masked either way).
+ */
+function visibleTo(role: string, values: Record<string, unknown>): Record<string, unknown> {
+  if (role === "SUPER_ADMIN") return values;
+  return Object.fromEntries(
+    Object.entries(values).filter(([k]) => {
+      const group = SETTING_DEFAULTS[k]?.group ?? k.split(".")[0] ?? "";
+      return !isSuperAdminOnlyGroup(group);
+    })
+  );
+}
+
+export const GET = apiHandler({ permission: "settings.view" }, async ({ user }) => ({
+  groups: user!.role === "SUPER_ADMIN" ? SETTING_GROUPS : SETTING_GROUPS.filter((g) => !isSuperAdminOnlyGroup(g.key)),
+  values: visibleTo(user!.role, await getAllSettings()),
+}));
 
 /**
  * PUT { values: { "group.key": value, … } } – masked secrets ("••••••••") are left unchanged.
@@ -42,5 +61,5 @@ export const PUT = apiHandler({ permission: "settings.update" }, async ({ req, u
       });
     }
   }
-  return { values: after, changed: changedKeys };
+  return { values: visibleTo(user!.role, after), changed: changedKeys };
 });

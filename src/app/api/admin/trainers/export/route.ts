@@ -33,7 +33,9 @@ export const GET = apiHandler({ permission: "trainers.export" }, async ({ req, u
   }
   const csv = csvFromRecords(rows, ["trainerId"]);
   await audit({ user: user!, action: "export", module: "trainers", recordType: "Trainer", description: `${user!.name} exported ${rows.length} trainers to CSV`, newValue: q, ip, userAgent });
-  return new Response(csv, {
+  // UTF-8 BOM: without it Excel on Windows reads the file in the ANSI code page and garbles
+  // Devanagari names, places and the rupee sign.
+  return new Response("﻿" + csv, {
     headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="trainers-${new Date().toISOString().slice(0, 10)}.csv"` },
   });
 });

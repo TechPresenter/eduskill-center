@@ -26,7 +26,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
   const user = await requireAdmin("users.view");
   const sp = flattenParams(await searchParams);
   const q = parseListQuery(staffListSchema, sp);
-  const [data, roles] = await Promise.all([listStaff(q), listRoles()]);
+  const [data, roles] = await Promise.all([listStaff(q, user), listRoles()]);
   const canCreate = user.role === "SUPER_ADMIN" && hasPermission(user, "users.create");
   const filtered = Object.keys(sp).some((k) => k !== "page");
   const isEmpty = data.meta.total === 0 && !filtered;

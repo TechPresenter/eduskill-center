@@ -48,6 +48,9 @@ export default async function StudentApplyPage({ searchParams }: { searchParams:
     stateId: student.stateId ?? "",
     districtId: student.districtId ?? "",
     blockId: student.blockId ?? "",
+    // The saved block's name too: a block deactivated since is no longer in the suggestions, and the
+    // Block box would otherwise show empty.
+    blockName: student.block?.name ?? "",
     villageTown: student.villageTown ?? "",
     address: student.address ?? "",
     pincode: student.pincode ?? "",

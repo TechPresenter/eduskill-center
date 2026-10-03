@@ -6,6 +6,7 @@ import { audit, type AuditActor } from "@/lib/audit";
 import { slugify } from "@/lib/utils";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid, optionalBool } from "@/lib/api/query";
 import { csvCell as safeCsvCell } from "@/lib/csv";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export interface Ctx {
   user: AuditActor;
@@ -90,6 +91,28 @@ async function takenDistrictCodes(stateId: string, client: Prisma.TransactionCli
 
 function ci(value: string) {
   return { equals: value, mode: "insensitive" as const };
+}
+
+/** New blocks one student / network may add through the forms per day (see resolveBlockId). */
+const NEW_BLOCKS_PER_DAY = 3;
+
+/**
+ * Devanagari letters with a precomposed nukta form (क़ ख़ ग़ ज़ ड़ ढ़ फ़ य़, U+0958–U+095F). Unicode
+ * excludes them from composition, so NFC writes them as letter + U+093C and never back: this rebuilds
+ * the precomposed spelling an older row may have been saved with.
+ */
+const NUKTA_PRECOMPOSED: Record<string, string> = {
+  "क": "क़",
+  "ख": "ख़",
+  "ग": "ग़",
+  "ज": "ज़",
+  "ड": "ड़",
+  "ढ": "ढ़",
+  "फ": "फ़",
+  "य": "य़",
+};
+function precomposeNukta(value: string): string {
+  return value.replace(/([कखगजडढफय])़/g, (_, letter: string) => NUKTA_PRECOMPOSED[letter] ?? `${letter}़`);
 }
 
 // ───────────────────────────── Overview ─────────────────────────────
@@ -255,11 +278,20 @@ export async function listBlocks(q: LocationListQuery) {
  *   - `blockId` (picked from the suggestions) must be a block of that district;
  *   - otherwise `blockName` (typed) is matched case-insensitively against the district's blocks —
  *     active ones first — and, when the district has no such block yet, added as a new active
- *     block (audited as a System action naming the form). Most districts have no Block rows, so
+ *     block (audited, naming the form). Most districts have no Block rows, so
  *     this is how they get them; Admin → Locations → Blocks can rename, merge or deactivate later.
  *
  * Returns null when neither is given (the caller decides whether a block is required). Throws a
  * 422 on `blockKey` (default "blockId") when the id does not belong to the district.
+ *
+ * A deactivated block is retired: it is never handed to a new record, whether picked by id or typed
+ * by name (the typed name then answers "no longer in use" rather than quietly re-using it). The one
+ * exception is `currentBlockId` — the block the record already has — so a student or centre on a
+ * since-deactivated block can still save.
+ *
+ * Adding a block: audited under `actor` when one is given (the student, or the administrator), as
+ * "System" for public forms. `quotaKey` (e.g. `u:<userId>` or `ip:<ip>`) caps how many new blocks one
+ * person or network can add a day, so a script cannot flood the public suggestions.
  *
  * Call it BEFORE the caller's own transaction: adding a block is harmless if the rest of the save
  * fails, and outside a transaction a concurrent insert of the same name is simply picked up (inside
@@ -267,24 +299,54 @@ export async function listBlocks(q: LocationListQuery) {
  */
 export async function resolveBlockId(
   input: { districtId: string; blockId?: string | null; blockName?: string | null },
-  opts: { tx?: Prisma.TransactionClient; source: string; blockKey?: string }
+  opts: {
+    tx?: Prisma.TransactionClient;
+    source: string;
+    blockKey?: string;
+    /** Who typed the block; the audit row names them. Leave out for public forms ("System"). */
+    actor?: AuditActor | null;
+    /** Rate-limit subject for ADDING blocks (`u:<id>` / `ip:<ip>`). Leave out for administrators. */
+    quotaKey?: string | null;
+    /** The record's current block: accepted even when it has since been deactivated. */
+    currentBlockId?: string | null;
+  }
 ): Promise<string | null> {
   const client = opts.tx ?? db;
   const key = opts.blockKey ?? "blockId";
+  const retired = () => Errors.validation("Please correct the highlighted fields.", { [key]: "This block is no longer in use. Pick one from the list." });
   if (input.blockId) {
-    const block = await client.block.findFirst({ where: { id: input.blockId, districtId: input.districtId }, select: { id: true } });
+    const block = await client.block.findFirst({ where: { id: input.blockId, districtId: input.districtId }, select: { id: true, isActive: true } });
     if (!block) throw Errors.validation("Please correct the highlighted fields.", { [key]: "Select a block in the chosen district" });
+    if (!block.isActive && block.id !== opts.currentBlockId) throw retired();
     return block.id;
   }
-  const name = input.blockName?.trim().replace(/\s+/g, " ");
+  // NFC, so a name typed with a precomposed nukta (ज़) and one typed as letter + combining nukta are
+  // the same block. Rows saved before this was normalised may hold another form, so those spellings
+  // are matched too.
+  const name = input.blockName?.normalize("NFC").trim().replace(/\s+/g, " ");
   if (!name) return null;
+  const spellings = [...new Set([name, name.normalize("NFD"), precomposeNukta(name)])];
   const find = () =>
-    client.block.findFirst({ where: { districtId: input.districtId, name: ci(name) }, orderBy: [{ isActive: "desc" }, { createdAt: "asc" }], select: { id: true } });
+    client.block.findFirst({
+      where: { districtId: input.districtId, OR: spellings.map((s) => ({ name: ci(s) })) },
+      orderBy: [{ isActive: "desc" }, { createdAt: "asc" }],
+      select: { id: true, isActive: true },
+    });
+  const accept = (b: { id: string; isActive: boolean }) => {
+    if (!b.isActive && b.id !== opts.currentBlockId) throw retired();
+    return b.id;
+  };
   const existing = await find();
-  if (existing) return existing.id;
+  if (existing) return accept(existing);
 
   const district = await client.district.findUnique({ where: { id: input.districtId }, select: { id: true, name: true, state: { select: { name: true } } } });
   if (!district) throw Errors.validation("Please correct the highlighted fields.", { districtId: "Select a valid district" });
+  if (opts.quotaKey) {
+    const quota = await checkRateLimit(`block-create:${opts.quotaKey}`, NEW_BLOCKS_PER_DAY, 86_400);
+    if (!quota.allowed) {
+      throw Errors.validation("Please correct the highlighted fields.", { [key]: "Too many new blocks were added from here today. Pick your block from the list, or try again tomorrow." });
+    }
+  }
   const base = slugify(name) || "block";
   const taken = new Set((await client.block.findMany({ where: { districtId: district.id, slug: { startsWith: base } }, select: { slug: true } })).map((b) => b.slug));
   let slug = base;
@@ -292,11 +354,12 @@ export async function resolveBlockId(
   try {
     const created = await client.block.create({ data: { districtId: district.id, name, slug, isActive: true } });
     await audit({
+      user: opts.actor ?? null,
       action: "create",
       module: "locations",
       recordType: "Block",
       recordId: created.id,
-      description: `System added the block "${name}" to ${district.name}, ${district.state.name} (typed in ${opts.source})`,
+      description: `${opts.actor?.name ?? "System"} added the block "${name}" to ${district.name}, ${district.state.name} (typed in ${opts.source})`,
       newValue: { districtId: district.id, name, slug },
     });
     return created.id;
@@ -304,7 +367,7 @@ export async function resolveBlockId(
     // Someone added the same block a moment ago (unique district + name / slug): use theirs.
     if (!opts.tx && e instanceof Error && "code" in e && (e as { code?: string }).code === "P2002") {
       const again = await find();
-      if (again) return again.id;
+      if (again) return accept(again);
     }
     throw e;
   }

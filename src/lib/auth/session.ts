@@ -258,10 +258,23 @@ export function portalHome(role: UserRole): string {
 
 /**
  * Where to send someone right after they sign in: their own `next` when it is an app-relative path,
- * otherwise their portal home. Protocol-relative (`//host`) and backslash (`/\host`) forms are refused
- * because browsers treat both as a different origin. Shared by every sign-in route so the password
- * and admission-number logins always land in the same place.
+ * otherwise their portal home. Shared by every sign-in route so the password and admission-number
+ * logins always land in the same place.
+ *
+ * Prefix checks alone are not enough: the WHATWG URL parser drops TAB/CR/LF anywhere in a URL, so
+ * `/\t/evil.example` becomes `//evil.example` in the browser. Control characters and backslashes are
+ * refused outright, and the value is then resolved against a dummy origin — anything that leaves that
+ * origin (protocol-relative, backslash, scheme) falls back to the portal home.
  */
 export function postLoginRedirect(next: string | undefined | null, role: UserRole): string {
-  return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : portalHome(role);
+  if (!next || !next.startsWith("/") || /[\u0000-\u001f\u007f\\]/.test(next)) return portalHome(role);
+  try {
+    const base = "https://x.invalid";
+    const u = new URL(next, base);
+    if (u.origin !== base) return portalHome(role);
+    const out = u.pathname + u.search + u.hash;
+    return out.startsWith("/") && !out.startsWith("//") ? out.slice(0, 500) : portalHome(role);
+  } catch {
+    return portalHome(role);
+  }
 }

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/rbac/permissions";
-import { isPrivateKey, readStoredFile } from "@/lib/storage";
+import { isPrivateKey, normalizeKey, readStoredFile } from "@/lib/storage";
 
 /**
  * Serves stored files. Public files (`public/...`) are cacheable and open.
@@ -12,12 +12,26 @@ import { isPrivateKey, readStoredFile } from "@/lib/storage";
  *   private/staff/...                  → admin/staff only
  *   private/<anything else>            → admin/staff only
  */
+const badKey = () => NextResponse.json({ success: false, error: { code: "BAD_REQUEST", message: "Invalid key" } }, { status: 400 });
+
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ key: string[] }> }) {
   const { key: parts } = await ctx.params;
-  const key = parts.join("/");
-  if (!key || key.includes("..")) return NextResponse.json({ success: false, error: { code: "BAD_REQUEST", message: "Invalid key" } }, { status: 400 });
+  // Next decodes each segment, so `%2F` / `%5C` arrive as a literal `/` or `\` INSIDE a segment.
+  // Refuse those outright: `/private/...` or `\private/...` would otherwise slip past the private
+  // check below and then be read as `private/...` by the storage driver.
+  if (!parts?.length || parts.some((p) => !p || p === "." || p === ".." || p.includes("/") || p.includes("\\"))) return badKey();
 
-  if (isPrivateKey(key)) {
+  // One normalised key, the exact one the driver reads, decides every check that follows.
+  let key: string;
+  try {
+    key = normalizeKey(parts.join("/"));
+  } catch {
+    return badKey();
+  }
+  if (!key) return badKey();
+  const isPrivate = isPrivateKey(key);
+
+  if (isPrivate) {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ success: false, error: { code: "UNAUTHORIZED", message: "Login required" } }, { status: 401 });
     const allowed = await canAccessPrivate(key, user);
@@ -31,7 +45,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ key: strin
     "Content-Type": file.mimeType,
     "Content-Length": String(file.buffer.length),
     "X-Content-Type-Options": "nosniff",
-    "Cache-Control": isPrivateKey(key) ? "private, no-store" : "public, max-age=31536000, immutable",
+    "Cache-Control": isPrivate ? "private, no-store" : "public, max-age=31536000, immutable",
     "Content-Disposition": `inline; filename="${key.split("/").pop()}"`,
   };
   return new NextResponse(new Uint8Array(file.buffer), { status: 200, headers });

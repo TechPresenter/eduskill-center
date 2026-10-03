@@ -113,7 +113,7 @@ export async function submitCentreApplication(input: CentreApplicationInput, met
   if (!(await getSetting<boolean>("centres.applicationsOpen"))) {
     throw Errors.forbidden("Centre applications are currently closed. Please check back soon.");
   }
-  const district = await db.district.findFirst({ where: { id: input.districtId, stateId: input.stateId }, select: { id: true } });
+  const district = await db.district.findFirst({ where: { id: input.districtId, stateId: input.stateId, isActive: true, state: { isActive: true } }, select: { id: true } });
   if (!district) throw Errors.validation("Please correct the highlighted fields.", { districtId: "District must belong to the selected state" });
 
   const email = normalizeEmail(input.email);
@@ -133,7 +133,8 @@ export async function submitCentreApplication(input: CentreApplicationInput, met
   // after the duplicate check (a refused application adds no block) and before the transaction.
   const blockId = await resolveBlockId(
     { districtId: district.id, blockId: input.blockId, blockName: input.blockName },
-    { source: "the Open a Centre application" }
+    // Public form: audited as System, and new blocks are capped per network.
+    { source: "the Open a Centre application", quotaKey: meta.ip ? `ip:${meta.ip}` : null }
   );
   if (!blockId) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Select or type your block" });
 
@@ -377,6 +378,11 @@ export async function approveCentreApplication(id: string, input: CentreApproveI
   if (app.centerId) throw Errors.conflict("This application already has a centre.");
   if (!CENTRE_TRANSITIONS[app.status].includes("APPROVED")) {
     throw Errors.badRequest(`The orientation must be completed before the centre can start (current status: ${titleCase(app.status)}).`);
+  }
+  // A retired (deactivated) block takes no new centre: it would be invisible in the public centre
+  // search by block. Said plainly here, since nobody can edit the application's block.
+  if (app.block && !app.block.isActive) {
+    throw Errors.badRequest(`The block "${app.block.name}" of this application has been deactivated. Reactivate it in Admin → Locations → Blocks before starting the centre.`);
   }
 
   const facilities = [

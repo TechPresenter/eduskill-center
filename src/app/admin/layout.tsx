@@ -29,7 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         {children}
       </PortalShell>
       {/* Automatic sign-out after ADMIN_IDLE_MINUTES without activity (the server enforces the same limit). */}
-      <IdleTimeout idleMinutes={adminIdleMinutes()} loginPath={ADMIN_LOGIN_PATH} />
+      <IdleTimeout idleMinutes={adminIdleMinutes()} loginPath={ADMIN_LOGIN_PATH} sessionId={user.sessionId} />
     </>
   );
 }

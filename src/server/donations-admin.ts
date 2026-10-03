@@ -101,7 +101,18 @@ export async function listDonations(q: z.infer<typeof donationListSchema>) {
   return { ...paged(items.map(serializeDonation), total, q), completedAmount: toNumber(totals._sum.amount), completedCount: totals._count._all };
 }
 
-export async function exportDonationsCsv(q: z.infer<typeof donationListSchema>) {
+/** A PAN is a tax identifier: outside a Super Admin's export only its last 4 characters show (ABCDE1234F → ••••••234F). */
+export function maskPan(pan: string): string {
+  const v = pan.replace(/\s+/g, "");
+  return v.length <= 4 ? "••••" : `${"•".repeat(Math.min(v.length - 4, 6))}${v.slice(-4)}`;
+}
+
+/**
+ * Donations as CSV rows. The donor's full PAN goes only to a Super Admin (80G / Form 10BD filing);
+ * everyone else gets it masked like the donations list.
+ */
+export async function exportDonationsCsv(q: z.infer<typeof donationListSchema>, viewer: { role: string }) {
+  const fullPan = viewer.role === "SUPER_ADMIN";
   const rows = await db.donation.findMany({ where: donationWhere(q), orderBy: { createdAt: "desc" }, take: 5000, include: { campaign: { select: { title: true } } } });
   return rows.map((d) => ({
     donationNo: d.donationNo,
@@ -109,7 +120,7 @@ export async function exportDonationsCsv(q: z.infer<typeof donationListSchema>) 
     donor: d.isAnonymous ? "Anonymous" : d.donorName,
     email: d.isAnonymous ? "" : (d.email ?? ""),
     mobile: d.isAnonymous ? "" : (d.mobile ?? ""),
-    pan: d.isAnonymous ? "" : (d.pan ?? ""),
+    pan: d.isAnonymous || !d.pan ? "" : fullPan ? d.pan : maskPan(d.pan),
     amount: toNumber(d.amount),
     currency: d.currency,
     campaign: d.campaign?.title ?? "",

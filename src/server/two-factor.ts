@@ -83,6 +83,33 @@ export async function twoFactorStatus(userId: string) {
 export type SecondFactorInput = { code?: string | null; backupCode?: string | null };
 export type SecondFactorMethod = "TOTP" | "BACKUP_CODE";
 
+type AttemptClaim = { ok: true; count: number; pausedMinutes: number | null } | { ok: false; lockedUntil: Date };
+
+/**
+ * Counts one second-factor attempt atomically (row lock), before the code is looked at. Refuses
+ * while a pause is running. The attempt that reaches a multiple of FAILURES_PER_STEP sets the pause
+ * itself, so no parallel guess can be checked after it; a correct code then clears the count.
+ */
+async function claimSecondFactorAttempt(userId: string): Promise<AttemptClaim> {
+  return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT 1 FROM "users" WHERE "id" = ${userId}::uuid FOR UPDATE`;
+    const u = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { mfaFailedCount: true, mfaLockedUntil: true } });
+    const now = Date.now();
+    if (u.mfaLockedUntil && u.mfaLockedUntil.getTime() > now) return { ok: false as const, lockedUntil: u.mfaLockedUntil };
+    const count = u.mfaFailedCount + 1;
+    let pausedMinutes: number | null = null;
+    if (count % FAILURES_PER_STEP === 0) {
+      const idx = Math.min(count / FAILURES_PER_STEP - 1, COOLDOWN_MINUTES.length - 1);
+      pausedMinutes = COOLDOWN_MINUTES[idx]!;
+    }
+    await tx.user.update({
+      where: { id: userId },
+      data: { mfaFailedCount: count, ...(pausedMinutes ? { mfaLockedUntil: new Date(now + pausedMinutes * 60_000) } : {}) },
+    });
+    return { ok: true as const, count, pausedMinutes };
+  });
+}
+
 /**
  * Checks an authenticator code or a backup code for a user, with replay protection and the
  * per-user escalating cooldown. Returns the method that succeeded; throws a neutral 401 otherwise.
@@ -90,12 +117,15 @@ export type SecondFactorMethod = "TOTP" | "BACKUP_CODE";
 export async function verifyUserSecondFactor(userId: string, input: SecondFactorInput, meta: { ip?: string | null; userAgent?: string | null } = {}): Promise<SecondFactorMethod> {
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { id: true, name: true, email: true, totpSecretEnc: true, totpEnabledAt: true, totpLastStep: true, mfaFailedCount: true, mfaLockedUntil: true },
+    select: { id: true, name: true, email: true, totpSecretEnc: true, totpEnabledAt: true, totpLastStep: true },
   });
   if (!user || !user.totpEnabledAt || !user.totpSecretEnc) throw Errors.unauthorized("Two-factor authentication is not set up for this account.");
 
-  if (user.mfaLockedUntil && user.mfaLockedUntil > new Date()) {
-    const mins = Math.ceil((user.mfaLockedUntil.getTime() - Date.now()) / 60_000);
+  // Every guess claims an attempt BEFORE the code is checked, under a row lock, so a burst of
+  // parallel guesses cannot all read "not paused" and slip past the cooldown.
+  const claim = await claimSecondFactorAttempt(user.id);
+  if (!claim.ok) {
+    const mins = Math.max(1, Math.ceil((claim.lockedUntil.getTime() - Date.now()) / 60_000));
     throw Errors.tooMany(mins * 60);
   }
 
@@ -128,16 +158,13 @@ export async function verifyUserSecondFactor(userId: string, input: SecondFactor
   }
 
   if (!method) {
-    const after = await db.user.update({ where: { id: user.id }, data: { mfaFailedCount: { increment: 1 } }, select: { mfaFailedCount: true } });
-    if (after.mfaFailedCount % FAILURES_PER_STEP === 0) {
-      const idx = Math.min(after.mfaFailedCount / FAILURES_PER_STEP - 1, COOLDOWN_MINUTES.length - 1);
-      const minutes = COOLDOWN_MINUTES[idx]!;
-      await db.user.update({ where: { id: user.id }, data: { mfaLockedUntil: new Date(Date.now() + minutes * 60_000) } });
+    // The attempt was already counted (and the pause already set) by the claim above.
+    if (claim.pausedMinutes) {
       await raiseSecurityAlert({
         type: "MFA_LOCKED",
         severity: "warning",
         title: `Two-factor sign-in paused for ${user.name}`,
-        detail: `${after.mfaFailedCount} wrong authenticator or backup codes. Sign-in with a second factor is paused for ${minutes} minutes.`,
+        detail: `${claim.count} wrong authenticator or backup codes. Sign-in with a second factor is paused for ${claim.pausedMinutes} minutes.`,
         userId: user.id,
         ip: meta.ip,
         userAgent: meta.userAgent,
@@ -183,9 +210,26 @@ export async function replaceBackupCodes(userId: string, client: DbClient = db):
 
 // ───────────────────────────── Self-service (Admin → My account → Security) ─────────────────────────────
 
+/** How recent the sign-in of THIS session must be for account-takeover-sensitive changes. */
+export const RECENT_SIGN_IN_MINUTES = 15;
+
+/**
+ * Step-up for changes that would let a stolen session lock its owner out (setting up an authenticator,
+ * moving the login email): the session must come from a sign-in in the last RECENT_SIGN_IN_MINUTES,
+ * i.e. its holder recently proved the first factor. A session left open on a shared computer, or a
+ * cookie lifted later, cannot do it.
+ */
+export async function assertRecentSignIn(sessionId: string, what: string) {
+  const session = await db.session.findUnique({ where: { id: sessionId }, select: { createdAt: true } });
+  if (!session || Date.now() - session.createdAt.getTime() > RECENT_SIGN_IN_MINUTES * 60_000) {
+    throw Errors.forbidden(`For your security, ${what} needs a recent sign-in. Sign out, sign in again, and do it within ${RECENT_SIGN_IN_MINUTES} minutes.`);
+  }
+}
+
 /** Starts set-up: a new secret is kept (encrypted) as pending until a valid code confirms it. */
 export async function beginTwoFactorSetup(ctx: Ctx): Promise<SetupPayload> {
   assertEncryption();
+  await assertRecentSignIn(ctx.user.sessionId, "setting up two-factor authentication");
   const user = await db.user.findUniqueOrThrow({ where: { id: ctx.user.id }, select: { email: true, totpEnabledAt: true } });
   if (user.totpEnabledAt) throw Errors.conflict("Two-factor authentication is already on. Turn it off first to set up a new phone.");
   const secret = generateTotpSecret();

@@ -10,11 +10,12 @@ import { adminIdleMinutes, adminPasswordLoginEnabled, adminSessionMs, adminTwoFa
 import { deviceLabel, maskIp } from "@/lib/auth/device";
 import { isEncryptionConfigured, keyedHash, sameHex, secretIssues } from "@/lib/crypto";
 import { emailConfigStatus, sendSecurityEmail } from "@/lib/notifications";
-import { getSettingsGroup, setSettings } from "@/lib/settings";
+import { getSettingsGroup, setSettings, storedSecretIssues } from "@/lib/settings";
 import { enforceRateLimitStrict } from "@/lib/rate-limit";
 import { getPaging, paged, paginationSchema, optionalBool, optionalDate } from "@/lib/api/query";
 import { isValidAddress } from "@/lib/email/sanitize";
 import { istTime, raiseSecurityAlert } from "@/server/security-alerts";
+import { assertRecentSignIn } from "@/server/two-factor";
 
 /**
  * Admin → Security Center.
@@ -94,7 +95,7 @@ export async function securityOverview(actor: AuthUser) {
       emailConfigured: email.configured,
     },
     // Problems with server secrets — shown to the Super Admin only, never their values.
-    issues: isSuper(actor) ? secretIssues() : [],
+    issues: isSuper(actor) ? [...secretIssues(), ...(await storedSecretIssues().catch(() => []))] : [],
   };
 }
 
@@ -279,9 +280,31 @@ export async function listSecurityAlerts(actor: AuthUser, q: z.infer<typeof aler
   return paged(rows.map((a) => ({ ...a, ip: ip(actor, a.ip), device: a.userAgent ? deviceLabel(a.userAgent) : null, userAgent: undefined })), total, q);
 }
 
+/**
+ * Marks alerts as reviewed. A Super Admin reviews any alert. Anyone else (security.manage) follows the
+ * same tier rule as assertCanActOn: alerts about no one in particular, or about staff of a LOWER tier —
+ * never alerts about themselves (a compromised account must not clear its own new-device alert),
+ * their peers, higher tiers or a Super Admin.
+ */
 export async function acknowledgeAlerts(ids: string[] | "all", ctx: Ctx) {
-  const scope: Prisma.SecurityAlertWhereInput = { acknowledgedAt: null, ...(isSuper(ctx.user) ? {} : { OR: [{ userId: null }, { user: { role: "STAFF" } }] }) };
-  const res = await db.securityAlert.updateMany({ where: ids === "all" ? scope : { ...scope, id: { in: ids } }, data: { acknowledgedAt: new Date(), acknowledgedById: ctx.user.id } });
+  const requested: Prisma.SecurityAlertWhereInput = { acknowledgedAt: null, ...(ids === "all" ? {} : { id: { in: ids } }) };
+  let where: Prisma.SecurityAlertWhereInput = requested;
+  if (!isSuper(ctx.user)) {
+    const candidates = await db.securityAlert.findMany({
+      where: { ...requested, OR: [{ userId: null }, { user: { role: "STAFF" } }] },
+      select: { id: true, userId: true, user: { select: { id: true, role: true, staff: { select: { deletedAt: true, role: { select: { level: true } } } } } } },
+    });
+    const actorTier = ctx.user.security.tier;
+    const allowed = candidates.filter((a) => {
+      if (!a.userId) return true;
+      if (!a.user || a.user.role !== "STAFF" || a.user.id === ctx.user.id) return false;
+      const tier = a.user.staff && !a.user.staff.deletedAt ? (a.user.staff.role?.level ?? 3) : 3;
+      return tier > actorTier;
+    });
+    if (ids !== "all" && allowed.length < candidates.length) throw Errors.forbidden("You can only mark alerts about staff below your own tier as reviewed.");
+    where = { id: { in: allowed.map((a) => a.id) }, acknowledgedAt: null };
+  }
+  const res = await db.securityAlert.updateMany({ where, data: { acknowledgedAt: new Date(), acknowledgedById: ctx.user.id } });
   await audit({ user: ctx.user, action: "alerts_ack", module: "security", recordType: "SecurityAlert", description: `${ctx.user.name} marked ${res.count} security alert(s) as reviewed`, ip: ctx.ip, userAgent: ctx.userAgent });
   return { acknowledged: res.count };
 }
@@ -343,6 +366,7 @@ function hashEmailChange(userId: string, email: string, code: string) {
 /** Sends a code to the NEW address; the change happens only when that code comes back. */
 export async function requestLoginEmailChange(newEmailRaw: string, ctx: Ctx) {
   if (!isSuper(ctx.user)) throw Errors.forbidden("Only a Super Admin can change their login email here.");
+  await assertRecentSignIn(ctx.user.sessionId, "changing your login email");
   const newEmail = newEmailRaw.trim().toLowerCase();
   if (!isValidAddress(newEmail)) throw Errors.validation("Please correct the highlighted fields.", { email: "Enter a valid email address" });
   await enforceRateLimitStrict(`email-change:u:${ctx.user.id}`, 5, 3600);

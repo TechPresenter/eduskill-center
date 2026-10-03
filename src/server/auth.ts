@@ -9,10 +9,39 @@ import { absoluteUrl } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
 import { mobileVariants, parsePhone, samePhone, toE164 } from "@/lib/phone";
 import { adminPasswordLoginEnabled, isAdminRole } from "@/lib/auth/policy";
+import { checkRateLimit, peekRateLimit } from "@/lib/rate-limit";
 import type { NotificationChannel, UserRole } from "@/generated/prisma/enums";
 
 const MAX_FAILED_LOGINS = 5;
 const LOCK_MINUTES = 15;
+/** Wrong passwords (any account) one IP may send per window before it is told to wait. */
+const FAILED_LOGINS_PER_IP = 10;
+const FAILED_LOGINS_WINDOW_SEC = 15 * 60;
+
+type PasswordAttemptClaim = { ok: true; lockedNow: boolean } | { ok: false; lockedUntil: Date };
+
+/**
+ * Counts one password attempt for the account under a row lock, before the password is compared.
+ * Refuses while the account is locked. The attempt that reaches MAX_FAILED_LOGINS sets the lock
+ * itself, so no parallel guess can be compared after it; a correct password clears the count again.
+ * An expired lock starts a fresh count.
+ */
+async function claimPasswordAttempt(userId: string): Promise<PasswordAttemptClaim> {
+  return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT 1 FROM "users" WHERE "id" = ${userId}::uuid FOR UPDATE`;
+    const u = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { failedLoginCount: true, lockedUntil: true } });
+    const now = Date.now();
+    if (u.lockedUntil && u.lockedUntil.getTime() > now) return { ok: false as const, lockedUntil: u.lockedUntil };
+    const count = (u.lockedUntil ? 0 : u.failedLoginCount) + 1;
+    const lockedNow = count >= MAX_FAILED_LOGINS;
+    await tx.user.update({ where: { id: userId }, data: { failedLoginCount: count, lockedUntil: lockedNow ? new Date(now + LOCK_MINUTES * 60_000) : null } });
+    return { ok: true as const, lockedNow };
+  });
+}
+
+async function countFailureFromIp(ip: string | null | undefined) {
+  if (ip) await checkRateLimit(`login-fail:ip:${ip}`, FAILED_LOGINS_PER_IP, FAILED_LOGINS_WINDOW_SEC);
+}
 
 /**
  * The one canonical form of a phone number for storage and comparison: **E.164** (`+919876543210`).
@@ -62,6 +91,12 @@ export type LoginResult =
  * (authenticator step / 2FA set-up) whenever their policy requires a second factor.
  */
 export async function login(input: { identifier: string; password: string; remember?: boolean; next?: string | null } & RequestMeta): Promise<LoginResult> {
+  // Wrong passwords per network are capped here; successful sign-ins do not count, so a whole office
+  // or computer lab behind one IP can still sign in (the route's own per-IP ceiling is generous).
+  if (input.ip) {
+    const failures = await peekRateLimit(`login-fail:ip:${input.ip}`, FAILED_LOGINS_PER_IP);
+    if (!failures.allowed) throw Errors.tooMany(failures.retryAfterSec);
+  }
   const raw = input.identifier.trim();
   const email = normalizeEmail(raw);
   // One free-text box for "email or mobile", so both readings are tried. `mobileVariants` is empty
@@ -80,40 +115,33 @@ export async function login(input: { identifier: string; password: string; remem
   if (!user) {
     await verifyPassword(input.password, await getDummyHash());
     await record(false, "unknown_user");
+    await countFailureFromIp(input.ip);
     throw Errors.unauthorized(GENERIC_LOGIN_ERROR);
   }
 
-  // An expired lock starts a fresh count (it used to re-lock on the very next mistake, forever).
-  const now = new Date();
-  if (user.lockedUntil && user.lockedUntil <= now) {
-    await db.user.update({ where: { id: user.id }, data: { failedLoginCount: 0, lockedUntil: null } });
-    user.failedLoginCount = 0;
-    user.lockedUntil = null;
-  }
-  const locked = !!user.lockedUntil && user.lockedUntil > now;
+  // The attempt is claimed (counted) under a row lock BEFORE the slow bcrypt compare, so a burst of
+  // parallel guesses cannot all read "not locked" from one stale snapshot: once the lock is set no
+  // further password is ever checked for a session, and a correct password then clears the count.
+  const claim = await claimPasswordAttempt(user.id);
   const ok = await verifyPassword(input.password, user.passwordHash);
 
   if (!ok) {
-    if (!locked) {
-      // Atomic: concurrent guesses cannot under-count.
-      const after = await db.user.update({ where: { id: user.id }, data: { failedLoginCount: { increment: 1 } }, select: { failedLoginCount: true } });
-      if (after.failedLoginCount >= MAX_FAILED_LOGINS) {
-        await db.user.update({ where: { id: user.id }, data: { lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60000) } });
-        if (isAdminRole(user.role)) {
-          const { raiseSecurityAlert } = await import("@/server/security-alerts");
-          await raiseSecurityAlert({ type: "ACCOUNT_LOCKED", severity: "warning", title: `Password sign-in locked for ${user.name}`, detail: `${MAX_FAILED_LOGINS} wrong passwords. Password sign-in is paused for ${LOCK_MINUTES} minutes (the email-code sign-in still works).`, userId: user.id, ip: input.ip, userAgent: input.userAgent });
-        }
-      }
+    if (claim.ok && claim.lockedNow && isAdminRole(user.role)) {
+      const { raiseSecurityAlert } = await import("@/server/security-alerts");
+      await raiseSecurityAlert({ type: "ACCOUNT_LOCKED", severity: "warning", title: `Password sign-in locked for ${user.name}`, detail: `${MAX_FAILED_LOGINS} wrong passwords. Password sign-in is paused for ${LOCK_MINUTES} minutes (the email-code sign-in still works).`, userId: user.id, ip: input.ip, userAgent: input.userAgent });
     }
-    await record(false, locked ? "locked" : "bad_password");
+    await record(false, claim.ok ? "bad_password" : "locked");
+    await countFailureFromIp(input.ip);
     throw Errors.unauthorized(GENERIC_LOGIN_ERROR);
   }
   // The password is proven: from here the account's real state may be told.
-  if (locked) {
+  if (!claim.ok) {
     await record(false, "locked");
-    const mins = Math.ceil((user.lockedUntil!.getTime() - Date.now()) / 60000);
+    const mins = Math.max(1, Math.ceil((claim.lockedUntil.getTime() - Date.now()) / 60000));
     throw Errors.unauthorized(`Too many failed attempts. The account is locked for ${mins} more minute${mins === 1 ? "" : "s"}.`);
   }
+  // This attempt counted against the lock up front; a correct password clears it again.
+  await db.user.update({ where: { id: user.id }, data: { failedLoginCount: 0, lockedUntil: null } });
   if (user.status !== "ACTIVE") {
     await record(false, "inactive");
     throw Errors.unauthorized("Your account is not active. Please contact the Foundation.");

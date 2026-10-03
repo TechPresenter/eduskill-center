@@ -4,6 +4,8 @@ import * as React from "react";
 import { CheckCheck, Download, Save } from "lucide-react";
 import { api, ApiClientError, errorMessage } from "@/lib/api-client";
 import { cn, formatDate } from "@/lib/utils";
+// Formula-injection safe: student names are free text, and a leading = + - @ must never be evaluated.
+import { csvCell } from "@/lib/csv";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Field } from "@/components/ui/form";
@@ -52,11 +54,6 @@ type Marks = Record<string, AttendanceMark>;
 
 function pctClass(p: number) {
   return p >= 75 ? "text-success-dark" : p >= 60 ? "text-warning-dark" : "text-danger";
-}
-
-function csvCell(v: unknown) {
-  const s = v === null || v === undefined ? "" : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 function downloadReportCsv(report: Report, today: string) {

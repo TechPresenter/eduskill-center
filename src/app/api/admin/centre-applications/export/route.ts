@@ -55,7 +55,9 @@ export const GET = apiHandler({ permission: "centre_applications.export" }, asyn
     ip,
     userAgent,
   });
-  return new Response(csv, {
+  // UTF-8 BOM: without it Excel on Windows reads the file in the ANSI code page and garbles
+  // Devanagari names, places and the rupee sign.
+  return new Response("﻿" + csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="centre-applications-${new Date().toISOString().slice(0, 10)}.csv"`,

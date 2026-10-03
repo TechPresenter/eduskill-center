@@ -12,10 +12,10 @@ import { AuditTable } from "@/components/admin/audit/audit-table";
 export const metadata: Metadata = { title: "Audit Logs · Foundation Admin" };
 
 export default async function AuditLogsPage({ searchParams }: { searchParams: Promise<SearchParamsRecord> }) {
-  await requireAdmin("audit_logs.view");
+  const user = await requireAdmin("audit_logs.view");
   const sp = flattenParams(await searchParams);
   const q = parseListQuery(auditListSchema, { limit: "50", ...sp });
-  const [data, options] = await Promise.all([listAuditLogs(q), auditFilterOptions()]);
+  const [data, options] = await Promise.all([listAuditLogs(q, user), auditFilterOptions()]);
 
   return (
     <AdminListPage

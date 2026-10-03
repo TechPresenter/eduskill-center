@@ -6,7 +6,9 @@ import { postLoginRedirect, SESSION_COOKIE, sessionCookieOptions } from "@/lib/a
 import { ensureDeviceId, setChallengeCookie } from "@/lib/auth/challenge-cookie";
 import { ADMIN_LOGIN_PATH } from "@/lib/auth/policy";
 
-export const POST = apiHandler({ auth: "none", rateLimit: { limit: 10, windowSec: 15 * 60, name: "login" } }, async ({ req, ip, userAgent }) => {
+// Every request counts here, successful ones included, so the ceiling is generous (an office or a
+// computer lab shares one IP). Wrong passwords per IP are capped much lower inside login().
+export const POST = apiHandler({ auth: "none", rateLimit: { limit: 100, windowSec: 15 * 60, name: "login" } }, async ({ req, ip, userAgent }) => {
   const body = await parseBody(req, loginSchema);
   const deviceId = await ensureDeviceId();
   const result = await login({ ...body, ip, userAgent, deviceId });

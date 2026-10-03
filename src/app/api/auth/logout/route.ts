@@ -15,7 +15,23 @@ function fromAdminPage(referer: string | null): boolean {
   }
 }
 
+/** The optional `{ sessionId }` an admin tab sends to sign out ITS session only. */
+async function requestedSessionId(req: Request): Promise<string | null> {
+  try {
+    const body = (await req.json()) as { sessionId?: unknown } | null;
+    return typeof body?.sessionId === "string" && body.sessionId.length <= 100 ? body.sessionId : null;
+  } catch {
+    return null;
+  }
+}
+
 export const POST = apiHandler({ auth: "optional" }, async ({ req, user, ip, userAgent }) => {
+  // An idle admin tab names the session it belongs to. When the cookie now holds a different, live
+  // session (someone else signed in after that admin session ended), it is not this tab's to end.
+  const sessionId = await requestedSessionId(req);
+  if (sessionId && user && user.sessionId !== sessionId) {
+    return NextResponse.json({ success: true, data: { redirect: isAdminRole(user.role) ? ADMIN_LOGIN_PATH : "/login", skipped: true } });
+  }
   const token = await getSessionToken();
   if (token) await logout(token, user, { ip, userAgent });
   await clearChallengeCookie();

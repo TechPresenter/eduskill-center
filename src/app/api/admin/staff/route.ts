@@ -1,7 +1,7 @@
 import { apiHandler, parseBody, parseQuery } from "@/lib/api/handler";
 import { createStaff, listStaff, staffCreateSchema, staffListSchema } from "@/server/staff";
 
-export const GET = apiHandler({ permission: "users.view" }, async ({ req }) => listStaff(parseQuery(req, staffListSchema)));
+export const GET = apiHandler({ permission: "users.view" }, async ({ req, user }) => listStaff(parseQuery(req, staffListSchema), user!));
 
 /** Only the Super Admin can create staff accounts. */
 export const POST = apiHandler({ roles: ["SUPER_ADMIN"], permission: "users.create" }, async ({ req, user, ip, userAgent }) => {

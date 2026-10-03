@@ -157,7 +157,7 @@ export function apiHandler<P extends RouteParams = RouteParams>(
       let user: AuthUser | null = null;
       if (opts.auth !== "none") {
         user = await getSessionUser();
-        if (opts.auth !== "optional" && !user) throw Errors.unauthorized();
+        if (opts.auth !== "optional" && !user) throw Errors.sessionRequired();
       }
       if (user && opts.roles && !opts.roles.includes(user.role)) throw Errors.forbidden();
       if (opts.permission && !hasPermission(user, opts.permission)) throw Errors.forbidden();
@@ -222,6 +222,6 @@ export function parseQuery<S extends z.ZodType>(req: NextRequest, schema: S): z.
 
 /** Helper to require that a user is present (narrowing). */
 export function requireCtxUser(ctx: ApiContext): AuthUser {
-  if (!ctx.user) throw Errors.unauthorized();
+  if (!ctx.user) throw Errors.sessionRequired();
   return ctx.user;
 }

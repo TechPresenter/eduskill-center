@@ -43,6 +43,26 @@ export async function checkRateLimit(key: string, limit: number, windowSec: numb
   }
 }
 
+/**
+ * Reads a counter WITHOUT counting this request — for limits that only count some outcomes (e.g.
+ * failed sign-ins): peek first, then call checkRateLimit when the outcome is one that counts.
+ * A limiter failure allows the request, like checkRateLimit.
+ */
+export async function peekRateLimit(key: string, limit: number): Promise<RateLimitResult> {
+  try {
+    const rows = await db.$queryRaw<{ count: number; retry_after: number }[]>`
+      SELECT "count", GREATEST(1, CEIL(EXTRACT(EPOCH FROM ("reset_at" - LOCALTIMESTAMP))))::int AS retry_after
+      FROM "rate_limits" WHERE "key" = ${key} AND "reset_at" >= LOCALTIMESTAMP`;
+    const row = rows[0];
+    if (!row) return { allowed: true, remaining: limit, retryAfterSec: 0 };
+    const count = Number(row.count);
+    return { allowed: count < limit, remaining: Math.max(0, limit - count), retryAfterSec: Number(row.retry_after) };
+  } catch (err) {
+    console.error("[rate-limit] peek failed, allowing request:", err);
+    return { allowed: true, remaining: limit, retryAfterSec: 0 };
+  }
+}
+
 export async function enforceRateLimit(key: string, limit: number, windowSec: number): Promise<void> {
   const result = await checkRateLimit(key, limit, windowSec);
   if (!result.allowed) throw Errors.tooMany(result.retryAfterSec);

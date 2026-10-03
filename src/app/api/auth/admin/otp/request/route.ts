@@ -16,7 +16,7 @@ const schema = z.object({
  * in it (message, stage, cooldown) differs. A sign-in already in progress in this browser is ended
  * first, so only the newest challenge's code can ever work.
  */
-export const POST = apiHandler({ auth: "none", rateLimit: { limit: 10, windowSec: 15 * 60, name: "admin-otp-request", failClosed: true } }, async ({ req, ip, userAgent }) => {
+export const POST = apiHandler({ auth: "none", rateLimit: { limit: 60, windowSec: 15 * 60, name: "admin-otp-request", failClosed: true } }, async ({ req, ip, userAgent }) => {
   const body = await parseBody(req, schema);
   const meta = await requestMeta(ip, userAgent);
   await cancelAdminChallenge(await getChallengeToken());

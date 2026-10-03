@@ -378,4 +378,63 @@ describe("drafts", () => {
     await expect(getEmail(draft.id, { user: author })).rejects.toMatchObject({ status: 404 });
     expect(await db.auditLog.count({ where: { recordId: draft.id, action: "email_draft_delete" } })).toBe(1);
   });
+
+  it("lets a Super Admin save, test and send another administrator's draft with its attachments", async () => {
+    const author = await staff();
+    const boss = await superAdmin();
+    const uploaded = await uploadEmailAttachment(pdfFile("Timetable.pdf"), { user: author });
+    const subject = `Shared draft ${uid("")}`;
+    const draft = await saveDraft(composeSchema.parse({ to: "x@y.com", subject, html: "<p>Draft</p>", attachments: [uploaded] }), { user: author });
+
+    const saved = await saveDraft({ ...composeSchema.parse({ to: "x@y.com", subject, html: "<p>Edited</p>", attachments: [uploaded] }), draftId: draft.id }, { user: boss });
+    expect(saved.attachments.map((a) => a.key)).toEqual([uploaded.key]);
+    const tested = await sendTestComposedEmail(testSchema.parse({ to: "x@y.com", subject, html: "<p>Edited</p>", attachments: [uploaded], testTo: "boss@example.com", draftId: draft.id }), { user: boss });
+    expect(tested.status).toBe("SENT");
+    expect((await db.emailMessage.findUniqueOrThrow({ where: { id: draft.id } })).deletedAt).toBeNull();
+
+    // Another upload of the author's that is NOT on the draft is still refused.
+    const other = await uploadEmailAttachment(pdfFile("Private.pdf"), { user: author });
+    await expect(send({ to: "x@y.com", subject, html: "<p>x</p>", attachments: [uploaded, other], draftId: draft.id }, boss)).rejects.toMatchObject({ status: 403 });
+
+    const sent = await send({ to: "x@y.com", subject, html: "<p>Edited</p>", attachments: [uploaded], draftId: draft.id }, boss);
+    expect(sent.status).toBe("SENT");
+    expect(mailer.mock.calls.at(-1)![0].attachments![0]!.filename).toBe("Timetable.pdf");
+    expect((await db.emailMessage.findUniqueOrThrow({ where: { id: draft.id } })).deletedAt).not.toBeNull();
+  });
+});
+
+describe("review fixes — attachment names, a failed history write, IST dates", () => {
+  it("takes the attachment's extension from its storage key, never from the client's name (F11)", async () => {
+    const me = await staff();
+    const txt = await uploadEmailAttachment(new File(["<html><body>Fee receipt</body></html>"], "notes.txt", { type: "text/plain" }), { user: me });
+    const sent = await send({ to: "parent@example.com", subject: "Receipt", html: "<p>x</p>", attachments: [{ ...txt, name: "Fee_Receipt.html" }] }, me);
+    expect(sent.status).toBe("SENT");
+    expect(mailer.mock.calls.at(-1)![0].attachments![0]!.filename).toBe("Fee_Receipt.txt");
+    expect(sent.attachments[0]!.name).toBe("Fee_Receipt.txt");
+
+    const draft = await saveDraft(composeSchema.parse({ to: "a@x.com", subject: "Names", html: "", attachments: [{ ...txt, name: "../../evil<script>.hta" }] }), { user: me });
+    expect(draft.attachments[0]!.name).toBe("evil_script_.txt");
+  });
+
+  it("reports SENT once the mail server accepted the email, even if the history row cannot be updated (F12)", async () => {
+    const me = await superAdmin();
+    const subject = `Accepted ${uid("")}`;
+    // The history row disappears while the message is in flight, so the SENT update fails.
+    mailer.mockImplementationOnce(async () => {
+      await db.emailMessage.deleteMany({ where: { subject, status: "SENDING" } });
+      return { messageId: "<msg-accepted@eduskillindia.com>", accepted: ["a@x.com"], rejected: [] };
+    });
+    const result = await send({ to: "a@x.com", subject, html: "<p>x</p>" }, me);
+    expect(result.status).toBe("SENT");
+    expect(result.messageId).toBe("<msg-accepted@eduskillindia.com>");
+    expect(await db.auditLog.count({ where: { recordId: result.id, action: "email_failed" } })).toBe(0);
+    expect(await db.auditLog.count({ where: { recordId: result.id, action: "email_send" } })).toBe(1);
+  });
+
+  it("filters the history by India days, not UTC days (F14)", async () => {
+    const me = await superAdmin();
+    const q = scopeHistoryQuery(historySchema.parse({ from: "2026-10-02", to: "2026-10-02" }), me);
+    expect(q.from?.toISOString()).toBe("2026-10-01T18:30:00.000Z");
+    expect(q.to?.toISOString()).toBe("2026-10-02T18:29:59.999Z");
+  });
 });

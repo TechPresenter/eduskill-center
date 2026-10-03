@@ -4,7 +4,7 @@ import { CheckCircle2, History, KeyRound, LogIn, ShieldCheck, XCircle } from "lu
 import { requireAdmin } from "@/lib/auth/guards";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { formatDate, formatDateTime, formatNumber, titleCase } from "@/lib/utils";
-import { getStaff } from "@/server/staff";
+import { canEditStaffProfile, getStaff } from "@/server/staff";
 import { listRoles } from "@/server/roles";
 import { twoFactorStatus } from "@/server/two-factor";
 import { PageHeader, KeyValue, Avatar } from "@/components/ui/misc";
@@ -22,13 +22,15 @@ export const metadata: Metadata = { title: "Staff Member · Foundation Admin" };
 export default async function StaffDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireAdmin("users.view");
   const { id } = await params;
-  const [staff, roles] = await Promise.all([orNotFound(getStaff(id)), listRoles()]);
+  const [staff, roles] = await Promise.all([orNotFound(getStaff(id, user)), listRoles()]);
   const superAdmin = user.role === "SUPER_ADMIN";
   const isSelf = staff.userId === user.id;
   // Super Admin viewing ANOTHER administrator: Reset 2FA and Sign out all devices (Security Center APIs).
-  const perms = { update: hasPermission(user, "users.update"), superAdmin: superAdmin && hasPermission(user, "users.update"), delete: superAdmin && hasPermission(user, "users.delete"), isSelf, security: superAdmin && !isSelf };
+  // Editing the profile follows the tier rule: own profile, or staff of a lower tier (the API refuses the rest).
+  const perms = { update: hasPermission(user, "users.update") && canEditStaffProfile(user, staff), superAdmin: superAdmin && hasPermission(user, "users.update"), delete: superAdmin && hasPermission(user, "users.delete"), isSelf, security: superAdmin && !isSelf };
   // 2FA status is Security Center information: shown to those who may open the Security Center.
-  const tfa = hasPermission(user, "security.view") ? await twoFactorStatus(staff.userId) : null;
+  // A Super Admin's 2FA state is shown to Super Admins only (getStaff already hides their record from staff).
+  const tfa = hasPermission(user, "security.view") && (superAdmin || staff.user.role === "STAFF") ? await twoFactorStatus(staff.userId) : null;
   const profile: StaffProfile = {
     id: staff.id,
     userId: staff.userId,

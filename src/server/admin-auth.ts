@@ -39,7 +39,19 @@ export const ADMIN_OTP_RESEND_AFTER_SEC = 45;
 const ADMIN_OTP_MIN_GAP_MS = (ADMIN_OTP_RESEND_AFTER_SEC - 5) * 1000;
 const MAX_CODES_PER_CHALLENGE = 5;
 const MAX_VERIFY_ATTEMPTS_PER_CHALLENGE = 12;
-const OTP_REQUESTS_PER_EMAIL_PER_HOUR = 6;
+/** Codes one browser on one network may have sent to one address per hour. */
+const OTP_REQUESTS_PER_SOURCE_PER_HOUR = 5;
+/** All sources together, per address — skipped for a browser that has signed in to the account before. */
+const OTP_REQUESTS_PER_EMAIL_PER_HOUR = 30;
+/** Codes one network may have emailed per hour (to any address), from browsers not seen before. */
+const OTP_CODES_PER_IP_PER_HOUR = 30;
+/**
+ * Code requests per network per 15 minutes. Generous on purpose: a whole office or centre behind one
+ * NAT signs in from the same address, and the quotas above are what keep email volume down.
+ */
+const OTP_REQUESTS_PER_IP_PER_15_MIN = 60;
+/** A well-formed UUID no account has: the "known device" query runs (and misses) for unknown addresses too. */
+const NO_USER_ID = "00000000-0000-0000-0000-000000000000";
 
 export const ADMIN_OTP_NEUTRAL_MESSAGE = "If this email belongs to an administrator, we have sent a 6-digit code to it.";
 const BAD_CODE = "That code is not correct. Please check the email and try again.";
@@ -93,7 +105,8 @@ export function maskEmail(email: string): string {
 
 /** Only an /admin path may be the post-sign-in destination of the admin flow. */
 export function safeAdminNext(next: string | null | undefined): string {
-  if (next && /^\/admin(\/|$|\?)/.test(next) && !next.startsWith("//") && !next.includes("\\")) return next.slice(0, 500);
+  // Control characters are refused like in postLoginRedirect: browsers strip TAB/CR/LF from URLs.
+  if (next && /^\/admin(\/|$|\?)/.test(next) && !next.startsWith("//") && !/[\u0000-\u001f\u007f\\]/.test(next)) return next.slice(0, 500);
   return "/admin/dashboard";
 }
 
@@ -235,8 +248,29 @@ async function issueAndSendCode(ch: { id: string }, user: { id: string; name: st
   });
 }
 
-/** Per-address throttle. Over the limit: still the neutral answer, just no email (and one alert). */
+/**
+ * Code quota. Over a limit: still the neutral answer, just no email (and one alert).
+ *
+ * The strict limit is keyed on the address AND the requesting browser/network, so a stranger who
+ * knows an administrator's address can only use up their own share — never the administrator's.
+ * The looser per-address cap (all sources together) is an anti-spam backstop; a browser that has
+ * already signed in to this account successfully is exempt from it, so flooding an address cannot
+ * keep its owner out. The per-network cap bounds how many codes one IP can have emailed in total.
+ */
 async function emailQuotaAllows(email: string, user: { id: string; name: string } | null, meta: RequestMeta) {
+  const ip = meta.ip ?? "unknown";
+  const deviceIdHash = meta.deviceId ? hashDeviceId(meta.deviceId) : "";
+  const own = await checkRateLimit(hashedRateKey("admin-otp:email-src", `${email}|${ip}|${deviceIdHash}`), OTP_REQUESTS_PER_SOURCE_PER_HOUR, 3600);
+  if (!own.allowed) return false;
+
+  // Queried for every address alike (an unknown one simply never matches), so timing tells nothing.
+  const knownDevice = deviceIdHash
+    ? await db.loginHistory.findFirst({ where: { userId: user?.id ?? NO_USER_ID, success: true, deviceIdHash }, select: { id: true } })
+    : null;
+  if (knownDevice) return true;
+
+  const fromNetwork = await checkRateLimit(`admin-otp:ip-codes:${ip}`, OTP_CODES_PER_IP_PER_HOUR, 3600);
+  if (!fromNetwork.allowed) return false;
   const r = await checkRateLimit(hashedRateKey("admin-otp:email", email), OTP_REQUESTS_PER_EMAIL_PER_HOUR, 3600);
   if (!r.allowed && user && r.remaining === 0) {
     const once = await checkRateLimit(hashedRateKey("admin-otp:abuse-alert", email), 1, 3600);
@@ -245,7 +279,7 @@ async function emailQuotaAllows(email: string, user: { id: string; name: string 
         type: "OTP_ABUSE",
         severity: "warning",
         title: `Many sign-in codes requested for ${user.name}`,
-        detail: `More than ${OTP_REQUESTS_PER_EMAIL_PER_HOUR} codes were requested in an hour. Further codes are held back for an hour.`,
+        detail: `More than ${OTP_REQUESTS_PER_EMAIL_PER_HOUR} codes were requested in an hour from browsers this administrator has not signed in from. Codes for those browsers are held back for an hour; browsers that have signed in before still get theirs.`,
         userId: user.id,
         ip: meta.ip,
         userAgent: meta.userAgent,
@@ -255,8 +289,14 @@ async function emailQuotaAllows(email: string, user: { id: string; name: string 
   return r.allowed;
 }
 
+/** Expires the live code of a challenge (used when a resend could not issue a new one). */
+async function expireChallengeCodes(challengeId: string) {
+  const now = new Date();
+  await db.loginOtp.updateMany({ where: { challengeId, purpose: "ADMIN_LOGIN", consumedAt: null, expiresAt: { gt: now } }, data: { expiresAt: now } });
+}
+
 export async function startAdminEmailOtp(input: { email: string; next?: string | null } & RequestMeta) {
-  await enforceRateLimitStrict(`admin-otp:ip:${input.ip ?? "unknown"}`, 10, 900);
+  await enforceRateLimitStrict(`admin-otp:ip:${input.ip ?? "unknown"}`, OTP_REQUESTS_PER_IP_PER_15_MIN, 900);
   const email = normalizeAdminEmail(input.email);
   const user = await findActiveAdminByEmail(email);
   const allowed = await emailQuotaAllows(email, user, input);
@@ -273,7 +313,10 @@ export async function resendAdminEmailOtp(token: string | null, meta: RequestMet
   // (a quiet "already sent", or 429 after the fifth code) tells an administrator from anyone else.
   if (ch.codeSentAt && Date.now() - ch.codeSentAt.getTime() < ADMIN_OTP_MIN_GAP_MS) return { message: ADMIN_OTP_NEUTRAL_MESSAGE, state: await stateOf(ch) };
   if (ch.codesSent >= MAX_CODES_PER_CHALLENGE) throw Errors.tooMany(60);
-  // Claimed atomically: two resends racing each other cannot both pass the cap.
+  // Claimed atomically: two resends racing each other cannot both pass the cap. The per-code attempt
+  // counter is reset for every address alike (so the answers never differ), which is why a resend
+  // that cannot issue a new code must expire the old one: otherwise the reset would hand that code
+  // a fresh set of guesses.
   const claimed = await db.authChallenge.updateMany({
     where: { id: ch.id, codesSent: ch.codesSent },
     data: { codesSent: { increment: 1 }, codeSentAt: new Date(), codeAttempts: 0 },
@@ -281,6 +324,7 @@ export async function resendAdminEmailOtp(token: string | null, meta: RequestMet
   if (claimed.count === 1 && ch.userId) {
     const user = await db.user.findFirst({ where: { id: ch.userId, status: "ACTIVE", deletedAt: null }, select: { id: true, name: true, email: true } });
     if (user?.email && (await emailQuotaAllows(user.email, user, meta))) await issueAndSendCode(ch, user, meta);
+    else await expireChallengeCodes(ch.id);
   }
   return { message: ADMIN_OTP_NEUTRAL_MESSAGE, state: await stateOf(await db.authChallenge.findUniqueOrThrow({ where: { id: ch.id } })) };
 }
@@ -393,6 +437,13 @@ export async function adminPasswordSignIn(user: { id: string; name: string; emai
 export async function verifyAdminSecondFactor(token: string | null, input: SecondFactorInput, meta: RequestMeta): Promise<StepResult> {
   const ch = await loadChallenge(token, ["SECOND_FACTOR"]);
   if (!ch.userId) throw Errors.unauthorized(RESTART);
+  // Same per-challenge cap as the email-code and enrolment steps: one challenge cannot be used for
+  // an unlimited number of guesses during its lifetime.
+  const bumped = await db.authChallenge.updateMany({ where: { id: ch.id, attempts: { lt: MAX_VERIFY_ATTEMPTS_PER_CHALLENGE } }, data: { attempts: { increment: 1 } } });
+  if (bumped.count !== 1) {
+    await cancelAdminChallenge(token);
+    throw Errors.unauthorized(RESTART);
+  }
   let method;
   try {
     method = await verifyUserSecondFactor(ch.userId, input, meta);

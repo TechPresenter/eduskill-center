@@ -247,7 +247,7 @@ export function EmailComposer({ config, starters, templates, initial, userEmail,
     }
     setBusy("test");
     try {
-      const r = await api.post<EmailMessageResult>("/api/admin/email/test", { ...payload(), testTo: address });
+      const r = await api.post<EmailMessageResult>("/api/admin/email/test", { ...payload(), testTo: address, draftId });
       setTestOpen(false);
       if (r.status === "FAILED") toast.error("The test email could not be sent", r.error ?? "The mail server refused the message.");
       else toast.success("Test email sent", `Check the inbox of ${address}. Its subject starts with [TEST].`);

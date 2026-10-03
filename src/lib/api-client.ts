@@ -95,9 +95,11 @@ async function request<T>(method: string, url: string, body?: unknown, init?: Re
     json = null;
   }
   if (!res.ok || !json?.success) {
-    if (res.status === 401 && redirectToAdminLogin(url)) {
+    // Only a missing or ended session (SESSION_REQUIRED) means "sign in again". A 401 for a wrong
+    // authenticator or email-change code must reach the form that sent it.
+    if (res.status === 401 && json?.error?.code === "SESSION_REQUIRED" && redirectToAdminLogin(url)) {
       // Callers still get their error (and stop their spinners); the page is already on its way out.
-      throw new ApiClientError(401, "Your session has ended. Please sign in again.", json?.error?.code ?? "UNAUTHORIZED", json?.error?.details);
+      throw new ApiClientError(401, "Your session has ended. Please sign in again.", json?.error?.code ?? "SESSION_REQUIRED", json?.error?.details);
     }
     throw new ApiClientError(res.status, json?.error?.message ?? `Request failed (${res.status})`, json?.error?.code, json?.error?.details);
   }
