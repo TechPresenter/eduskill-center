@@ -46,6 +46,26 @@ export const optionalPhone = z
   .transform((v) => v || null)
   // Outermost, so Zod still reports the key as optional; `undefined` never reaches the transform.
   .optional();
+/**
+ * A block (tehsil / taluka / mandal) typed by the person filling a form. Most districts have no
+ * Block rows yet, so forms let people type the name; the server finds the block in that district
+ * (case-insensitively) or adds it — see `resolveBlockId` in src/server/locations.ts. Letters (any
+ * script), digits, spaces and . - ( ) ' & / only, so it cannot carry markup or odd control text.
+ */
+export const blockNameSchema = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/\s+/g, " "))
+  .pipe(
+    z
+      .string()
+      .min(2, "Enter your block name")
+      .max(80, "Block name is too long")
+      .regex(/^[\p{L}\p{M}\p{N} .\-()'&/]+$/u, "Use letters, numbers and spaces only")
+  );
+/** `""` and `null` mean "not given". */
+export const optionalBlockName = z.union([z.literal(""), blockNameSchema]).optional().nullable().transform((v) => v || undefined);
+
 export const pincodeSchema = z.string().trim().regex(/^[1-9]\d{5}$/, "Enter a valid 6-digit PIN code");
 export const emailSchema = z.email("Enter a valid email address");
 export const optionalEmail = z.union([z.literal(""), emailSchema]).optional().nullable();

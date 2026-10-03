@@ -10,6 +10,7 @@ import type { StoredFile } from "@/lib/storage";
 import { normalizeEmail, normalizeMobile } from "@/server/auth";
 import { mobileVariants } from "@/lib/phone";
 import { createCenter } from "@/server/centers";
+import { resolveBlockId } from "@/server/locations";
 import type { CentreApplicationInput } from "@/lib/validation/centre-applications";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid, optionalDate } from "@/lib/api/query";
 import { z } from "zod";
@@ -112,10 +113,8 @@ export async function submitCentreApplication(input: CentreApplicationInput, met
   if (!(await getSetting<boolean>("centres.applicationsOpen"))) {
     throw Errors.forbidden("Centre applications are currently closed. Please check back soon.");
   }
-  const block = await db.block.findFirst({
-    where: { id: input.blockId, districtId: input.districtId, district: { stateId: input.stateId }, isActive: true },
-  });
-  if (!block) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Block must belong to the selected district and state" });
+  const district = await db.district.findFirst({ where: { id: input.districtId, stateId: input.stateId }, select: { id: true } });
+  if (!district) throw Errors.validation("Please correct the highlighted fields.", { districtId: "District must belong to the selected state" });
 
   const email = normalizeEmail(input.email);
   const mobile = normalizeMobile(input.mobile);
@@ -129,6 +128,14 @@ export async function submitCentreApplication(input: CentreApplicationInput, met
       `An application (${open.applicationNo}) already exists for this email or mobile and is ${titleCase(open.status)}. Track it from the status page.`
     );
   }
+
+  // The block picked from the list, or the one typed — found in the district or added to it. Done
+  // after the duplicate check (a refused application adds no block) and before the transaction.
+  const blockId = await resolveBlockId(
+    { districtId: district.id, blockId: input.blockId, blockName: input.blockName },
+    { source: "the Open a Centre application" }
+  );
+  if (!blockId) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Select or type your block" });
 
   const app = await db.$transaction(async (tx) => {
     const applicationNo = await generateCentreApplicationNo(tx);
@@ -147,7 +154,7 @@ export async function submitCentreApplication(input: CentreApplicationInput, met
         teachingExperienceYears: input.teachingExperienceYears,
         stateId: input.stateId,
         districtId: input.districtId,
-        blockId: input.blockId,
+        blockId,
         villageTown: input.villageTown,
         address: input.address,
         pincode: input.pincode,

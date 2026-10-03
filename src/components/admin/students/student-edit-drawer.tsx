@@ -23,7 +23,10 @@ export interface StudentEditValues {
   email: string;
   stateId: string;
   districtId: string;
+  /** Set when the block was picked from (or typed exactly as) one of the district's blocks. */
   blockId: string;
+  /** The block as typed, when it is not in the district's list yet (the server adds it). */
+  blockName?: string;
   villageTown: string;
   address: string;
   pincode: string;
@@ -38,7 +41,13 @@ export interface StudentEditValues {
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
 }
 
-const SKIP_WHEN_BLANK: (keyof StudentEditValues)[] = ["stateId", "districtId", "blockId", "gender", "areaType", "dob", "guardianRelation", "familyIncome"];
+/**
+ * Fields the profile requires whenever they are sent (plus the selects): a blank one is left out of the
+ * PATCH — "leave it as it is" — so a student who never filled in, say, an address can still be saved.
+ */
+const SKIP_WHEN_BLANK: (keyof StudentEditValues)[] = ["name", "guardianName", "guardianRelation", "dob", "gender", "mobile", "stateId", "districtId", "villageTown", "address", "pincode", "qualification", "areaType", "familyIncome"];
+/** Optional free-text fields: a blank one is sent as null, which clears it. */
+const CLEAR_WHEN_BLANK: (keyof StudentEditValues)[] = ["whatsapp", "email", "institution", "occupation", "trainingRequirement"];
 
 function StudentEditForm({ onClose, studentId, initial }: { onClose: () => void; studentId: string; initial: StudentEditValues }) {
   const [v, setV] = React.useState<StudentEditValues>(initial);
@@ -52,13 +61,24 @@ function StudentEditForm({ onClose, studentId, initial }: { onClose: () => void;
     const body: Record<string, unknown> = {};
     for (const [k, val] of Object.entries(v)) {
       const key = k as keyof StudentEditValues;
-      if (SKIP_WHEN_BLANK.includes(key) && val === "") continue;
+      if (key === "blockId" || key === "blockName") continue;
+      const blank = typeof val === "string" && val.trim() === "";
+      if (SKIP_WHEN_BLANK.includes(key) && blank) continue;
+      if (CLEAR_WHEN_BLANK.includes(key) && blank) {
+        body[key] = null;
+        continue;
+      }
       if (key === "passingYear") {
-        body[key] = val === "" ? null : Number(val);
+        body[key] = blank ? null : Number(val);
         continue;
       }
       body[key] = val;
     }
+    // The block picked from the list goes by id alone (its stored name may use characters a typed name
+    // may not); a typed one by name, which the server finds in the district or adds. Neither: the
+    // student keeps their block, as long as it is in the chosen district.
+    if (v.blockId) body.blockId = v.blockId;
+    else if (v.blockName?.trim()) body.blockName = v.blockName.trim();
     const r = await run(() => api.patch(`/api/admin/students/${studentId}`, body), { success: "Student profile updated" });
     if (r !== undefined) onClose();
   };
@@ -103,9 +123,9 @@ function StudentEditForm({ onClose, studentId, initial }: { onClose: () => void;
 
       <FormSection title="Address">
         <LocationCascade
-          value={{ stateId: v.stateId || undefined, districtId: v.districtId || undefined, blockId: v.blockId || undefined }}
-          onChange={(loc) => setV((s) => ({ ...s, stateId: loc.stateId ?? "", districtId: loc.districtId ?? "", blockId: loc.blockId ?? "" }))}
-          errors={{ stateId: err("stateId"), districtId: err("districtId"), blockId: err("blockId") }}
+          value={{ stateId: v.stateId || undefined, districtId: v.districtId || undefined, blockId: v.blockId || undefined, blockName: v.blockName }}
+          onChange={(loc) => setV((s) => ({ ...s, stateId: loc.stateId ?? "", districtId: loc.districtId ?? "", blockId: loc.blockId ?? "", blockName: loc.blockName ?? "" }))}
+          errors={{ stateId: err("stateId"), districtId: err("districtId"), blockId: err("blockId"), blockName: err("blockName") }}
           className="grid grid-cols-1 gap-4 sm:grid-cols-3"
         />
         <FormGrid>

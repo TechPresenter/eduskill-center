@@ -21,6 +21,7 @@ import {
   type TeacherApplicationInput,
 } from "@/lib/validation/trainers";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid, optionalDate } from "@/lib/api/query";
+import { resolveBlockId } from "@/server/locations";
 import { z } from "zod";
 
 export interface Ctx {
@@ -40,8 +41,20 @@ export const TRAINER_TRANSITIONS: Record<TrainerApplicationStatus, TrainerApplic
   REJECTED: ["UNDER_REVIEW"],
 };
 
-/** Location requirement per volunteer level. Returns normalised ids (extra ids are dropped). */
-export async function resolveTrainerLocation(level: TrainerLevel, ids: { stateId: string; districtId?: string | null; blockId?: string | null }) {
+/**
+ * Location requirement per volunteer level. Returns normalised ids (extra ids are dropped).
+ *
+ * A BLOCK-level volunteer's block is picked (`blockId`, which must belong to the district) or typed
+ * (`blockName`, found in the district case-insensitively or added to it — see resolveBlockId), so
+ * the result always carries a real blockId. Most districts have no Block rows yet, which is why the
+ * block can be typed at all. Other levels never touch the block: nothing is looked up or added.
+ *
+ * Adding a typed block is a write, so call this BEFORE any transaction (resolveBlockId's rule).
+ */
+export async function resolveTrainerLocation(
+  level: TrainerLevel,
+  ids: { stateId: string; districtId?: string | null; blockId?: string | null; blockName?: string | null }
+) {
   const state = await db.state.findFirst({ where: { id: ids.stateId, isActive: true } });
   if (!state) throw Errors.validation("Please correct the highlighted fields.", { stateId: "Select a valid state" });
   let districtId: string | null = null;
@@ -53,10 +66,11 @@ export async function resolveTrainerLocation(level: TrainerLevel, ids: { stateId
     districtId = district.id;
   }
   if (level === "BLOCK") {
-    if (!ids.blockId) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Block is required" });
-    const block = await db.block.findFirst({ where: { id: ids.blockId, districtId: districtId!, isActive: true } });
-    if (!block) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Select a block within the chosen district" });
-    blockId = block.id;
+    blockId = await resolveBlockId(
+      { districtId: districtId!, blockId: ids.blockId, blockName: ids.blockName },
+      { source: "the Become a Trainer application" }
+    );
+    if (!blockId) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Select or type your block" });
   }
   return { stateId: state.id, districtId, blockId };
 }
@@ -82,7 +96,10 @@ export interface TrainerApplicationServiceInput {
   level: TrainerLevel;
   stateId: string;
   districtId?: string | null;
+  /** BLOCK level only: the block picked from the district's list… */
   blockId?: string | null;
+  /** …or typed (found in the district or added to it). Ignored for the other levels. */
+  blockName?: string | null;
   address?: string | null;
   pincode?: string | null;
   qualification: string;
@@ -122,7 +139,6 @@ function identityWhere(email: string | null, mobiles: string[]): Prisma.UserWher
 
 export async function submitTrainerApplication(input: TrainerApplicationServiceInput, meta: SubmitTrainerApplicationMeta = {}) {
   if (!(await getSetting<boolean>("admissions.trainerApplicationsOpen"))) throw Errors.forbidden("Volunteer trainer applications are currently closed.");
-  const loc = await resolveTrainerLocation(input.level, input);
   const email = input.email ? normalizeEmail(input.email) : null;
   const mobile = normalizeMobile(input.mobile);
 
@@ -134,6 +150,10 @@ export async function submitTrainerApplication(input: TrainerApplicationServiceI
     select: { applicationNo: true, status: true },
   });
   if (open) throw Errors.conflict(`An application (${open.applicationNo}) already exists for this email/mobile and is ${titleCase(open.status)}. Track it from the application status page.`);
+
+  // A typed block is found in the district or added to it, so this runs after the duplicate checks
+  // (a refused application adds no block) and before the transaction (resolveBlockId's rule).
+  const loc = await resolveTrainerLocation(input.level, input);
 
   const app = await db.$transaction(async (tx) => {
     const applicationNo = await generateTrainerApplicationNo(tx);

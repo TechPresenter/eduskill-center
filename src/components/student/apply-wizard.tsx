@@ -30,6 +30,8 @@ import {
   PROFILE_LABELS,
   PROFILE_REQUIRED,
   PersonalDetailsFields,
+  blockFieldIssue,
+  profileFieldFilled,
   profilePayload,
   type ProfileFieldSetter,
   type ProfileFormValues,
@@ -461,7 +463,7 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
     const fields = PROFILE_STEP_FIELDS[index] ?? [];
     const errs: Record<string, string> = {};
     for (const k of PROFILE_REQUIRED) {
-      if (fields.includes(k) && !String(form[k] ?? "").trim()) errs[k] = `${PROFILE_LABELS[k]} is required`;
+      if (fields.includes(k) && !profileFieldFilled(form, k)) errs[k] = `${PROFILE_LABELS[k]} is required`;
     }
     // No input is rendered for these: the wizard carries them forward from the saved profile. The
     // checks still gate the step, so they must accept a foreign number or a volunteer abroad is
@@ -475,6 +477,11 @@ export function ApplyWizard({ studentId, profile, profileCompleted, admissionsOp
       if (issue) errs.whatsapp = issue;
     }
     if (index === STEP_ADDRESS && form.pincode && !/^[1-9]\d{5}$/.test(form.pincode.trim())) errs.pincode = "Enter a valid 6-digit PIN code";
+    // Picked from the list or typed; a typed name must pass the server's block-name rule.
+    if (index === STEP_ADDRESS) {
+      const issue = blockFieldIssue(form);
+      if (issue) errs.blockId = issue;
+    }
     return errs;
   };
 

@@ -4,10 +4,11 @@ import { audit, type AuditActor } from "@/lib/audit";
 import { generateStudentId } from "@/lib/ids";
 import type { StoredFile } from "@/lib/storage";
 import { toNumber } from "@/lib/utils";
-import type { StudentProfileInput } from "@/lib/validation/students";
+import type { AdminStudentUpdateInput, StudentProfileInput } from "@/lib/validation/students";
 import { normalizeEmail, normalizeMobile } from "@/server/auth";
 import { mobileVariants, samePhone } from "@/lib/phone";
 import { reconsiderAfterDocuments } from "@/server/applications";
+import { resolveBlockId } from "@/server/locations";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid, optionalDate } from "@/lib/api/query";
 import { z } from "zod";
 
@@ -26,8 +27,8 @@ export async function getStudentProfile(studentId: string) {
 export async function updateStudentProfile(studentId: string, input: StudentProfileInput, actor: AuditActor, meta: { ip?: string | null; userAgent?: string | null } = {}) {
   const student = await db.student.findUnique({ where: { id: studentId }, include: { user: true } });
   if (!student) throw Errors.notFound("Student");
-  const block = await db.block.findFirst({ where: { id: input.blockId, districtId: input.districtId, district: { stateId: input.stateId } } });
-  if (!block) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Block must belong to the selected district and state" });
+  const district = await db.district.findFirst({ where: { id: input.districtId, stateId: input.stateId }, select: { id: true } });
+  if (!district) throw Errors.validation("Please correct the highlighted fields.", { districtId: "District must belong to the selected state" });
   const mobile = normalizeMobile(input.mobile);
   const email = input.email ? normalizeEmail(input.email) : null;
   // Every stored spelling, or this check misses an older row and the save hits the DB unique instead.
@@ -38,6 +39,11 @@ export async function updateStudentProfile(studentId: string, input: StudentProf
     if (email && clash.email === email) details.email = "This email is used by another account";
     throw Errors.validation("Please correct the highlighted fields.", details);
   }
+  // The block picked from the district's list, or typed — found in the district case-insensitively
+  // or added to it. Last of the checks, so a refused save adds no block; before the transaction, as
+  // resolveBlockId requires.
+  const blockId = await resolveBlockId({ districtId: district.id, blockId: input.blockId, blockName: input.blockName }, { source: "the student profile form" });
+  if (!blockId) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Select or type your block" });
   const updated = await db.$transaction(async (tx) => {
     await tx.user.update({ where: { id: student.userId }, data: { name: input.name, mobile, email, avatarUrl: input.photoUrl ?? student.user.avatarUrl } });
     return tx.student.update({
@@ -53,8 +59,8 @@ export async function updateStudentProfile(studentId: string, input: StudentProf
         email,
         photoUrl: input.photoUrl ?? student.photoUrl,
         stateId: input.stateId,
-        districtId: input.districtId,
-        blockId: input.blockId,
+        districtId: district.id,
+        blockId,
         villageTown: input.villageTown,
         address: input.address,
         pincode: input.pincode,
@@ -204,18 +210,56 @@ export async function getStudentAdmin(id: string) {
   };
 }
 
-export async function adminUpdateStudent(id: string, input: Partial<StudentProfileInput> & { status?: "ACTIVE" | "INACTIVE" | "SUSPENDED" }, ctx: Ctx) {
+/**
+ * Where a staff edit leaves the student, or null when it does not move them. The district must be
+ * in the state. A block sent with the edit — picked (`blockId`, which must be in the district) or
+ * typed (`blockName`, found in the district or added to it, see resolveBlockId) — wins; otherwise the
+ * student keeps their block, which must still be in the (possibly changed) district. Runs before any
+ * transaction, as resolveBlockId requires.
+ */
+async function editedLocation(
+  existing: { stateId: string | null; districtId: string | null; blockId: string | null },
+  input: { stateId?: string; districtId?: string; blockId?: string; blockName?: string }
+) {
+  const blockGiven = !!(input.blockId || input.blockName);
+  const moved = (input.stateId && input.stateId !== existing.stateId) || (input.districtId && input.districtId !== existing.districtId);
+  if (!moved && !blockGiven) return null;
+  const invalid = (field: "stateId" | "districtId" | "blockId", message: string) => Errors.validation("Please correct the highlighted fields.", { [field]: message });
+  const stateId = input.stateId || existing.stateId;
+  const districtId = input.districtId || existing.districtId;
+  if (!stateId) throw invalid("stateId", "Select a state");
+  if (!districtId) {
+    if (blockGiven) throw invalid("districtId", "Select a district");
+    return { stateId, districtId: null, blockId: null };
+  }
+  const district = await db.district.findFirst({ where: { id: districtId, stateId }, select: { id: true } });
+  if (!district) throw invalid("districtId", "District must belong to the selected state");
+  if (blockGiven) {
+    const blockId = await resolveBlockId({ districtId, blockId: input.blockId, blockName: input.blockName }, { source: "the admin student form" });
+    return { stateId, districtId, blockId };
+  }
+  if (existing.blockId && !(await db.block.findFirst({ where: { id: existing.blockId, districtId }, select: { id: true } }))) {
+    throw invalid("blockId", "Select or type the block in the chosen district");
+  }
+  return { stateId, districtId, blockId: existing.blockId };
+}
+
+export async function adminUpdateStudent(id: string, input: AdminStudentUpdateInput, ctx: Ctx) {
   const student = await db.student.findFirst({ where: { id, deletedAt: null }, include: { user: true } });
   if (!student) throw Errors.notFound("Student");
+  const loc = await editedLocation(student, input);
   const data: Prisma.StudentUpdateInput = {};
   for (const k of ["name", "guardianName", "guardianRelation", "gender", "villageTown", "address", "pincode", "qualification", "institution", "passingYear", "familyIncome", "occupation", "areaType", "trainingRequirement", "scholarshipRequired", "photoUrl"] as const) {
     if (input[k] !== undefined) (data as Record<string, unknown>)[k] = input[k];
   }
   if (input.dob) data.dob = input.dob;
-  if (input.stateId) data.state = { connect: { id: input.stateId } };
-  if (input.districtId) data.district = { connect: { id: input.districtId } };
-  if (input.blockId) data.block = { connect: { id: input.blockId } };
+  if (loc) {
+    data.state = { connect: { id: loc.stateId } };
+    data.district = loc.districtId ? { connect: { id: loc.districtId } } : { disconnect: true };
+    data.block = loc.blockId ? { connect: { id: loc.blockId } } : { disconnect: true };
+  }
   if (input.mobile) data.mobile = normalizeMobile(input.mobile);
+  if (input.whatsapp !== undefined) data.whatsapp = input.whatsapp ? normalizeMobile(input.whatsapp) : null;
   if (input.email !== undefined) data.email = input.email ? normalizeEmail(input.email) : null;
   const updated = await db.$transaction(async (tx) => {
     const st = await tx.student.update({ where: { id }, data });

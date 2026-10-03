@@ -277,6 +277,8 @@ export function FormFields({ fields, values, onChange, errors = {}, disabled, co
                 {f.required && <span className="ml-0.5 text-danger">*</span>}
               </p>
               <LocationCascade
+                // CMS records store a blockId only, so blocks are picked from the existing list here.
+                blockMode="select"
                 depth={f.depth}
                 value={{ stateId: str(values.stateId) || undefined, districtId: str(values.districtId) || undefined, blockId: str(values.blockId) || undefined }}
                 onChange={(loc) => onChange({ ...values, stateId: loc.stateId ?? "", districtId: loc.districtId ?? "", blockId: loc.blockId ?? "" })}

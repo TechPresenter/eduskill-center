@@ -12,13 +12,14 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Checkbox, CheckboxCards, Input, RadioCards, Textarea } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { phoneIssue } from "@/lib/phone";
+import { blockNameSchema } from "@/lib/validation/common";
 import { DateInput } from "@/components/ui/date-input";
 import { Select } from "@/components/ui/select";
 import { Field, FormGrid, FormSection } from "@/components/ui/form";
 import { FileUpload, type UploadedFile } from "@/components/ui/file-upload";
 import { WizardShell } from "@/components/ui/wizard-shell";
 import { toast } from "@/components/ui/toast";
-import { LocationCascade } from "@/components/shared/location-cascade";
+import { LocationCascade, type LocationValue } from "@/components/shared/location-cascade";
 import { CentreSteps, type CentreStepItem } from "@/components/site/centre-steps";
 import { CENTRE_DOCUMENT_TYPES, CENTRE_MAX_SPACE_PHOTOS } from "../centre-documents";
 
@@ -54,7 +55,10 @@ interface FormState {
   teachingExperienceYears: string;
   stateId?: string;
   districtId?: string;
+  /** Set when the block was picked from (or typed exactly as) one of the district's blocks. */
   blockId?: string;
+  /** The block as typed; the server finds it in the district or adds it. */
+  blockName?: string;
   villageTown: string;
   address: string;
   pincode: string;
@@ -113,7 +117,7 @@ const LAST_STEP = WIZARD_STEPS.length - 1;
 
 const STEP_FIELDS: string[][] = [
   ["applicantName", "mobile", "whatsapp", "email", "dob", "gender", "qualification", "occupation", "teachingExperienceYears"],
-  ["stateId", "districtId", "blockId", "villageTown", "address", "pincode"],
+  ["stateId", "districtId", "blockId", "blockName", "villageTown", "address", "pincode"],
   ["proposedName", "spaceType", "roomCount", "areaSqft", "seatingCapacity", "hasElectricity", "hasToilet", "hasDrinkingWater", "hasFurniture", "expectedStudents", "classes"],
   ["motivation", "acceptTerms"],
 ];
@@ -153,6 +157,14 @@ function intBetween(value: string, min: number, max: number): boolean {
   return value.trim() !== "" && Number.isInteger(n) && n >= min && n <= max;
 }
 
+/** Picked from the list, or typed — a typed block must pass the same rule the server applies. */
+function blockFieldIssue(f: FormState): string | null {
+  if (f.blockId) return null;
+  if (!f.blockName?.trim()) return "Select or type your block";
+  const parsed = blockNameSchema.safeParse(f.blockName);
+  return parsed.success ? null : (parsed.error.issues[0]?.message ?? "Enter your block name");
+}
+
 function validateStep(step: number, f: FormState): Record<string, string> {
   const e: Record<string, string> = {};
   if (step === 0) {
@@ -169,7 +181,8 @@ function validateStep(step: number, f: FormState): Record<string, string> {
   if (step === 1) {
     if (!f.stateId) e.stateId = "Select your state";
     if (!f.districtId) e.districtId = "Select your district";
-    if (!f.blockId) e.blockId = "Select your block";
+    const blockIssue = blockFieldIssue(f);
+    if (blockIssue) e.blockId = blockIssue;
     if (f.villageTown.trim().length < 2) e.villageTown = "Enter the village or town";
     if (f.address.trim().length < 5) e.address = "Enter the full address of the centre";
     if (!PIN_RE.test(f.pincode.trim())) e.pincode = "Enter a valid 6-digit PIN code";
@@ -346,7 +359,10 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
         teachingExperienceYears: Number(form.teachingExperienceYears),
         stateId: form.stateId,
         districtId: form.districtId,
-        blockId: form.blockId,
+        // A picked block travels by id alone (its stored name may use characters a typed name may
+        // not); a typed one by name, and the server finds it in the district or adds it.
+        blockId: form.blockId ?? "",
+        blockName: form.blockId ? "" : (form.blockName?.trim() ?? ""),
         villageTown: form.villageTown.trim(),
         address: form.address.trim(),
         pincode: form.pincode.trim(),
@@ -647,23 +663,24 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
               )}
 
               {step === 1 && (
-                <FormSection title="Where the centre will run" description="Select the state, district and block, then give the exact village or town and address of the proposed centre.">
+                <FormSection title="Where the centre will run" description="Select the state and district, pick or type your block, then give the exact village or town and address of the proposed centre.">
                   <LocationCascade
-                    value={{ stateId: form.stateId, districtId: form.districtId, blockId: form.blockId }}
-                    onChange={(v) => {
-                      setForm((f) => ({ ...f, ...v }));
+                    value={{ stateId: form.stateId, districtId: form.districtId, blockId: form.blockId, blockName: form.blockName }}
+                    onChange={(v: LocationValue) => {
+                      setForm((f) => ({ ...f, stateId: v.stateId, districtId: v.districtId, blockId: v.blockId, blockName: v.blockName }));
                       setErrors((e) => {
                         const n = { ...e };
                         delete n.stateId;
                         delete n.districtId;
                         delete n.blockId;
+                        delete n.blockName;
                         return n;
                       });
                     }}
                     onNames={handleNames}
                     depth="block"
                     required
-                    errors={{ stateId: errors.stateId, districtId: errors.districtId, blockId: errors.blockId }}
+                    errors={{ stateId: errors.stateId, districtId: errors.districtId, blockId: errors.blockId, blockName: errors.blockName }}
                     className="grid grid-cols-1 gap-4 sm:grid-cols-3"
                   />
                   <FormGrid>
@@ -797,7 +814,7 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
                       rows: [
                         { label: "State", value: names.state ?? "—" },
                         { label: "District", value: names.district ?? "—" },
-                        { label: "Block", value: names.block ?? "—" },
+                        { label: "Block", value: names.block ?? (form.blockName?.trim() || "—") },
                         { label: "Village / town", value: form.villageTown },
                         { label: "PIN code", value: form.pincode },
                         { label: "Address", value: form.address },

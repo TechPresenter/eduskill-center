@@ -106,7 +106,10 @@ export function CenterForm({ initial, courses, canVerify, codeFormat }: { initia
       name,
       stateId: loc.stateId ?? "",
       districtId: loc.districtId ?? "",
+      // The block picked from the list, or typed (the server finds it in the district or adds it).
+      // A picked block travels by id alone: its stored name may use characters a typed name may not.
       blockId: loc.blockId ?? "",
+      blockName: loc.blockId ? "" : (loc.blockName ?? ""),
       address,
       landmark: landmark || null,
       villageTown: villageTown || null,
@@ -134,7 +137,7 @@ export function CenterForm({ initial, courses, canVerify, codeFormat }: { initia
     router.refresh();
   };
 
-  const locErrors = { stateId: fieldErrors.stateId, districtId: fieldErrors.districtId, blockId: fieldErrors.blockId };
+  const locErrors = { stateId: fieldErrors.stateId, districtId: fieldErrors.districtId, blockId: fieldErrors.blockId, blockName: fieldErrors.blockName };
 
   return (
     <form onSubmit={onSubmit} className="space-y-8" noValidate>
@@ -154,6 +157,7 @@ export function CenterForm({ initial, courses, canVerify, codeFormat }: { initia
                 clearField("stateId");
                 clearField("districtId");
                 clearField("blockId");
+                clearField("blockName");
               }}
               required
               errors={locErrors}

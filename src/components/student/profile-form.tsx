@@ -15,6 +15,7 @@ import { LocationCascade } from "@/components/shared/location-cascade";
 import { toast } from "@/components/ui/toast";
 import { api, ApiClientError } from "@/lib/api-client";
 import { GUARDIAN_RELATIONS, INCOME_BANDS, QUALIFICATIONS } from "@/lib/validation/students";
+import { blockNameSchema } from "@/lib/validation/common";
 
 export interface ProfileFormValues {
   name: string;
@@ -28,7 +29,10 @@ export interface ProfileFormValues {
   photoUrl: string;
   stateId: string;
   districtId: string;
+  /** Set when the block was picked from (or typed exactly as) one of the district's blocks. */
   blockId: string;
+  /** The block as typed, when it is not in the district's list yet (the server adds it). */
+  blockName?: string;
   villageTown: string;
   address: string;
   pincode: string;
@@ -57,7 +61,7 @@ export const PROFILE_REQUIRED: (keyof ProfileFormValues)[] = ["name", "guardianN
 
 /** Which field group (= apply-wizard step) each field belongs to. */
 export const PERSONAL_FIELDS: (keyof ProfileFormValues)[] = ["photoUrl", "name", "guardianName", "guardianRelation", "dob", "gender", "mobile", "whatsapp", "email"];
-export const ADDRESS_FIELDS: (keyof ProfileFormValues)[] = ["stateId", "districtId", "blockId", "villageTown", "address", "pincode"];
+export const ADDRESS_FIELDS: (keyof ProfileFormValues)[] = ["stateId", "districtId", "blockId", "blockName", "villageTown", "address", "pincode"];
 export const EDUCATION_FIELDS: (keyof ProfileFormValues)[] = ["qualification", "institution", "passingYear", "familyIncome", "occupation", "areaType", "trainingRequirement", "scholarshipRequired"];
 
 export const PROFILE_LABELS: Record<keyof ProfileFormValues, string> = {
@@ -73,6 +77,7 @@ export const PROFILE_LABELS: Record<keyof ProfileFormValues, string> = {
   stateId: "State",
   districtId: "District",
   blockId: "Block",
+  blockName: "Block",
   villageTown: "Village / Town",
   address: "Address",
   pincode: "PIN code",
@@ -86,9 +91,23 @@ export const PROFILE_LABELS: Record<keyof ProfileFormValues, string> = {
   scholarshipRequired: "Scholarship",
 };
 
+/** Whether a field has a value. The block counts as filled when it was picked or typed. */
+export function profileFieldFilled(form: ProfileFormValues, key: keyof ProfileFormValues): boolean {
+  if (key === "blockId" || key === "blockName") return !!(form.blockId || form.blockName?.trim());
+  return !!String(form[key] ?? "").trim();
+}
+
+/** Picked from the list, or typed — a typed block must pass the same rule the server applies. */
+export function blockFieldIssue(form: ProfileFormValues): string | null {
+  if (form.blockId) return null;
+  if (!form.blockName?.trim()) return "Select or type your block";
+  const parsed = blockNameSchema.safeParse(form.blockName);
+  return parsed.success ? null : (parsed.error.issues[0]?.message ?? "Enter your block name");
+}
+
 /** Missing required fields + completion percentage, shared by the profile page and the wizard. */
 export function profileCompletion(form: ProfileFormValues) {
-  const missing = PROFILE_REQUIRED.filter((k) => !String(form[k] ?? "").trim());
+  const missing = PROFILE_REQUIRED.filter((k) => !profileFieldFilled(form, k));
   return { missing, completion: Math.round(((PROFILE_REQUIRED.length - missing.length) / PROFILE_REQUIRED.length) * 100) };
 }
 
@@ -96,6 +115,10 @@ export function profileCompletion(form: ProfileFormValues) {
 export function profilePayload(form: ProfileFormValues) {
   return {
     ...form,
+    // The block picked from the list goes by id alone (its stored name may use characters a typed
+    // name may not); otherwise the typed name, which the server finds in the district or adds.
+    blockId: form.blockId || "",
+    blockName: form.blockId ? "" : (form.blockName?.trim() ?? ""),
     photoUrl: form.photoUrl || null,
     whatsapp: form.whatsapp || null,
     email: form.email || null,
@@ -174,19 +197,20 @@ export function ContactFields({ form, set, errors }: ProfileFieldGroupProps) {
   );
 }
 
-/** State / district / block cascade plus village, address and PIN code. */
+/** State / district select cascade, a typable block (picked or new), plus village, address and PIN code. */
 export function AddressFields({ form, set, errors }: ProfileFieldGroupProps) {
   return (
     <div className="space-y-5">
       <LocationCascade
-        value={{ stateId: form.stateId || undefined, districtId: form.districtId || undefined, blockId: form.blockId || undefined }}
+        value={{ stateId: form.stateId || undefined, districtId: form.districtId || undefined, blockId: form.blockId || undefined, blockName: form.blockName }}
         onChange={(v) => {
           set("stateId", v.stateId ?? "");
           set("districtId", v.districtId ?? "");
           set("blockId", v.blockId ?? "");
+          set("blockName", v.blockName ?? "");
         }}
         required
-        errors={{ stateId: errors.stateId, districtId: errors.districtId, blockId: errors.blockId }}
+        errors={{ stateId: errors.stateId, districtId: errors.districtId, blockId: errors.blockId, blockName: errors.blockName }}
         className="grid grid-cols-1 gap-4 sm:grid-cols-3"
       />
       <FormGrid cols={3}>
@@ -274,6 +298,9 @@ export function ProfileForm({ initial, profileCompleted, studentCode, welcome }:
     e.preventDefault();
     setError(null);
     setErrors({});
+    // The server only reports a missing block once every other field is valid, so check it here too
+    // and show it together with whatever the server says.
+    const blockIssue = blockFieldIssue(form);
     setSaving(true);
     try {
       await api.put("/api/student/profile", profilePayload(form));
@@ -282,10 +309,14 @@ export function ProfileForm({ initial, profileCompleted, studentCode, welcome }:
       router.refresh();
     } catch (err) {
       if (err instanceof ApiClientError) {
-        setErrors(err.fieldErrors);
+        const serverHasBlock = !!(err.fieldErrors.blockId || err.fieldErrors.blockName);
+        const fieldErrors = { ...err.fieldErrors, ...(blockIssue && !serverHasBlock ? { blockId: blockIssue } : {}) };
+        setErrors(fieldErrors);
         setError(err.message);
-        const first = Object.keys(err.fieldErrors)[0];
-        if (first) document.getElementById(first)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        const first = Object.keys(fieldErrors)[0];
+        // The location fields have no element id of their own; their section does.
+        const target = first && (["stateId", "districtId", "blockId", "blockName"].includes(first) ? "address" : first);
+        if (target) document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: target === "address" ? "start" : "center" });
       } else setError("Could not save your profile. Please try again.");
     } finally {
       setSaving(false);

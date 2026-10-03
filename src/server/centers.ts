@@ -6,6 +6,7 @@ import { generateCenterCode } from "@/lib/ids";
 import { slugify } from "@/lib/utils";
 import type { CenterInput, CenterSearchQuery } from "@/lib/validation/centers";
 import { countOccupiedSeats } from "@/server/batches";
+import { resolveBlockId } from "@/server/locations";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid } from "@/lib/api/query";
 import { z } from "zod";
 
@@ -15,10 +16,18 @@ export interface Ctx {
   userAgent?: string | null;
 }
 
-async function resolveHierarchy(stateId: string, districtId: string, blockId: string) {
-  const block = await db.block.findFirst({ where: { id: blockId, districtId, district: { stateId } }, include: { district: { include: { state: true } } } });
-  if (!block) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Block must belong to the selected district and state" });
-  return { state: block.district.state, district: block.district, block };
+/**
+ * The centre's state, district and block. The district must be in the state; the block is the one
+ * picked (`blockId`, which must be in the district) or typed (`blockName`, found in the district
+ * case-insensitively or added to it — see resolveBlockId). Runs before any transaction, as
+ * resolveBlockId requires. A block is required: every centre row has a real blockId.
+ */
+async function resolveHierarchy(loc: { stateId: string; districtId: string; blockId?: string | null; blockName?: string | null }) {
+  const district = await db.district.findFirst({ where: { id: loc.districtId, stateId: loc.stateId }, include: { state: true } });
+  if (!district) throw Errors.validation("Please correct the highlighted fields.", { districtId: "District must belong to the selected state" });
+  const blockId = await resolveBlockId({ districtId: district.id, blockId: loc.blockId, blockName: loc.blockName }, { source: "the training centre form" });
+  if (!blockId) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Select or type your block" });
+  return { state: district.state, district, blockId };
 }
 
 async function uniqueSlug(base: string, excludeId?: string) {
@@ -31,7 +40,7 @@ async function uniqueSlug(base: string, excludeId?: string) {
 }
 
 export async function createCenter(input: CenterInput, ctx: Ctx) {
-  const { state, district } = await resolveHierarchy(input.stateId, input.districtId, input.blockId);
+  const { state, district, blockId } = await resolveHierarchy(input);
   const slug = await uniqueSlug(input.name);
   const center = await db.$transaction(async (tx) => {
     const { code, sequence } = await generateCenterCode(state.code, district.code, tx);
@@ -43,7 +52,7 @@ export async function createCenter(input: CenterInput, ctx: Ctx) {
         slug,
         stateId: state.id,
         districtId: district.id,
-        blockId: input.blockId,
+        blockId,
         address: input.address,
         landmark: input.landmark ?? null,
         villageTown: input.villageTown ?? null,
@@ -78,8 +87,15 @@ export async function updateCenter(id: string, input: Partial<CenterInput>, ctx:
   if (!existing) throw Errors.notFound("Training center");
   const stateId = input.stateId ?? existing.stateId;
   const districtId = input.districtId ?? existing.districtId;
-  const blockId = input.blockId ?? existing.blockId;
-  await resolveHierarchy(stateId, districtId, blockId);
+  // A block sent with the update (picked or typed) wins; otherwise the centre keeps its block, which
+  // must then still be in the (possibly changed) district.
+  const blockGiven = !!(input.blockId || input.blockName);
+  const { blockId } = await resolveHierarchy({
+    stateId,
+    districtId,
+    blockId: blockGiven ? input.blockId : existing.blockId,
+    blockName: blockGiven ? input.blockName : undefined,
+  });
   const slug = input.name && input.name !== existing.name ? await uniqueSlug(input.name, id) : undefined;
   const center = await db.$transaction(async (tx) => {
     const updated = await tx.center.update({

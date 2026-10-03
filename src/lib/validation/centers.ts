@@ -1,11 +1,27 @@
 import { z } from "zod";
-import { optionalEmail, optionalPhone, optionalString, pincodeSchema, stringList, uuid } from "@/lib/validation/common";
+import { optionalBlockName, optionalEmail, optionalPhone, optionalString, pincodeSchema, stringList, uuid } from "@/lib/validation/common";
 
-export const centerInputSchema = z.object({
+/**
+ * A block picked from the district's list. `""` and `null` mean "not picked" — the block may have
+ * been typed instead (`blockName`). `.optional()` stays outermost so the key is optional.
+ */
+const optionalBlockId = z
+  .union([z.literal(""), uuid])
+  .nullable()
+  .transform((v) => v || undefined)
+  .optional();
+
+/**
+ * Every field of a training centre. The block is picked (`blockId`) or typed (`blockName`); the
+ * service finds the typed block in the district or adds it (resolveBlockId), so the centre always
+ * stores a real blockId. Use `centerInputSchema` to create and `centerUpdateSchema` to update.
+ */
+export const centerFieldsSchema = z.object({
   name: z.string().trim().min(3, "Enter the center name").max(160),
   stateId: uuid,
   districtId: uuid,
-  blockId: uuid,
+  blockId: optionalBlockId,
+  blockName: optionalBlockName.optional(),
   address: z.string().trim().min(5, "Enter the address").max(500),
   landmark: optionalString,
   villageTown: optionalString,
@@ -26,6 +42,18 @@ export const centerInputSchema = z.object({
   establishedOn: z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]).optional().nullable(),
   courseIds: z.array(uuid).max(200).optional(),
 });
+
+/** Creating a centre: a block — picked or typed — is required (shown under the Block field). */
+export const centerInputSchema = centerFieldsSchema.superRefine((d, ctx) => {
+  if (!d.blockId && !d.blockName) ctx.addIssue({ code: "custom", path: ["blockId"], message: "Select or type your block" });
+});
+
+/**
+ * Updating a centre: every field optional. Without a block the centre keeps its own, which must still
+ * be in the (possibly changed) district — updateCenter checks that. Built from the unrefined object,
+ * because Zod refuses `.partial()` on a refined one.
+ */
+export const centerUpdateSchema = centerFieldsSchema.partial();
 
 export type CenterInput = z.infer<typeof centerInputSchema>;
 

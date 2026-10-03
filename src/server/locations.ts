@@ -249,6 +249,67 @@ export async function listBlocks(q: LocationListQuery) {
   return paged(items, total, q);
 }
 
+/**
+ * The block a form refers to, as a real Block row in `districtId`:
+ *
+ *   - `blockId` (picked from the suggestions) must be a block of that district;
+ *   - otherwise `blockName` (typed) is matched case-insensitively against the district's blocks —
+ *     active ones first — and, when the district has no such block yet, added as a new active
+ *     block (audited as a System action naming the form). Most districts have no Block rows, so
+ *     this is how they get them; Admin → Locations → Blocks can rename, merge or deactivate later.
+ *
+ * Returns null when neither is given (the caller decides whether a block is required). Throws a
+ * 422 on `blockKey` (default "blockId") when the id does not belong to the district.
+ *
+ * Call it BEFORE the caller's own transaction: adding a block is harmless if the rest of the save
+ * fails, and outside a transaction a concurrent insert of the same name is simply picked up (inside
+ * one, Postgres would abort the whole transaction on the unique violation).
+ */
+export async function resolveBlockId(
+  input: { districtId: string; blockId?: string | null; blockName?: string | null },
+  opts: { tx?: Prisma.TransactionClient; source: string; blockKey?: string }
+): Promise<string | null> {
+  const client = opts.tx ?? db;
+  const key = opts.blockKey ?? "blockId";
+  if (input.blockId) {
+    const block = await client.block.findFirst({ where: { id: input.blockId, districtId: input.districtId }, select: { id: true } });
+    if (!block) throw Errors.validation("Please correct the highlighted fields.", { [key]: "Select a block in the chosen district" });
+    return block.id;
+  }
+  const name = input.blockName?.trim().replace(/\s+/g, " ");
+  if (!name) return null;
+  const find = () =>
+    client.block.findFirst({ where: { districtId: input.districtId, name: ci(name) }, orderBy: [{ isActive: "desc" }, { createdAt: "asc" }], select: { id: true } });
+  const existing = await find();
+  if (existing) return existing.id;
+
+  const district = await client.district.findUnique({ where: { id: input.districtId }, select: { id: true, name: true, state: { select: { name: true } } } });
+  if (!district) throw Errors.validation("Please correct the highlighted fields.", { districtId: "Select a valid district" });
+  const base = slugify(name) || "block";
+  const taken = new Set((await client.block.findMany({ where: { districtId: district.id, slug: { startsWith: base } }, select: { slug: true } })).map((b) => b.slug));
+  let slug = base;
+  for (let i = 2; taken.has(slug); i++) slug = `${base}-${i}`;
+  try {
+    const created = await client.block.create({ data: { districtId: district.id, name, slug, isActive: true } });
+    await audit({
+      action: "create",
+      module: "locations",
+      recordType: "Block",
+      recordId: created.id,
+      description: `System added the block "${name}" to ${district.name}, ${district.state.name} (typed in ${opts.source})`,
+      newValue: { districtId: district.id, name, slug },
+    });
+    return created.id;
+  } catch (e) {
+    // Someone added the same block a moment ago (unique district + name / slug): use theirs.
+    if (!opts.tx && e instanceof Error && "code" in e && (e as { code?: string }).code === "P2002") {
+      const again = await find();
+      if (again) return again.id;
+    }
+    throw e;
+  }
+}
+
 export async function createBlocks(input: z.infer<typeof bulkBlockSchema>, ctx: Ctx) {
   const district = await db.district.findUnique({ where: { id: input.districtId }, include: { state: { select: { code: true, name: true } } } });
   if (!district) throw Errors.validation("Please correct the highlighted fields.", { districtId: "Select a valid district" });

@@ -1,7 +1,17 @@
 import { z } from "zod";
-import { boolish, dateString, emailSchema, mobileSchema, optionalEmail, optionalPhone, optionalString, pincodeSchema, stringList, uuid } from "@/lib/validation/common";
+import { boolish, dateString, emailSchema, mobileSchema, optionalBlockName, optionalEmail, optionalPhone, optionalString, pincodeSchema, stringList, uuid } from "@/lib/validation/common";
 
 export const trainerLevelSchema = z.enum(["BLOCK", "DISTRICT", "STATE"]);
+
+/**
+ * A block picked from the district's list. `""` and `null` mean "not picked" — the applicant may
+ * have typed the block instead (`blockName`). `.optional()` stays outermost so the key is optional.
+ */
+const optionalBlockId = z
+  .union([z.literal(""), uuid])
+  .nullable()
+  .transform((v) => v || undefined)
+  .optional();
 
 export const trainerApplicationSchema = z
   .object({
@@ -14,7 +24,11 @@ export const trainerApplicationSchema = z
     level: trainerLevelSchema,
     stateId: uuid,
     districtId: z.union([z.literal(""), uuid]).optional().nullable(),
-    blockId: z.union([z.literal(""), uuid]).optional().nullable(),
+    // Block-level volunteers pick the block (blockId) or type it (blockName); the service finds the
+    // typed block in the district or adds it (resolveBlockId), so the application stores a real
+    // blockId. Other levels have no block and the service drops both.
+    blockId: optionalBlockId,
+    blockName: optionalBlockName.optional(),
     address: z.string().trim().min(5, "Enter your address").max(500),
     pincode: pincodeSchema,
     qualification: z.string().trim().min(2, "Enter your highest qualification").max(200),
@@ -33,8 +47,9 @@ export const trainerApplicationSchema = z
     if ((d.level === "BLOCK" || d.level === "DISTRICT") && !d.districtId) {
       ctx.addIssue({ code: "custom", path: ["districtId"], message: "District is required for this volunteer level" });
     }
-    if (d.level === "BLOCK" && !d.blockId) {
-      ctx.addIssue({ code: "custom", path: ["blockId"], message: "Block is required for block-level volunteers" });
+    // The form shows errors.blockId under the Block field, whichever way the block was entered.
+    if (d.level === "BLOCK" && !d.blockId && !d.blockName) {
+      ctx.addIssue({ code: "custom", path: ["blockId"], message: "Select or type your block" });
     }
   });
 

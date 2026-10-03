@@ -18,6 +18,7 @@ import { FileUpload, TagInput, type UploadedFile } from "@/components/ui/file-up
 import { Badge } from "@/components/ui/badge";
 import { LocationCascade } from "@/components/shared/location-cascade";
 import { toast } from "@/components/ui/toast";
+import { blockNameSchema } from "@/lib/validation/common";
 
 type Level = "BLOCK" | "DISTRICT" | "STATE";
 interface DocType {
@@ -47,7 +48,10 @@ interface FormState {
   level: Level | "";
   stateId?: string;
   districtId?: string;
+  /** Set when the block was picked from (or typed exactly as) one of the district's blocks. */
   blockId?: string;
+  /** The block as typed; the server finds it in the district or adds it. */
+  blockName?: string;
   address: string;
   pincode: string;
   qualification: string;
@@ -96,7 +100,7 @@ const STEPS = [
 const STEP_FIELDS: string[][] = [
   ["name", "mobile", "whatsapp", "email", "dob", "gender"],
   ["level"],
-  ["stateId", "districtId", "blockId", "address", "pincode"],
+  ["stateId", "districtId", "blockId", "blockName", "address", "pincode"],
   ["qualification", "skills", "experienceYears", "teachingExperienceYears", "preferredCourseIds", "languages", "availability", "trainingMode"],
   ["motivation", "acceptTerms"],
 ];
@@ -107,6 +111,14 @@ const STORAGE_KEY = "esk.trainerApplication";
 
 function depthFor(level: Level | ""): "state" | "district" | "block" {
   return level === "STATE" ? "state" : level === "DISTRICT" ? "district" : "block";
+}
+
+/** Picked from the list, or typed — a typed block must pass the same rule the server applies. */
+function blockFieldIssue(f: FormState): string | null {
+  if (f.blockId) return null;
+  if (!f.blockName?.trim()) return "Select or type your block";
+  const parsed = blockNameSchema.safeParse(f.blockName);
+  return parsed.success ? null : (parsed.error.issues[0]?.message ?? "Enter your block name");
 }
 
 function validateStep(step: number, f: FormState): Record<string, string> {
@@ -126,7 +138,10 @@ function validateStep(step: number, f: FormState): Record<string, string> {
   if (step === 2) {
     if (!f.stateId) e.stateId = "Select your state";
     if ((f.level === "DISTRICT" || f.level === "BLOCK") && !f.districtId) e.districtId = "Select your district";
-    if (f.level === "BLOCK" && !f.blockId) e.blockId = "Select your block";
+    if (f.level === "BLOCK") {
+      const blockIssue = blockFieldIssue(f);
+      if (blockIssue) e.blockId = blockIssue;
+    }
     if (f.address.trim().length < 5) e.address = "Enter your address";
     if (!PIN_RE.test(f.pincode.trim())) e.pincode = "Enter a valid 6-digit PIN code";
   }
@@ -233,7 +248,10 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
         level: form.level,
         stateId: form.stateId,
         districtId: form.level === "STATE" ? "" : (form.districtId ?? ""),
+        // A picked block travels by id alone (its stored name may use characters a typed name may
+        // not); a typed one by name, which the server finds in the district or adds to it.
         blockId: form.level === "BLOCK" ? (form.blockId ?? "") : "",
+        blockName: form.level === "BLOCK" && !form.blockId ? (form.blockName?.trim() ?? "") : "",
         address: form.address.trim(),
         pincode: form.pincode.trim(),
         qualification: form.qualification.trim(),
@@ -466,7 +484,13 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
                       value={form.level || undefined}
                       onChange={(v) => {
                         const lvl = v as Level;
-                        setForm((f) => ({ ...f, level: lvl, districtId: lvl === "STATE" ? undefined : f.districtId, blockId: lvl === "BLOCK" ? f.blockId : undefined }));
+                        setForm((f) => ({
+                          ...f,
+                          level: lvl,
+                          districtId: lvl === "STATE" ? undefined : f.districtId,
+                          blockId: lvl === "BLOCK" ? f.blockId : undefined,
+                          blockName: lvl === "BLOCK" ? f.blockName : undefined,
+                        }));
                         setErrors((e) => {
                           const n = { ...e };
                           delete n.level;
@@ -484,22 +508,23 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
               )}
 
               {step === 2 && (
-                <FormSection title="Location" description={form.level === "STATE" ? "Select the state you will serve." : form.level === "DISTRICT" ? "Select your state and district." : "Select your state, district and block."}>
+                <FormSection title="Location" description={form.level === "STATE" ? "Select the state you will serve." : form.level === "DISTRICT" ? "Select your state and district." : "Select your state and district, then pick or type your block."}>
                   <LocationCascade
-                    value={{ stateId: form.stateId, districtId: form.districtId, blockId: form.blockId }}
+                    value={{ stateId: form.stateId, districtId: form.districtId, blockId: form.blockId, blockName: form.blockName }}
                     onChange={(v) => {
-                      setForm((f) => ({ ...f, ...v }));
+                      setForm((f) => ({ ...f, stateId: v.stateId, districtId: v.districtId, blockId: v.blockId, blockName: v.blockName }));
                       setErrors((e) => {
                         const n = { ...e };
                         delete n.stateId;
                         delete n.districtId;
                         delete n.blockId;
+                        delete n.blockName;
                         return n;
                       });
                     }}
                     depth={depth}
                     required
-                    errors={{ stateId: errors.stateId, districtId: errors.districtId, blockId: errors.blockId }}
+                    errors={{ stateId: errors.stateId, districtId: errors.districtId, blockId: errors.blockId, blockName: errors.blockName }}
                     className="grid grid-cols-1 gap-4 sm:grid-cols-3"
                   />
                   <FormGrid>
