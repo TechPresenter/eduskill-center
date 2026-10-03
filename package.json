@@ -26,6 +26,8 @@
     "content:fees": "tsx scripts/apply-monthly-fees.ts",
     "content:programs": "tsx scripts/apply-skill-ai-programs.ts",
     "content:course-cover": "tsx scripts/apply-course-cover.ts",
+    "content:visuals": "tsx scripts/apply-ai-visuals.ts",
+    "media:generate": "tsx scripts/generate-ai-media.ts",
     "security:migrate": "tsx scripts/apply-admin-security.ts",
     "security:recovery": "tsx scripts/admin-recovery.ts"
   },
