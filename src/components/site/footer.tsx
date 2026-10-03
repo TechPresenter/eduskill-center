@@ -127,7 +127,7 @@ function FooterColumn({ id, title, links }: { id: string; title: string; links: 
   );
 }
 
-/** Icon + label + value cell for the full-width contact strip. */
+/** Icon + label + value row in the brand column's contact list. */
 function ContactRow({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
   return (
     <div className="flex items-start gap-3">
@@ -188,31 +188,12 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
               {footer.description && <p className="mt-4 max-w-md text-body text-white/80">{footer.description}</p>}
 
               {/*
-                Follow us. Shares one component with the top bar, so both rows carry the same
-                brand-colour fill on hover and focus; only the circle size differs, and the footer
-                takes the comfortable 44px one. Renders nothing at all while no social URL is set.
+                Contact details, stacked in the brand column under the description (the Foundation's
+                layout): email, address and office hours — and the phone only when one is configured
+                for the public site.
               */}
-              <SocialLinks social={branding.social} whatsapp={branding.contact.whatsapp} siteName={branding.siteName} heading="Follow Us" className="mt-7" />
-            </div>
-
-            {/* Link columns — accordions on phones, four open columns from md up */}
-            <nav className="lg:col-span-8" aria-label="Footer">
-              <div className="grid max-md:border-b max-md:border-white/10 md:grid-cols-4 md:gap-x-6 lg:gap-x-8">
-                {COLUMNS.map((col) => (
-                  <FooterColumn key={col.id} id={col.id} title={col.title} links={col.links} />
-                ))}
-              </div>
-            </nav>
-          </div>
-
-          {/* Contact strip. These four details used to sit in the brand column, where a 4-of-12
-              column left them no choice but to stack. Given their own full-width row they line up
-              side by side: two across on phones (four across at 360px leaves each item ~90px, which
-              shreds the address, and 768px squeezes the office hours onto three lines), four across with
-              hairline dividers from lg up. */}
-          {hasContact && (
-            <Reveal className="mt-10 border-t border-white/10 pt-8 lg:mt-12">
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-7 md:gap-x-10 lg:grid-cols-4 lg:gap-x-0 lg:[&>*]:px-6 lg:[&>*+*]:border-l lg:[&>*+*]:border-white/10 lg:[&>*:first-child]:pl-0 lg:[&>*:last-child]:pr-0">
+              {hasContact && (
+                <dl className="mt-6 grid gap-4">
                 {branding.contact.email && (
                   <ContactRow icon={Mail} label="Email">
                     <a href={`mailto:${branding.contact.email}`} className="ring-focus-inverse inline-flex min-h-11 items-center rounded-sm break-all transition-colors hover:text-white motion-reduce:transition-none">
@@ -251,9 +232,26 @@ export function SiteFooter({ branding, footer }: { branding: Branding; footer: {
                     {branding.contact.hours}
                   </ContactRow>
                 )}
-              </dl>
-            </Reveal>
-          )}
+                </dl>
+              )}
+
+              {/*
+                Follow us. Shares one component with the top bar, so both rows carry the same
+                brand-colour fill on hover and focus; only the circle size differs, and the footer
+                takes the comfortable 44px one. Renders nothing at all while no social URL is set.
+              */}
+              <SocialLinks social={branding.social} whatsapp={branding.contact.whatsapp} siteName={branding.siteName} heading="Follow Us" className="mt-7" />
+            </div>
+
+            {/* Link columns — accordions on phones, four open columns from md up */}
+            <nav className="lg:col-span-8" aria-label="Footer">
+              <div className="grid max-md:border-b max-md:border-white/10 md:grid-cols-4 md:gap-x-6 lg:gap-x-8">
+                {COLUMNS.map((col) => (
+                  <FooterColumn key={col.id} id={col.id} title={col.title} links={col.links} />
+                ))}
+              </div>
+            </nav>
+          </div>
 
           {/* Closing prompt. Deliberately a quiet utility strip rather than a second hero CTA: pages
               can already end with a full CtaBand, and two of those in a row read as a mistake. */}
