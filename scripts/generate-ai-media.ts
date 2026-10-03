@@ -480,7 +480,7 @@ async function requestOpenAiImage(spec: AssetSpec, ctx: RequestContext): Promise
     const code = str(err.code);
     if (res.status === 401) throw new FatalError("auth", "OpenAI rejected the API key (HTTP 401).", ["OPENAI_API_KEY is missing, revoked or mistyped.", "", `API message: ${message}`]);
     // Only an exhausted balance is final; an ordinary rate-limit message also mentions "billing".
-    if (res.status === 429 && (code === "insufficient_quota" || /insufficient_quota|exceeded your current quota/i.test(message))) {
+    if (res.status === 429 && (code === "insufficient_quota" || /insufficient_quota|exceeded your current quota|no credits remaining/i.test(message))) {
       throw new FatalError("billing", "OpenAI: no credit or quota left for image generation.", OPENAI_BILLING_LINES);
     }
     if (res.status === 429 || res.status >= 500) {

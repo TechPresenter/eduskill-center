@@ -181,6 +181,10 @@
    * on the cheap Android phones most of our students use — do not add new uses.
    */
   --animate-float: float 5s ease-in-out infinite;
+  /* Typewriter cursor: a hard on/off blink, never a fade. */
+  --animate-caret: caret 1.05s steps(1, end) infinite;
+  /* Slow drift for the hero's floating marks: a larger, lazier float. */
+  --animate-drift: drift 9s ease-in-out infinite;
   /*
    * The chat launcher's typing dots: one staggered hop of three 3px dots, then a rest, so the
    * corner is not in constant motion. Transform + opacity only (compositor), and every use pairs
@@ -258,6 +262,24 @@
     to {
       opacity: 0;
       transform: translateY(100%);
+    }
+  }
+  @keyframes caret {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+  @keyframes drift {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+    50% {
+      transform: translate3d(6px, -14px, 0) rotate(4deg);
     }
   }
   @keyframes float {
@@ -1274,6 +1296,30 @@
     &:hover::after {
       animation: none;
     }
+  }
+}
+
+/*
+ * Typewriter headline (hero-slider.tsx). Untyped characters keep their place but are invisible.
+ * Until React takes over (data-typing on the heading), a one-off fallback reveals them after 1.4 s,
+ * so a visitor on a slow phone or without JavaScript is never left with an empty headline.
+ */
+.tw-pending {
+  opacity: 0;
+  animation: tw-reveal 0s linear 1.4s forwards;
+}
+[data-typing] .tw-pending {
+  animation: none;
+}
+@keyframes tw-reveal {
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tw-pending {
+    opacity: 1;
+    animation: none;
   }
 }
 

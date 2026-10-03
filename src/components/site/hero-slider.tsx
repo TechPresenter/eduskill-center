@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
+import { ArrowRight, Bot, BrainCircuit, ChevronLeft, ChevronRight, Code2, Cpu, Pause, Play, Sparkles } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { Highlight } from "@/components/ui/highlight";
 import Image from "next/image";
@@ -26,6 +26,8 @@ export interface HeroSlideData {
   secondaryHref?: string;
   tertiaryLabel?: string;
   tertiaryHref?: string;
+  /** Full-bleed photo behind the slide, under a navy gradient. When set, the cut-out is not shown. */
+  backgroundUrl?: string;
   imageUrl?: string;
   imageAlt?: string;
 }
@@ -61,7 +63,8 @@ export function phoneTitle(title: string, mobileTitle?: string) {
  * five, so the headline lives in five columns and 36–42px is what keeps the seeded three CMS lines
  * to three lines there.
  */
-export function HeroTitle({ title, mobileTitle }: { title: string; mobileTitle?: string }) {
+export function HeroTitle({ title, mobileTitle, typing = false }: { title: string; mobileTitle?: string; typing?: boolean }) {
+  if (typing) return <TypewriterTitle title={title} mobileTitle={mobileTitle} />;
   return (
     // Both renderings are white-on-navy by construction — every caller paints onto the hero's dark
     // navy bed — so the [[…]] accent is fixed to the on-navy orange (4.56:1 on navy, more on
@@ -97,35 +100,53 @@ function usePrefersReducedMotion() {
   return reduced;
 }
 
+/** Staggered entrance for the active slide's copy: each piece fades up a beat after the last. */
+function enter(on: boolean, step: number): { className?: string; style?: React.CSSProperties } {
+  return on ? { className: "animate-fade-up motion-reduce:animate-none", style: { animationDelay: `${step * 90}ms` } } : {};
+}
+
 /** One slide's editorial column, in the reference's order: headline, pill, offer, programmes, CTA. */
-function SlideCopy({ slide }: { slide: HeroSlideData }) {
+function SlideCopy({ slide, on = true }: { slide: HeroSlideData; on?: boolean }) {
+  const e = (step: number, className?: string) => {
+    const a = enter(on, step);
+    return { className: cn(className, a.className), style: a.style };
+  };
   return (
     <>
       {/* `eyebrow-on-navy`, not `eyebrow` + a colour: the slide sits on the navy bed, where plain
           text-orange is 2.28:1 at 12px/700. */}
-      {slide.eyebrow && <p className="eyebrow-on-navy mb-1.5 lg:mb-2">{slide.eyebrow}</p>}
-      <HeroTitle title={slide.title} mobileTitle={slide.mobileTitle} />
+      {slide.eyebrow && <p {...e(0, "eyebrow-on-navy mb-1.5 lg:mb-2")}>{slide.eyebrow}</p>}
+      <div {...e(1)}>
+        <HeroTitle title={slide.title} mobileTitle={slide.mobileTitle} typing={on} />
+      </div>
 
       {slide.pillText && (
         // The reference's light pill naming the institution. navy on lavender is 7.09:1.
-        <p className="mt-2.5 inline-flex max-w-full items-center rounded-full bg-lavender px-3 py-1 text-body-sm font-bold text-navy lg:mt-3">{slide.pillText}</p>
+        <p {...e(2, "mt-2.5 inline-flex max-w-full items-center rounded-full bg-lavender px-3 py-1 text-body-sm font-bold text-navy lg:mt-3")}>{slide.pillText}</p>
       )}
 
-      {slide.emphasis && <p className="mt-2.5 text-body-sm font-semibold text-orange-on-navy lg:text-body">{slide.emphasis}</p>}
+      {slide.emphasis && <p {...e(3, "mt-2.5 text-body-sm font-semibold text-orange-on-navy lg:text-body")}>{slide.emphasis}</p>}
 
-      {slide.programLine && <p className="mt-2 text-body-sm font-bold text-white">{slide.programLine}</p>}
+      {slide.programLine && <p {...e(3, "mt-2 text-body-sm font-bold text-white")}>{slide.programLine}</p>}
 
-      {slide.subtitle && <p className="mt-2.5 line-clamp-3 max-w-xl text-body-sm text-white/80 lg:mt-3 lg:line-clamp-2">{slide.subtitle}</p>}
+      {slide.subtitle && <p {...e(4, "mt-2.5 line-clamp-3 max-w-xl text-body-sm text-white/85 lg:mt-3 lg:line-clamp-2")}>{slide.subtitle}</p>}
 
-      {/* On phones a slide's own CTA is one compact link; the solid button row is desktop's. */}
-      {slide.primaryLabel && slide.primaryHref && (
-        // Hover lands on orange-on-navy (4.56:1), not orange (2.28:1): a hover state is still text,
-        // and a link that becomes unreadable when you point at it is backwards.
-        <ButtonLink href={slide.primaryHref} variant="link" className="mt-3 min-h-11 text-white hover:text-orange-on-navy lg:hidden" rightIcon={<ArrowRight className="h-4 w-4" />}>
-          {slide.primaryLabel}
-        </ButtonLink>
+      {/* Phones: the two calls to action as a compact button pair; desktop: the full row below. */}
+      {(slide.primaryLabel || slide.secondaryLabel) && (
+        <div {...e(5, "mt-4 flex flex-wrap gap-2.5 lg:hidden")}>
+          {slide.primaryLabel && slide.primaryHref && (
+            <ButtonLink href={slide.primaryHref} size="md" rightIcon={<ArrowRight className="h-4 w-4" />}>
+              {slide.primaryLabel}
+            </ButtonLink>
+          )}
+          {slide.secondaryLabel && slide.secondaryHref && (
+            <ButtonLink href={slide.secondaryHref} size="md" variant="white">
+              {slide.secondaryLabel}
+            </ButtonLink>
+          )}
+        </div>
       )}
-      <div className="mt-5 hidden flex-wrap gap-3 lg:flex lg:items-center">
+      <div {...e(5, "mt-5 hidden flex-wrap gap-3 lg:flex lg:items-center")}>
         {slide.primaryLabel && slide.primaryHref && (
           <ButtonLink href={slide.primaryHref} size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
             {slide.primaryLabel}
@@ -138,7 +159,7 @@ function SlideCopy({ slide }: { slide: HeroSlideData }) {
         )}
       </div>
       {slide.tertiaryLabel && slide.tertiaryHref && (
-        <ButtonLink href={slide.tertiaryHref} variant="link" className="mt-4 hidden text-white hover:text-orange-on-navy lg:inline-flex" rightIcon={<ArrowRight className="h-4 w-4" />}>
+        <ButtonLink href={slide.tertiaryHref} variant="link" className={cn("mt-4 hidden text-white hover:text-orange-on-navy lg:inline-flex", enter(on, 6).className)} style={enter(on, 6).style} rightIcon={<ArrowRight className="h-4 w-4" />}>
           {slide.tertiaryLabel}
         </ButtonLink>
       )}
@@ -175,6 +196,8 @@ export function HeroSlider({
   // mark its only slide as a `role="group"` slide — which is exactly the single static banner this
   // hero has always been for a Foundation that has not added a second slide in Admin → CMS.
   const isCarousel = count > 1;
+  const hasBackgrounds = slides.some((s) => s.backgroundUrl);
+  const allBackgrounds = slides.every((s) => s.backgroundUrl);
   const reduced = usePrefersReducedMotion();
   const [active, setActive] = React.useState(0);
   const [paused, setPaused] = React.useState(false);
@@ -259,7 +282,44 @@ export function HeroSlider({
         </p>
       )}
 
-      <div className="container-x relative pt-5 pb-6 sm:pt-6 lg:pt-9 lg:pb-7">
+      {/*
+        Full-bleed photographs, one per slide, cross-fading with the copy. The active one eases in
+        from a slight zoom (Ken Burns, off under reduced motion). The navy gradient keeps the white
+        copy at AA on any photo: solid navy-dark behind the copy column, fading out to the right.
+      */}
+      {hasBackgrounds && (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          {slides.map((s, i) =>
+            s.backgroundUrl ? (
+              <div
+                key={i}
+                className={cn("absolute inset-0 transition-opacity motion-reduce:transition-none", i === active ? "opacity-100" : "opacity-0")}
+                style={{ transitionDuration: `${FADE_MS * 3}ms` }}
+              >
+                <Image
+                  src={withBasePath(s.backgroundUrl)}
+                  alt=""
+                  fill
+                  priority={i === 0}
+                  sizes="100vw"
+                  className={cn(
+                    "object-cover object-[70%_center] transition-transform ease-out motion-reduce:transition-none",
+                    i === active ? "scale-100" : "scale-[1.06]"
+                  )}
+                  style={{ transitionDuration: "7000ms" }}
+                />
+              </div>
+            ) : null
+          )}
+          <div className="absolute inset-0 bg-navy-dark/80 lg:bg-transparent lg:bg-linear-to-r lg:from-navy-dark lg:via-navy-dark/88 lg:to-navy-dark/30" />
+          <div className="absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-t from-navy-dark/85 to-transparent" />
+          <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "radial-gradient(circle at 1.5px 1.5px, #fff 1.5px, transparent 0)", backgroundSize: "30px 30px" }} />
+        </div>
+      )}
+
+      <FloatingMarks />
+
+      <div className={cn("container-x relative pt-5 pb-6 sm:pt-6 lg:pt-9 lg:pb-7", hasBackgrounds && "pt-8 pb-10 sm:pt-10 lg:pt-14 lg:pb-12")}>
         <div className="relative grid gap-6 lg:grid-cols-12 lg:items-start lg:gap-x-8 lg:gap-y-6">
           {/*
             The cut-out subject. Absolutely positioned between the two columns from lg, so it adds no
@@ -276,13 +336,14 @@ export function HeroSlider({
               {slides.map((s, i) => (
                 <div
                   key={i}
-                  className={cn("col-start-1 row-start-1 h-full transition-opacity motion-reduce:transition-none", i === active ? "opacity-100" : "opacity-0")}
+                  className={cn("col-start-1 row-start-1 h-full transition-opacity motion-reduce:transition-none", i === active && !s.backgroundUrl ? "opacity-100" : "opacity-0")}
                   style={{ transitionDuration: `${FADE_MS}ms` }}
                 >
                   {/* A transparent-background cut-out, bottom-aligned so it stands on the hero's
                       baseline and may overhang. `object-bottom` keeps her feet on that line at any
                       height; `object-contain` stops the crop distorting at narrow widths. A slide
                       can override the subject from Admin → CMS. */}
+                  {!s.backgroundUrl && (
                   <Image
                     src={withBasePath(s.imageUrl || HERO_SUBJECT)}
                     alt=""
@@ -291,6 +352,7 @@ export function HeroSlider({
                     sizes="(max-width: 1024px) 1px, 34vw"
                     className="object-contain object-bottom drop-shadow-[0_24px_48px_rgb(0_0_0/0.45)]"
                   />
+                  )}
                 </div>
               ))}
             </div>
@@ -302,6 +364,7 @@ export function HeroSlider({
             one, this is its own flow block between the copy and the form. It costs height, which is
             the trade for having her visible at all on a phone; `h-52` keeps that cost bounded.
           */}
+          {!allBackgrounds && (
           <div className="relative order-2 -mb-6 h-52 sm:h-60 lg:hidden" aria-hidden>
             <span className="absolute bottom-0 left-1/2 h-[70%] w-[78%] -translate-x-1/2 rounded-full bg-orange/20 blur-[70px]" />
             <div className="relative grid h-full">
@@ -311,6 +374,7 @@ export function HeroSlider({
                   className={cn("col-start-1 row-start-1 h-full transition-opacity motion-reduce:transition-none", i === active ? "opacity-100" : "opacity-0")}
                   style={{ transitionDuration: `${FADE_MS}ms` }}
                 >
+                  {!s.backgroundUrl && (
                   <Image
                     src={withBasePath(s.imageUrl || HERO_SUBJECT)}
                     alt=""
@@ -318,10 +382,12 @@ export function HeroSlider({
                     sizes="(max-width: 1024px) 60vw, 1px"
                     className="object-contain object-bottom drop-shadow-[0_16px_32px_rgb(0_0_0/0.4)]"
                   />
+                  )}
                 </div>
               ))}
             </div>
           </div>
+          )}
 
           {/*
             Editorial column. Every slide occupies the same grid cell, so the column is as tall as the
@@ -349,7 +415,7 @@ export function HeroSlider({
                   // Keeps Tab out of the slides that are faded out.
                   inert={!on}
                 >
-                  <SlideCopy slide={s} />
+                  <SlideCopy slide={s} on={on} />
                 </div>
               );
             })}
@@ -360,7 +426,11 @@ export function HeroSlider({
             below the fold), right-hand column from lg. `self-start` rather than a stretched
             row-span: the card should keep its own height, not be pulled taller by the badge row.
           */}
-          {form && <div className="relative z-10 order-3 lg:order-none lg:col-span-4 lg:col-start-9 lg:row-span-2 lg:row-start-1 lg:self-start">{form}</div>}
+          {form && (
+            <div className="relative z-10 order-3 animate-fade-up motion-reduce:animate-none lg:order-none lg:col-span-4 lg:col-start-9 lg:row-span-2 lg:row-start-1 lg:self-start" style={{ animationDelay: "420ms" }}>
+              {form}
+            </div>
+          )}
 
         </div>
       </div>
@@ -417,6 +487,174 @@ export function HeroSlider({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ───────────────────────────── Typewriter headline ─────────────────────────────
+
+const TYPE_MS = 34;
+const TYPE_DELAY_MS = 260;
+/** Hydrated later than this (ms after navigation start): show the headline whole instead of typing it. */
+const LATE_MS = 1300;
+
+const noopSubscribe = () => () => undefined;
+/** false during SSR and hydration, true once React runs in the browser — no effect, no re-render loop. */
+function useHydrated() {
+  return React.useSyncExternalStore(noopSubscribe, () => true, () => false);
+}
+
+type Seg = { text: string; hl: boolean };
+
+/** "a [[b]] c" → segments, one array per line. */
+function parseTitle(title: string): Seg[][] {
+  return title
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const out: Seg[] = [];
+      const re = /\[\[(.+?)\]\]/g;
+      let last = 0;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(line))) {
+        if (m.index > last) out.push({ text: line.slice(last, m.index), hl: false });
+        out.push({ text: m[1]!, hl: true });
+        last = m.index + m[0].length;
+      }
+      if (last < line.length) out.push({ text: line.slice(last), hl: false });
+      return out;
+    });
+}
+
+const plain = (title: string) => title.replace(/\[\[|\]\]/g, "").replace(/\s*\n\s*/g, " ").trim();
+
+/** Characters typed so far: 0 → total at TYPE_MS each, restarting when `key` changes. */
+function useTyped(total: number, key: string) {
+  const reduced = usePrefersReducedMotion();
+  const [state, setState] = React.useState({ key, n: 0 });
+  const n = state.key === key ? state.n : 0;
+  React.useEffect(() => {
+    if (reduced) return;
+    let i = 0;
+    let timer = 0;
+    // A slow page has already shown the headline through the CSS fallback (.tw-pending); typing it
+    // again from nothing would make it vanish, so it is completed at once instead.
+    const late = typeof performance !== "undefined" && performance.now() > LATE_MS;
+    const start = window.setTimeout(() => {
+      if (late) {
+        setState({ key, n: total });
+        return;
+      }
+      timer = window.setInterval(() => {
+        i += 1;
+        setState({ key, n: i });
+        if (i >= total) window.clearInterval(timer);
+      }, TYPE_MS);
+    }, late ? 0 : TYPE_DELAY_MS);
+    return () => {
+      window.clearTimeout(start);
+      window.clearInterval(timer);
+    };
+  }, [key, total, reduced]);
+  return reduced ? total : n;
+}
+
+/**
+ * Renders `lines` with the first `n` characters visible. The rest are laid out but transparent,
+ * so the heading never changes size while it types; the caret sits after the last typed character.
+ */
+function Typed({ lines, n, block }: { lines: Seg[][]; n: number; block: boolean }) {
+  let left = n;
+  let caretPlaced = false;
+  const caret = <span key="caret" aria-hidden className="ml-0.5 inline-block h-[0.95em] w-[3px] translate-y-[0.12em] rounded-full bg-orange-on-navy animate-caret motion-reduce:animate-none" />;
+  return (
+    <>
+      {lines.map((segs, li) => {
+        const parts: React.ReactNode[] = [];
+        segs.forEach((seg, si) => {
+          const shown = Math.max(0, Math.min(seg.text.length, left));
+          left -= seg.text.length;
+          const cls = seg.hl ? "text-orange-on-navy" : undefined;
+          if (shown > 0) parts.push(<span key={`${si}a`} className={cls}>{seg.text.slice(0, shown)}</span>);
+          if (!caretPlaced && shown < seg.text.length) {
+            parts.push(caret);
+            caretPlaced = true;
+          }
+          if (shown < seg.text.length) parts.push(<span key={`${si}b`} className={cn("tw-pending", cls)}>{seg.text.slice(shown)}</span>);
+        });
+        if (!caretPlaced && li === lines.length - 1) parts.push(caret);
+        return block ? (
+          <span key={li} className="block">
+            {parts}
+          </span>
+        ) : (
+          <React.Fragment key={li}>
+            {li > 0 && " "}
+            {parts}
+          </React.Fragment>
+        );
+      })}
+    </>
+  );
+}
+
+/**
+ * The hero <h1>, typed out with a blinking caret. Screen readers and search engines get the whole
+ * headline at once (sr-only); the typing is decoration over it. Reduced motion: shown complete.
+ */
+function TypewriterTitle({ title, mobileTitle }: { title: string; mobileTitle?: string }) {
+  const desktop = React.useMemo(() => parseTitle(title), [title]);
+  const phone = React.useMemo(() => parseTitle(phoneTitle(title, mobileTitle)), [title, mobileTitle]);
+  const count = (lines: Seg[][]) => lines.reduce((a, l) => a + l.reduce((b, s) => b + s.text.length, 0), 0);
+  const nDesktop = useTyped(count(desktop), title);
+  const nPhone = useTyped(count(phone), `${title}|${mobileTitle ?? ""}`);
+  const hydrated = useHydrated();
+  return (
+    // data-typing switches off the no-JS fallback that reveals the untyped text (globals.css).
+    <h1 className="text-white" data-typing={hydrated ? "" : undefined}>
+      <span className="sr-only">{plain(title)}</span>
+      <span aria-hidden className="block text-h1 text-balance lg:hidden">
+        <Typed lines={phone} n={nPhone} block={false} />
+      </span>
+      <span aria-hidden className="hidden font-heading text-[1.875rem] leading-[1.08] font-extrabold tracking-[-0.02em] text-balance [text-shadow:0_2px_24px_rgb(0_0_0/0.35)] lg:block xl:text-[2.4rem]">
+        <Typed lines={desktop} n={nDesktop} block />
+      </span>
+    </h1>
+  );
+}
+
+// ───────────────────────────── Floating marks ─────────────────────────────
+
+const MARKS = [
+  { Icon: BrainCircuit, className: "top-[12%] left-[44%] h-12 w-12", delay: "0s", lg: true },
+  { Icon: Cpu, className: "top-[58%] left-[50%] h-11 w-11", delay: "1.6s", lg: true },
+  { Icon: Code2, className: "bottom-[14%] left-[40%] h-10 w-10", delay: "3.1s", lg: true },
+  { Icon: Bot, className: "top-[30%] left-[58%] h-10 w-10", delay: "2.3s", lg: true },
+  { Icon: Sparkles, className: "top-4 right-4 h-10 w-10", delay: "0.8s", lg: false },
+];
+
+/**
+ * A few glassy AI / digital marks drifting slowly in the gap between the copy and the enquiry card.
+ * Decorative (aria-hidden), behind the content, still under reduced motion, one on phones.
+ */
+function FloatingMarks() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      {MARKS.map(({ Icon, className, delay, lg }, i) => (
+        <span
+          key={i}
+          className={cn(
+            "absolute grid place-items-center rounded-2xl border border-white/20 bg-white/10 text-white/85 shadow-[0_8px_30px_rgb(0_0_0/0.25)] backdrop-blur-sm animate-drift motion-reduce:animate-none",
+            lg ? "hidden lg:grid" : "lg:hidden",
+            className
+          )}
+          style={{ animationDelay: delay }}
+        >
+          <Icon className="h-1/2 w-1/2" />
+          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-orange-on-navy shadow-[0_0_10px_2px_rgb(244_174_140/0.7)]" />
+        </span>
+      ))}
     </div>
   );
 }

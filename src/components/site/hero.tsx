@@ -20,6 +20,8 @@ export interface HeroSection {
   secondaryHref?: string;
   tertiaryLabel?: string;
   tertiaryHref?: string;
+  /** Full-bleed photo behind the first slide (under a navy gradient). */
+  backgroundUrl?: string;
   imageUrl?: string;
   imageAlt?: string;
   /** Enquiry card. */
@@ -176,6 +178,7 @@ export function Hero({
       secondaryHref: section.secondaryHref,
       tertiaryLabel: section.tertiaryLabel,
       tertiaryHref: section.tertiaryHref,
+      backgroundUrl: section.backgroundUrl,
       imageUrl: section.imageUrl,
       imageAlt: section.imageAlt,
     },
