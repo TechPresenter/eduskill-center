@@ -16,6 +16,9 @@ import { SectionBg, IconTile } from "@/components/site/decor";
 import { SectionHeading } from "@/components/site/section-heading";
 import { CtaBand } from "@/components/site/cta-band";
 import { applyHref } from "@/components/site/apply-link";
+import { SchoolAiWorkshop } from "@/components/site/programs/school-ai-workshop";
+import { WORKSHOP_SLUG } from "@/components/site/programs/school-ai-workshop-content";
+import { getBranding } from "@/lib/settings";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -23,7 +26,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const program = await getProgram(slug);
   if (!program) return { title: "Program not found" };
-  const description = program.summary || markdownExcerpt(program.content);
+  const description =
+    program.slug === WORKSHOP_SLUG
+      ? "School AI Training & Awareness Workshop for Class VI–XII in government and private schools: AI basics, Generative AI, prompt writing, digital safety and AI careers, with hands-on activities and a certificate for every participant."
+      : program.summary || markdownExcerpt(program.content);
   return {
     title: program.title,
     description,
@@ -36,6 +42,13 @@ export default async function ProgramDetailPage({ params }: Props) {
   const { slug } = await params;
   const program = await getProgram(slug);
   if (!program) notFound();
+
+  // The School AI Training & Awareness Workshop has its own landing-page layout.
+  if (program.slug === WORKSHOP_SLUG) {
+    const [programs, branding] = await Promise.all([listPrograms(), getBranding()]);
+    return <SchoolAiWorkshop contactEmail={branding.contact.email} otherPrograms={programs.filter((p) => p.id !== program.id).slice(0, 6)} />;
+  }
+
   const [courses, programs, user] = await Promise.all([listPublicCourses(), listPrograms(), getSessionUser().catch(() => null)]);
   const others = programs.filter((p) => p.id !== program.id).slice(0, 6);
 

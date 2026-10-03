@@ -21,8 +21,10 @@ const TYPES = [
 
 const empty = { name: "", email: "", mobile: "", type: "GENERAL", subject: "", message: "", website: "" };
 
-export function EnquiryForm({ defaultType }: { defaultType?: string }) {
-  const [form, setForm] = React.useState({ ...empty, type: defaultType && TYPES.some((t) => t.value === defaultType) ? defaultType : "GENERAL" });
+/** `defaultSubject` pre-fills the subject, e.g. "School AI Training & Awareness Workshop" on that programme's page. */
+export function EnquiryForm({ defaultType, defaultSubject }: { defaultType?: string; defaultSubject?: string }) {
+  const initial = { ...empty, type: defaultType && TYPES.some((t) => t.value === defaultType) ? defaultType : "GENERAL", subject: defaultSubject?.slice(0, 200) ?? "" };
+  const [form, setForm] = React.useState(initial);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [status, setStatus] = React.useState<"idle" | "busy" | "done">("idle");
   const [error, setError] = React.useState<string | null>(null);
@@ -65,7 +67,7 @@ export function EnquiryForm({ defaultType }: { defaultType?: string }) {
           variant="outline"
           className="mt-7"
           onClick={() => {
-            setForm({ ...empty });
+            setForm(initial);
             setStatus("idle");
           }}
         >
