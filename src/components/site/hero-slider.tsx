@@ -26,7 +26,7 @@ export interface HeroSlideData {
   secondaryHref?: string;
   tertiaryLabel?: string;
   tertiaryHref?: string;
-  /** Full-bleed photo behind the slide, under a navy gradient. When set, the cut-out is not shown. */
+  /** Full-bleed photo behind the slide, under a navy gradient. The cut-out still stands in front of it. */
   backgroundUrl?: string;
   imageUrl?: string;
   imageAlt?: string;
@@ -129,7 +129,7 @@ function SlideCopy({ slide, on = true }: { slide: HeroSlideData; on?: boolean })
 
       {slide.programLine && <p {...e(3, "mt-2 text-body-sm font-bold text-white")}>{slide.programLine}</p>}
 
-      {slide.subtitle && <p {...e(4, "mt-2.5 line-clamp-3 max-w-xl text-body-sm text-white/85 lg:mt-3 lg:line-clamp-2")}>{slide.subtitle}</p>}
+      {slide.subtitle && <p {...e(4, "mt-2.5 line-clamp-3 max-w-xl text-body-sm text-white/85 lg:mt-3 lg:line-clamp-3 lg:max-w-[26rem] xl:max-w-[28rem]")}>{slide.subtitle}</p>}
 
       {/* Phones: the two calls to action as a compact button pair; desktop: the full row below. */}
       {(slide.primaryLabel || slide.secondaryLabel) && (
@@ -197,7 +197,6 @@ export function HeroSlider({
   // hero has always been for a Foundation that has not added a second slide in Admin → CMS.
   const isCarousel = count > 1;
   const hasBackgrounds = slides.some((s) => s.backgroundUrl);
-  const allBackgrounds = slides.every((s) => s.backgroundUrl);
   const reduced = usePrefersReducedMotion();
   const [active, setActive] = React.useState(0);
   const [paused, setPaused] = React.useState(false);
@@ -319,7 +318,7 @@ export function HeroSlider({
 
       <FloatingMarks />
 
-      <div className={cn("container-x relative pt-5 pb-6 sm:pt-6 lg:pt-9 lg:pb-7", hasBackgrounds && "pt-8 pb-10 sm:pt-10 lg:pt-14 lg:pb-12")}>
+      <div className="container-x relative pt-5 pb-6 sm:pt-6 lg:pt-9 lg:pb-7">
         <div className="relative grid gap-6 lg:grid-cols-12 lg:items-start lg:gap-x-8 lg:gap-y-6">
           {/*
             The cut-out subject. Absolutely positioned between the two columns from lg, so it adds no
@@ -327,7 +326,7 @@ export function HeroSlider({
             figure (which fills the middle ~57% of its own canvas) lands in the gutter between the
             copy and the card at every width from 1024 up — verified at 1024 and 1440.
           */}
-          <div className="pointer-events-none absolute inset-y-0 left-[34%] hidden w-[29%] lg:block xl:left-[36%] xl:w-[27%]" aria-hidden>
+          <div className="pointer-events-none absolute inset-y-0 left-[36%] hidden w-[28%] lg:block xl:left-[38.5%] xl:w-[26%]" aria-hidden>
             {/* Glow behind the subject so the cut-out sits in the scene instead of floating flatly
                 on the navy. Sized generously and blurred hard; it is decoration, never a shape. */}
             <span className="absolute bottom-0 left-1/2 h-[78%] w-[115%] -translate-x-1/2 rounded-full bg-orange/18 blur-[90px]" />
@@ -336,14 +335,13 @@ export function HeroSlider({
               {slides.map((s, i) => (
                 <div
                   key={i}
-                  className={cn("col-start-1 row-start-1 h-full transition-opacity motion-reduce:transition-none", i === active && !s.backgroundUrl ? "opacity-100" : "opacity-0")}
+                  className={cn("col-start-1 row-start-1 h-full transition-opacity motion-reduce:transition-none", i === active ? "opacity-100" : "opacity-0")}
                   style={{ transitionDuration: `${FADE_MS}ms` }}
                 >
                   {/* A transparent-background cut-out, bottom-aligned so it stands on the hero's
                       baseline and may overhang. `object-bottom` keeps her feet on that line at any
                       height; `object-contain` stops the crop distorting at narrow widths. A slide
                       can override the subject from Admin → CMS. */}
-                  {!s.backgroundUrl && (
                   <Image
                     src={withBasePath(s.imageUrl || HERO_SUBJECT)}
                     alt=""
@@ -352,7 +350,6 @@ export function HeroSlider({
                     sizes="(max-width: 1024px) 1px, 34vw"
                     className="object-contain object-bottom drop-shadow-[0_24px_48px_rgb(0_0_0/0.45)]"
                   />
-                  )}
                 </div>
               ))}
             </div>
@@ -364,7 +361,6 @@ export function HeroSlider({
             one, this is its own flow block between the copy and the form. It costs height, which is
             the trade for having her visible at all on a phone; `h-52` keeps that cost bounded.
           */}
-          {!allBackgrounds && (
           <div className="relative order-2 -mb-6 h-52 sm:h-60 lg:hidden" aria-hidden>
             <span className="absolute bottom-0 left-1/2 h-[70%] w-[78%] -translate-x-1/2 rounded-full bg-orange/20 blur-[70px]" />
             <div className="relative grid h-full">
@@ -374,7 +370,6 @@ export function HeroSlider({
                   className={cn("col-start-1 row-start-1 h-full transition-opacity motion-reduce:transition-none", i === active ? "opacity-100" : "opacity-0")}
                   style={{ transitionDuration: `${FADE_MS}ms` }}
                 >
-                  {!s.backgroundUrl && (
                   <Image
                     src={withBasePath(s.imageUrl || HERO_SUBJECT)}
                     alt=""
@@ -382,12 +377,10 @@ export function HeroSlider({
                     sizes="(max-width: 1024px) 60vw, 1px"
                     className="object-contain object-bottom drop-shadow-[0_16px_32px_rgb(0_0_0/0.4)]"
                   />
-                  )}
                 </div>
               ))}
             </div>
           </div>
-          )}
 
           {/*
             Editorial column. Every slide occupies the same grid cell, so the column is as tall as the
@@ -627,15 +620,16 @@ function TypewriterTitle({ title, mobileTitle }: { title: string; mobileTitle?: 
 // ───────────────────────────── Floating marks ─────────────────────────────
 
 const MARKS = [
-  { Icon: BrainCircuit, className: "top-[12%] left-[44%] h-12 w-12", delay: "0s", lg: true },
-  { Icon: Cpu, className: "top-[58%] left-[50%] h-11 w-11", delay: "1.6s", lg: true },
-  { Icon: Code2, className: "bottom-[14%] left-[40%] h-10 w-10", delay: "3.1s", lg: true },
-  { Icon: Bot, className: "top-[30%] left-[58%] h-10 w-10", delay: "2.3s", lg: true },
+  { Icon: BrainCircuit, className: "top-[5%] left-[50%] h-12 w-12", delay: "0s", lg: true },
+  { Icon: Bot, className: "top-[28%] left-[63%] h-10 w-10", delay: "2.3s", lg: true },
+  { Icon: Cpu, className: "top-[62%] left-[64%] h-11 w-11", delay: "1.6s", lg: true },
+  { Icon: Code2, className: "bottom-[6%] left-[31%] h-10 w-10", delay: "3.1s", lg: true },
   { Icon: Sparkles, className: "top-4 right-4 h-10 w-10", delay: "0.8s", lg: false },
 ];
 
 /**
- * A few glassy AI / digital marks drifting slowly in the gap between the copy and the enquiry card.
+ * A few glassy AI / digital marks drifting slowly around the cut-out figure, between the copy and the
+ * enquiry card.
  * Decorative (aria-hidden), behind the content, still under reduced motion, one on phones.
  */
 function FloatingMarks() {
