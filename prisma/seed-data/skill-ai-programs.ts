@@ -1,8 +1,8 @@
 /**
- * Two programmes the Foundation runs alongside Project EduSkill Shiksha Mission (October 2026):
- * Computer & Skill Development Training, and AI Workshop & Training. The wording is the
- * Foundation's own. They are listed on /programs, on the homepage programmes band and each has
- * its own page at /programs/<slug>.
+ * Programmes the Foundation runs alongside Project EduSkill Shiksha Mission (October 2026):
+ * Computer & Skill Development Training, AI Workshop & Training, and Digital Marketing Training.
+ * The wording is the Foundation's own. They are listed on /programs, on the homepage programmes
+ * band and each has its own page at /programs/<slug>.
  *
  * Applied by scripts/apply-skill-ai-programs.ts (npm run content:programs, and prisma/seed.ts).
  * After that, Admin → CMS → Programs is the place to edit them.
@@ -42,6 +42,21 @@ export interface ProgramSeed {
   content: string;
 }
 
+const DIGITAL_MARKETING_MODULES = [
+  "Digital Marketing Introduction",
+  "Social Media Marketing",
+  "Content Marketing",
+  "Canva & Creative Design",
+  "SEO",
+  "Google & Online Promotion",
+  "Video & YouTube Marketing",
+  "WhatsApp Business",
+  "AI for Digital Marketing",
+  "Email Marketing",
+  "Personal Branding",
+  "Freelancing & Career Awareness",
+];
+
 /** In display order; they sit directly after Shiksha Mission (sortOrder 0). */
 export const SKILL_AI_PROGRAMS: ProgramSeed[] = [
   {
@@ -77,6 +92,24 @@ export const SKILL_AI_PROGRAMS: ProgramSeed[] = [
       WHO_CAN_JOIN.join(" • "),
       "",
       CLOSING_LINE,
+    ].join("\n"),
+  },
+  {
+    // Its page has its own landing layout (src/components/site/programs/digital-marketing.tsx);
+    // this content is the plain fallback and the source of the search/social description.
+    title: "Digital Marketing Training",
+    icon: "Megaphone",
+    summary:
+      "Practical digital marketing training for students, youth, teachers, job seekers, entrepreneurs and small businesses — social media, content, Canva, SEO, AI tools and freelancing.",
+    content: [
+      "## Learn Digital Marketing • Create • Promote • Grow",
+      "",
+      "Eduskill India Foundation का Digital Marketing Training & Awareness Program — offline और online।",
+      "",
+      "### Training modules",
+      ...DIGITAL_MARKETING_MODULES.map((t) => `- ${t}`),
+      "",
+      "**Learn Digital Marketing | Create Content | Build Your Brand | Grow Digitally**",
     ].join("\n"),
   },
 ];

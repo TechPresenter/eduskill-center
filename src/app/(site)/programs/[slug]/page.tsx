@@ -18,6 +18,8 @@ import { CtaBand } from "@/components/site/cta-band";
 import { applyHref } from "@/components/site/apply-link";
 import { SchoolAiWorkshop } from "@/components/site/programs/school-ai-workshop";
 import { WORKSHOP_SLUG } from "@/components/site/programs/school-ai-workshop-content";
+import { DigitalMarketingProgram } from "@/components/site/programs/digital-marketing";
+import { DM_SLUG } from "@/components/site/programs/digital-marketing-content";
 import { getBranding } from "@/lib/settings";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -29,12 +31,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description =
     program.slug === WORKSHOP_SLUG
       ? "School AI Training & Awareness Workshop for Class VI–XII in government and private schools: AI basics, Generative AI, prompt writing, digital safety and AI careers, with hands-on activities and a certificate for every participant."
-      : program.summary || markdownExcerpt(program.content);
+      : program.slug === DM_SLUG
+        ? "Digital Marketing Training & Awareness Program by Eduskill India Foundation: 12 modules on social media, content, Canva, SEO, Google, YouTube, WhatsApp Business, AI tools, email, personal branding and freelancing — offline or online, 1 to 30 days."
+        : program.summary || markdownExcerpt(program.content);
+  // A landing page's search/share title is the programme's full name, not the short list title.
+  const title = program.slug === DM_SLUG ? "Digital Marketing Training & Awareness Program" : program.title;
   return {
-    title: program.title,
+    title,
     description,
     alternates: { canonical: absoluteUrl(`/programs/${program.slug}`) },
-    openGraph: { title: program.title, description, url: absoluteUrl(`/programs/${program.slug}`), type: "article", images: program.image ? [{ url: program.image }] : undefined },
+    openGraph: { title, description, url: absoluteUrl(`/programs/${program.slug}`), type: "article", images: program.image ? [{ url: program.image }] : undefined },
   };
 }
 
@@ -43,10 +49,11 @@ export default async function ProgramDetailPage({ params }: Props) {
   const program = await getProgram(slug);
   if (!program) notFound();
 
-  // The School AI Training & Awareness Workshop has its own landing-page layout.
-  if (program.slug === WORKSHOP_SLUG) {
+  // These programmes have their own landing-page layouts.
+  if (program.slug === WORKSHOP_SLUG || program.slug === DM_SLUG) {
     const [programs, branding] = await Promise.all([listPrograms(), getBranding()]);
-    return <SchoolAiWorkshop contactEmail={branding.contact.email} otherPrograms={programs.filter((p) => p.id !== program.id).slice(0, 6)} />;
+    const Landing = program.slug === WORKSHOP_SLUG ? SchoolAiWorkshop : DigitalMarketingProgram;
+    return <Landing contactEmail={branding.contact.email} image={program.image} otherPrograms={programs.filter((p) => p.id !== program.id).slice(0, 6)} />;
   }
 
   const [courses, programs, user] = await Promise.all([listPublicCourses(), listPrograms(), getSessionUser().catch(() => null)]);

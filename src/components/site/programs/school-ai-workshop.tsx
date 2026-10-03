@@ -1,16 +1,13 @@
-import Link from "next/link";
-import { ArrowRight, Award, CheckCircle2, Clock, Coffee, Mail, Sparkles, Trophy } from "lucide-react";
-import { ButtonLink } from "@/components/ui/button";
+import { Award, CheckCircle2, Clock, Coffee, Mail, Sparkles, Trophy } from "lucide-react";
 import { Highlight } from "@/components/ui/highlight";
-import { DynamicIcon } from "@/components/ui/icon";
-import { PageHero } from "@/components/site/page-hero";
 import { Reveal } from "@/components/site/reveal";
 import { SectionBg } from "@/components/site/decor";
+import { Media } from "@/components/site/safe-image";
 import { SectionHeading } from "@/components/site/section-heading";
 import { CtaBand } from "@/components/site/cta-band";
 import { EnquiryForm } from "@/components/site/enquiry-form";
 import { cn } from "@/lib/utils";
-import { RotatingWords } from "./rotating-words";
+import { HoverBullet, HoverIcon, JumpLinks, LandingHero, OtherProgramsNav, Ticker } from "./landing-parts";
 import {
   ABOUT,
   ACTIVITIES,
@@ -47,38 +44,6 @@ const LEVEL_TONE = {
   green: { tile: "bg-green text-white", ring: "group-hover:border-green/50", text: "text-green-dark" },
 } as const;
 
-/** Icon tile that tilts and grows a little when its card is hovered. */
-function HoverIcon({ icon: Icon, className }: { icon: React.ComponentType<{ className?: string }>; className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-light text-orange transition-transform duration-element ease-soft group-hover:scale-110 group-hover:-rotate-6 motion-reduce:transition-none motion-reduce:group-hover:transform-none",
-        className
-      )}
-    >
-      <Icon className="h-6 w-6" />
-    </span>
-  );
-}
-
-/** A bullet line whose text slides right and turns orange on hover. */
-function HoverBullet({ children, light }: { children: React.ReactNode; light?: boolean }) {
-  return (
-    <li className="group/item flex items-start gap-2.5">
-      <CheckCircle2 aria-hidden className={cn("mt-1 h-4 w-4 shrink-0", light ? "text-green-on-navy" : "text-green")} />
-      <span
-        className={cn(
-          "transition-[color,transform] duration-micro ease-soft group-hover/item:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover/item:translate-x-0",
-          light ? "text-white/90 group-hover/item:text-white" : "text-ink/85 group-hover/item:text-orange"
-        )}
-      >
-        {children}
-      </span>
-    </li>
-  );
-}
-
 /**
  * /programs/ai-workshop-training — the School AI Training & Awareness Workshop, laid out as a full
  * landing page (hero with rotating line, ticker, modules, schedule and duration tables, benefits,
@@ -87,79 +52,28 @@ function HoverBullet({ children, light }: { children: React.ReactNode; light?: b
  */
 export function SchoolAiWorkshop({
   contactEmail,
+  image,
   otherPrograms,
 }: {
   contactEmail?: string | null;
+  /** The programme's picture (Admin → CMS → Programs), shown as the workshop's key visual. */
+  image?: string | null;
   otherPrograms: { id: string; slug: string; title: string; icon: string | null }[];
 }) {
   return (
     <>
-      <PageHero
+      <LandingHero
         eyebrow={HERO.eyebrow}
         title={HERO.title}
         description={HERO.quote}
-        breadcrumbs={[{ label: "Home", href: "/" }, { label: "Programs", href: "/programs" }, { label: "AI Workshop & Training" }]}
-      >
-        <div className="space-y-5 lg:space-y-7">
-          <p className="font-heading text-h3 text-white lg:text-h2">
-            <RotatingWords words={HERO.rotating} wordClassName="text-orange-on-navy" />
-          </p>
-          <ul className="flex flex-wrap gap-2" aria-label="At a glance">
-            {HERO.chips.map((c) => (
-              <li
-                key={c}
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3.5 text-body-sm font-semibold text-white transition-colors duration-micro hover:border-orange-on-navy/60 hover:bg-white/15 motion-reduce:transition-none"
-              >
-                <Sparkles aria-hidden className="h-3.5 w-3.5 text-orange-on-navy" />
-                {c}
-              </li>
-            ))}
-          </ul>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <ButtonLink href="#book" size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
-              Book a Workshop for Your School
-            </ButtonLink>
-            <ButtonLink href="#modules" size="lg" variant="white">
-              Explore the Modules
-            </ButtonLink>
-          </div>
-        </div>
-      </PageHero>
-
-      {/* Ticker: the two taglines, moving. Decorative — the words are read once from the sr-only copy. */}
-      <div className="relative overflow-x-clip bg-orange py-3 text-white">
-        <p className="sr-only">{TICKER.join(", ")}</p>
-        <div aria-hidden className="flex w-max animate-marquee items-center [--marquee-duration:32s]">
-          {[0, 1].map((run) => (
-            <div key={run} className="flex items-center">
-              {[...TICKER, ...TICKER].map((t, i) => (
-                <span key={`${run}-${i}`} className="flex items-center gap-4 px-4 font-heading text-xl font-bold whitespace-nowrap">
-                  {t}
-                  <Sparkles className="h-4 w-4 text-white/80" />
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Jump links */}
-      <nav aria-label="On this page" className="border-b border-line bg-white">
-        <div className="container-x">
-          <ul className="hscroll gap-2 py-3 lg:mx-0 lg:flex-wrap lg:px-0">
-            {JUMP_LINKS.map((l) => (
-              <li key={l.href}>
-                <a
-                  href={l.href}
-                  className="ring-focus inline-flex min-h-11 items-center rounded-full border border-line px-4 text-body-sm font-semibold text-navy transition-colors duration-micro hover:border-orange hover:bg-orange-light hover:text-orange motion-reduce:transition-none"
-                >
-                  {l.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </nav>
+        crumb="AI Workshop & Training"
+        rotating={HERO.rotating}
+        chips={HERO.chips}
+        primary={{ label: "Book a Workshop for Your School", href: "#book" }}
+        secondary={{ label: "Explore the Modules", href: "#modules" }}
+      />
+      <Ticker items={TICKER} />
+      <JumpLinks links={JUMP_LINKS} />
 
       {/* About */}
       <section id="about" className="relative scroll-mt-24 overflow-x-clip bg-surface section-y" aria-labelledby="about-title">
@@ -177,6 +91,19 @@ export function SchoolAiWorkshop({
             </blockquote>
           </Reveal>
           <div className="lg:col-span-6">
+            {image && (
+              <Reveal className="mb-8">
+                <div className="group relative overflow-hidden rounded-card-lg shadow-e2">
+                  <div className="transition-transform duration-element ease-soft group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100">
+                    <Media src={image} alt="" seed="ai-workshop" ratio="16x9" sizes="(max-width: 1024px) 100vw, 600px" />
+                  </div>
+                  <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-navy/85 px-3 py-1.5 text-body-sm font-semibold text-white backdrop-blur-sm">
+                    <Sparkles aria-hidden className="h-4 w-4 text-orange-on-navy" />
+                    Learn AI • Create with AI
+                  </span>
+                </div>
+              </Reveal>
+            )}
             <h3 className="text-overline text-muted">Key highlights</h3>
             <ul className="mt-4 grid gap-4 sm:grid-cols-2">
               {ABOUT.highlights.map((h, i) => (
@@ -561,29 +488,7 @@ export function SchoolAiWorkshop({
         </div>
       </section>
 
-      {otherPrograms.length > 0 && (
-        <nav className="border-t border-line bg-white py-8" aria-labelledby="other-programs">
-          <div className="container-x">
-            <h2 id="other-programs" className="text-overline text-muted">
-              Other programs
-            </h2>
-            <ul className="mt-3 flex flex-wrap gap-2">
-              {otherPrograms.map((p) => (
-                <li key={p.id}>
-                  <Link
-                    href={`/programs/${p.slug}`}
-                    className="ring-focus group inline-flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-body-sm font-semibold text-navy transition-colors duration-micro hover:border-orange hover:text-orange motion-reduce:transition-none"
-                  >
-                    <DynamicIcon name={p.icon ?? undefined} className="h-4 w-4 text-orange" aria-hidden />
-                    {p.title}
-                    <ArrowRight aria-hidden className="h-3.5 w-3.5 transition-transform duration-micro group-hover:translate-x-0.5 motion-reduce:transition-none" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </nav>
-      )}
+      <OtherProgramsNav programs={otherPrograms} />
 
       <CtaBand
         title="Empowering Students with AI Skills for a [[Smart Future]]"
