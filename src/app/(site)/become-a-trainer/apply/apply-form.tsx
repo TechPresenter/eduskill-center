@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, Search } from "lucide-react";
 import { api, ApiClientError } from "@/lib/api-client";
 import { ButtonLink } from "@/components/ui/button";
@@ -19,6 +20,10 @@ import { Badge } from "@/components/ui/badge";
 import { LocationCascade } from "@/components/shared/location-cascade";
 import { toast } from "@/components/ui/toast";
 import { blockNameSchema } from "@/lib/validation/common";
+import { formatDate } from "@/lib/utils";
+import { levelNeedsInChargeTerms } from "@/lib/terms/documents";
+import { TermsReader, type TermsProp } from "@/components/site/terms-reader";
+import { InChargeDeclaration, VolunteerTeacherDeclaration } from "@/components/site/terms-declarations";
 
 type Level = "BLOCK" | "DISTRICT" | "STATE";
 interface DocType {
@@ -39,6 +44,9 @@ interface Submitted {
 }
 
 interface FormState {
+  /** Terms versions that were on screen when each box was ticked; accepted only while they are the current ones. */
+  volunteerTermsVersion: string | null;
+  inChargeTermsVersion: string | null;
   name: string;
   mobile: string;
   whatsapp: string;
@@ -67,6 +75,8 @@ interface FormState {
 }
 
 const INITIAL: FormState = {
+  volunteerTermsVersion: null,
+  inChargeTermsVersion: null,
   name: "",
   mobile: "",
   whatsapp: "",
@@ -89,6 +99,7 @@ const INITIAL: FormState = {
 };
 
 const STEPS = [
+  { label: "Terms", description: "Read and accept first" },
   { label: "Personal", description: "Contact details" },
   { label: "Level", description: "Block / District / State" },
   { label: "Location", description: "Where you will serve" },
@@ -97,9 +108,13 @@ const STEPS = [
   { label: "Documents", description: "Upload after submit" },
 ];
 
+/** Wizard step indexes. Documents comes after Submit, so Motivation is the last step of the form itself. */
+const STEP = { terms: 0, personal: 1, level: 2, location: 3, professional: 4, motivation: 5, documents: 6 } as const;
+
 const STEP_FIELDS: string[][] = [
+  ["acceptVolunteerTerms", "volunteerTermsVersion"],
   ["name", "mobile", "whatsapp", "email", "dob", "gender"],
-  ["level"],
+  ["level", "acceptInChargeTerms", "inChargeTermsVersion"],
   ["stateId", "districtId", "blockId", "blockName", "address", "pincode"],
   ["qualification", "skills", "experienceYears", "teachingExperienceYears", "preferredCourseIds", "languages", "availability", "trainingMode"],
   ["motivation", "acceptTerms"],
@@ -121,9 +136,17 @@ function blockFieldIssue(f: FormState): string | null {
   return parsed.success ? null : (parsed.error.issues[0]?.message ?? "Enter your block name");
 }
 
-function validateStep(step: number, f: FormState): Record<string, string> {
+interface TermsVersions {
+  volunteer: string;
+  inCharge: string;
+}
+
+function validateStep(step: number, f: FormState, terms: TermsVersions): Record<string, string> {
   const e: Record<string, string> = {};
-  if (step === 0) {
+  if (step === STEP.terms && f.volunteerTermsVersion !== terms.volunteer) {
+    e.acceptVolunteerTerms = "Read the Volunteer Teacher Terms & Conditions to the end and tick the box to accept them";
+  }
+  if (step === STEP.personal) {
     if (f.name.trim().length < 2) e.name = "Enter your full name";
     const mobileIssue = phoneIssue(f.mobile);
     if (mobileIssue) e.mobile = mobileIssue;
@@ -134,8 +157,13 @@ function validateStep(step: number, f: FormState): Record<string, string> {
     else if (new Date(f.dob) > new Date()) e.dob = "Date of birth cannot be in the future";
     if (!f.gender) e.gender = "Select your gender";
   }
-  if (step === 1 && !f.level) e.level = "Choose the level you want to volunteer at";
-  if (step === 2) {
+  if (step === STEP.level) {
+    if (!f.level) e.level = "Choose the level you want to volunteer at";
+    else if (levelNeedsInChargeTerms(f.level) && f.inChargeTermsVersion !== terms.inCharge) {
+      e.acceptInChargeTerms = "Block and District level volunteers must read the In-Charge terms to the end and accept them";
+    }
+  }
+  if (step === STEP.location) {
     if (!f.stateId) e.stateId = "Select your state";
     if ((f.level === "DISTRICT" || f.level === "BLOCK") && !f.districtId) e.districtId = "Select your district";
     if (f.level === "BLOCK") {
@@ -145,7 +173,7 @@ function validateStep(step: number, f: FormState): Record<string, string> {
     if (f.address.trim().length < 5) e.address = "Enter your address";
     if (!PIN_RE.test(f.pincode.trim())) e.pincode = "Enter a valid 6-digit PIN code";
   }
-  if (step === 3) {
+  if (step === STEP.professional) {
     if (f.qualification.trim().length < 2) e.qualification = "Enter your highest qualification";
     if (f.skills.length === 0) e.skills = "Add at least one skill you can teach";
     const exp = Number(f.experienceYears);
@@ -154,14 +182,35 @@ function validateStep(step: number, f: FormState): Record<string, string> {
     if (!Number.isInteger(texp) || texp < 0 || texp > 60) e.teachingExperienceYears = "Enter years between 0 and 60";
     if (f.languages.length === 0) e.languages = "Add at least one language";
   }
-  if (step === 4) {
+  if (step === STEP.motivation) {
     if (f.motivation.trim().length < 30) e.motivation = "Please write at least a few sentences (30+ characters)";
     if (!f.acceptTerms) e.acceptTerms = "You must accept the declaration to continue";
   }
   return e;
 }
 
-export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }) {
+/** Every step up to `upto`, so Submit never sends a form with an earlier step left incomplete. */
+function validateThrough(upto: number, f: FormState, terms: TermsVersions): { step: number; errors: Record<string, string> } | null {
+  for (let s = 0; s <= upto; s++) {
+    const errors = validateStep(s, f, terms);
+    if (Object.keys(errors).length) return { step: s, errors };
+  }
+  return null;
+}
+
+export function TrainerApplyForm({
+  documentTypes,
+  volunteerTerms,
+  inChargeTerms,
+}: {
+  documentTypes: DocType[];
+  /** The Volunteer Teacher Terms & Conditions, read and accepted before the form (every level). */
+  volunteerTerms: TermsProp;
+  /** The Block / District In-Charge terms, accepted on the Level step by Block and District level applicants. */
+  inChargeTerms: TermsProp;
+}) {
+  const router = useRouter();
+  const termsVersions: TermsVersions = { volunteer: volunteerTerms.version, inCharge: inChargeTerms.version };
   const [step, setStep] = React.useState(0);
   const [form, setForm] = React.useState<FormState>(INITIAL);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -172,7 +221,13 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
   const [done, setDone] = React.useState(false);
   const [photo, setPhoto] = React.useState<UploadedFile | null>(null);
   const [docs, setDocs] = React.useState<Record<string, UploadedFile | null>>({});
+  const [names, setNames] = React.useState<{ state?: string; district?: string; block?: string }>({});
   const topRef = React.useRef<HTMLDivElement>(null);
+
+  /** LocationCascade re-emits names on every render; keep the previous object when nothing changed. */
+  const handleNames = React.useCallback((n: { state?: string; district?: string; block?: string }) => {
+    setNames((prev) => (prev.state === n.state && prev.district === n.district && prev.block === n.block ? prev : n));
+  }, []);
 
   React.useEffect(() => {
     api
@@ -189,7 +244,7 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
           setSubmitted({ id: saved.id, applicationNo: saved.applicationNo, uploadToken: saved.uploadToken });
           setDocs(saved.docs ?? {});
           setPhoto(saved.photo ?? null);
-          setStep(5);
+          setStep(STEP.documents);
         }
       } catch {
         /* ignore */
@@ -220,21 +275,30 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
   const scrollTop = () => topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const next = () => {
-    const e = validateStep(step, form);
+    const e = validateStep(step, form, termsVersions);
     setErrors(e);
     if (Object.keys(e).length) return;
-    setStep((s) => Math.min(s + 1, 4));
+    // A step that validates has dealt with whatever the last submit reported (e.g. updated terms).
+    setFormError(null);
+    setStep((s) => Math.min(s + 1, STEP.motivation));
     scrollTop();
   };
   const back = () => {
+    setFormError(null);
     setStep((s) => Math.max(s - 1, 0));
     scrollTop();
   };
 
   const submit = async () => {
-    const e = validateStep(4, form);
-    setErrors(e);
-    if (Object.keys(e).length) return;
+    const invalid = validateThrough(STEP.motivation, form, termsVersions);
+    if (invalid) {
+      setErrors(invalid.errors);
+      setStep(invalid.step);
+      scrollTop();
+      return;
+    }
+    setErrors({});
+    const needsInCharge = levelNeedsInChargeTerms(form.level);
     setSubmitting(true);
     setFormError(null);
     try {
@@ -264,17 +328,30 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
         trainingMode: form.trainingMode,
         motivation: form.motivation.trim(),
         acceptTerms: form.acceptTerms,
+        acceptVolunteerTerms: form.volunteerTermsVersion === volunteerTerms.version,
+        volunteerTermsVersion: form.volunteerTermsVersion ?? "",
+        acceptInChargeTerms: needsInCharge ? form.inChargeTermsVersion === inChargeTerms.version : undefined,
+        inChargeTermsVersion: needsInCharge ? (form.inChargeTermsVersion ?? "") : undefined,
       };
       const data = await api.post<Submitted>("/api/public/trainer-applications", payload);
       setSubmitted(data);
       persist(data, {}, null);
-      setStep(5);
+      setStep(STEP.documents);
       scrollTop();
       toast.success("Application submitted", `Your application number is ${data.applicationNo}`);
     } catch (err) {
       if (err instanceof ApiClientError) {
         if (err.status === 422) {
           const fe = err.fieldErrors;
+          if (fe.acceptVolunteerTerms || fe.acceptInChargeTerms) {
+            // A text was edited while this form was open: drop that acceptance and load the new text.
+            setForm((f) => ({
+              ...f,
+              volunteerTermsVersion: fe.acceptVolunteerTerms ? null : f.volunteerTermsVersion,
+              inChargeTermsVersion: fe.acceptInChargeTerms ? null : f.inChargeTermsVersion,
+            }));
+            router.refresh();
+          }
           setErrors(fe);
           const firstStep = STEP_FIELDS.findIndex((fields) => fields.some((f) => fe[f]));
           if (firstStep >= 0) setStep(firstStep);
@@ -310,7 +387,7 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
     setDocs({});
     setPhoto(null);
     setForm(INITIAL);
-    setStep(0);
+    setStep(STEP.terms);
   };
 
   const depth = depthFor(form.level);
@@ -355,7 +432,16 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
   }
 
   const formId = "trainer-apply-form";
-  const onDocuments = step === 5 && submitted !== null;
+  const onDocuments = step === STEP.documents && submitted !== null;
+  const needsInChargeTerms = levelNeedsInChargeTerms(form.level);
+  const designation = form.level === "BLOCK" ? "Block In-Charge" : form.level === "DISTRICT" ? "District In-Charge" : null;
+  const clearError = (key: string) =>
+    setErrors((e) => {
+      if (!e[key]) return e;
+      const rest = { ...e };
+      delete rest[key];
+      return rest;
+    });
 
   return (
     <div ref={topRef} className="mx-auto max-w-4xl scroll-mt-24">
@@ -369,7 +455,7 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
         nextType={onDocuments ? "button" : "submit"}
         onNext={onDocuments ? finish : undefined}
         form={onDocuments ? undefined : formId}
-        nextLabel={onDocuments ? (requiredMissing.length ? "Finish for now" : "Finish") : step === 4 ? "Submit application" : "Continue"}
+        nextLabel={onDocuments ? (requiredMissing.length ? "Finish for now" : "Finish") : step === STEP.motivation ? "Submit application" : "Continue"}
         nextLoading={submitting}
       >
         {formError && (
@@ -446,11 +532,32 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
               noValidate
               onSubmit={(e) => {
                 e.preventDefault();
-                if (step < 4) next();
+                if (step < STEP.motivation) next();
                 else void submit();
               }}
             >
-              {step === 0 && (
+              {step === STEP.terms && (
+                <FormSection
+                  title="Read the terms before you apply"
+                  description="Every volunteer trainer and teacher with EduSkill India Foundation agrees to these terms. Read them to the end and tick the box to accept them — the application form opens after that."
+                >
+                  {/* Keyed by version: when the terms change under an open form, the reader starts again. */}
+                  <TermsReader
+                    key={volunteerTerms.version}
+                    terms={volunteerTerms}
+                    checkboxLabel="I have read and understood the Volunteer Teacher Terms & Conditions, and I agree to follow them."
+                    accepted={form.volunteerTermsVersion === volunteerTerms.version}
+                    onAcceptedChange={(v) => {
+                      // Ticked against the text on screen now; a newer text after a refresh unticks it.
+                      setForm((f) => ({ ...f, volunteerTermsVersion: v ? volunteerTerms.version : null }));
+                      clearError("acceptVolunteerTerms");
+                    }}
+                    error={errors.acceptVolunteerTerms}
+                  />
+                </FormSection>
+              )}
+
+              {step === STEP.personal && (
                 <FormSection title="Personal details" description="We use these to contact you about your application.">
                   <FormGrid>
                     <Field label="Full name" htmlFor="name" required error={errors.name} className="sm:col-span-2">
@@ -476,7 +583,7 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
                 </FormSection>
               )}
 
-              {step === 1 && (
+              {step === STEP.level && (
                 <FormSection title="Volunteer level" description="Choose the geography you would like to serve. This decides which location details we ask for next.">
                   <Field error={errors.level}>
                     <RadioCards
@@ -504,10 +611,32 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
                       ]}
                     />
                   </Field>
+                  {needsInChargeTerms && (
+                    <div className="space-y-3 border-t border-line pt-5">
+                      <div>
+                        <h3 className="text-h4 text-navy">{designation} terms</h3>
+                        <p className="mt-0.5 text-body-sm text-muted">
+                          Block and District level volunteers act as the Foundation&rsquo;s In-Charge in their area. Read these terms to the end and accept them to continue.
+                          {form.level === "BLOCK" && " They are written for the District In-Charge and apply in the same way to a Block In-Charge."}
+                        </p>
+                      </div>
+                      <TermsReader
+                        key={inChargeTerms.version}
+                        terms={inChargeTerms}
+                        checkboxLabel="I have read and understood the In-Charge Terms, Roles & Conditions, and I agree to follow them."
+                        accepted={form.inChargeTermsVersion === inChargeTerms.version}
+                        onAcceptedChange={(v) => {
+                          setForm((f) => ({ ...f, inChargeTermsVersion: v ? inChargeTerms.version : null }));
+                          clearError("acceptInChargeTerms");
+                        }}
+                        error={errors.acceptInChargeTerms}
+                      />
+                    </div>
+                  )}
                 </FormSection>
               )}
 
-              {step === 2 && (
+              {step === STEP.location && (
                 <FormSection title="Location" description={form.level === "STATE" ? "Select the state you will serve." : form.level === "DISTRICT" ? "Select your state and district." : "Select your state and district, then pick or type your block."}>
                   <LocationCascade
                     value={{ stateId: form.stateId, districtId: form.districtId, blockId: form.blockId, blockName: form.blockName }}
@@ -522,6 +651,7 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
                         return n;
                       });
                     }}
+                    onNames={handleNames}
                     depth={depth}
                     required
                     errors={{ stateId: errors.stateId, districtId: errors.districtId, blockId: errors.blockId, blockName: errors.blockName }}
@@ -538,7 +668,7 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
                 </FormSection>
               )}
 
-              {step === 3 && (
+              {step === STEP.professional && (
                 <FormSection title="Professional background" description="Tell us what you can teach and when you are available.">
                   <FormGrid>
                     <Field label="Highest qualification" htmlFor="qualification" required error={errors.qualification} className="sm:col-span-2">
@@ -583,11 +713,32 @@ export function TrainerApplyForm({ documentTypes }: { documentTypes: DocType[] }
                 </FormSection>
               )}
 
-              {step === 4 && (
+              {step === STEP.motivation && (
                 <FormSection title="Motivation & declaration">
                   <Field label="Why do you want to become a volunteer trainer?" htmlFor="motivation" required error={errors.motivation} hint={`${form.motivation.trim().length} / 3000 characters (minimum 30)`}>
                     <Textarea id="motivation" rows={6} value={form.motivation} onChange={(e) => set("motivation", e.target.value)} invalid={!!errors.motivation} />
                   </Field>
+                  <VolunteerTeacherDeclaration
+                    gender={form.gender}
+                    values={{ name: form.name, mobile: form.mobile, address: [form.address, form.pincode].map((v) => v.trim()).filter(Boolean).join(", "), date: formatDate(new Date()) }}
+                    signature="Accepted online — pressing Submit application records your acceptance with the date and time."
+                  />
+                  {needsInChargeTerms && (
+                    <InChargeDeclaration
+                      gender={form.gender}
+                      values={{
+                        name: form.name,
+                        designation,
+                        district: names.district ?? null,
+                        state: names.state ?? null,
+                        mobile: form.mobile,
+                        email: form.email,
+                        date: formatDate(new Date()),
+                        place: names.block || form.blockName?.trim() || names.district || null,
+                      }}
+                      signature="Accepted online — pressing Submit application records your acceptance with the date and time."
+                    />
+                  )}
                   <Field error={errors.acceptTerms}>
                     <Checkbox
                       checked={form.acceptTerms}

@@ -30,6 +30,8 @@ export const GET = apiHandler({ permission: "trainers.export" }, async ({ req, u
         status: titleCase(a.status),
         documents: a._count.documents,
         interviewAt: a.interviewAt?.toISOString() ?? "",
+        volunteerTermsAcceptedAt: a.volunteerTermsAcceptedAt?.toISOString() ?? "",
+        inChargeTermsAcceptedAt: a.inChargeTermsAcceptedAt?.toISOString() ?? "",
         submittedAt: a.submittedAt.toISOString(),
       });
     }

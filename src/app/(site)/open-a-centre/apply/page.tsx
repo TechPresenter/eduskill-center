@@ -7,11 +7,13 @@ import { getSetting } from "@/lib/settings";
 import { absoluteUrl } from "@/lib/utils";
 import { CENTRE_CLASSES, SPACE_TYPES } from "@/lib/validation/centre-applications";
 import { CENTRE_STEPS } from "@/server/centre-applications";
+import { getTerms } from "@/server/terms";
+import { termsProp } from "@/components/site/terms-page";
 import { CentreApplyForm } from "./apply-form";
 
 const TITLE = "Apply to Open a Centre";
 const DESCRIPTION =
-  "Apply to open an EduSkill Normal Education Centre for Class 1 to 4 in your panchayat, village or town. Fill the form in five short steps and upload your documents straight after submitting.";
+  "Apply to open an EduSkill Normal Education Centre for Class 1 to 4 in your panchayat, village or town. Read and accept the Centre In-charge Terms & Conditions, fill the form in five short steps and upload your documents straight after submitting.";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -25,7 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export const dynamic = "force-dynamic";
 
 export default async function OpenACentreApplyPage() {
-  const open = await getSetting<boolean>("centres.applicationsOpen").catch(() => true);
+  const [open, terms] = await Promise.all([getSetting<boolean>("centres.applicationsOpen").catch(() => true), getTerms("centreInCharge")]);
 
   return (
     <>
@@ -33,7 +35,7 @@ export default async function OpenACentreApplyPage() {
         compact
         eyebrow="EduSkill Shiksha Mission"
         title="Apply to open a [[Normal Education Centre]]"
-        description="Class 1 to 4 — regular study, practice and extra academic support for children in your area. The form takes about ten minutes, and you can upload your documents right after submitting or later, from the status page."
+        description="Class 1 to 4 — regular study, practice and extra academic support for children in your area. First read and accept the Centre In-charge Terms & Conditions; the form then takes about ten minutes, and you can upload your documents right after submitting or later, from the status page."
         breadcrumbs={[{ label: "Home", href: "/" }, { label: "Open a Centre", href: "/open-a-centre" }, { label: "Apply" }]}
       >
         <ButtonLink href="/open-a-centre/status" variant="white" leftIcon={<Search className="h-4 w-4" />}>
@@ -44,7 +46,12 @@ export default async function OpenACentreApplyPage() {
       <section className="bg-surface">
         <div className="container-x section-y">
           {open !== false ? (
-            <CentreApplyForm steps={CENTRE_STEPS} classes={CENTRE_CLASSES} spaceTypes={SPACE_TYPES} />
+            <CentreApplyForm
+              steps={CENTRE_STEPS}
+              classes={CENTRE_CLASSES}
+              spaceTypes={SPACE_TYPES}
+              terms={termsProp(terms)}
+            />
           ) : (
             <div className="mx-auto max-w-2xl">
               <Alert tone="warning" title="Centre applications are currently closed">

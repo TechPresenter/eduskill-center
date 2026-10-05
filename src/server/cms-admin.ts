@@ -7,6 +7,7 @@ import { hasPermission } from "@/lib/rbac/permissions";
 import { CMS_ICONS, CMS_SECTIONS, getSectionDef, mergeSectionData, type CmsAnyField, type CmsField, type CmsSectionDef } from "@/lib/cms/sections";
 import { saveSection } from "@/lib/cms";
 import { slugify } from "@/lib/utils";
+import { TERMS_DOCUMENTS, TERMS_KEYS, termsKeyForSlug } from "@/lib/terms/documents";
 import { optionalString, slugSchema, uuid } from "@/lib/validation/common";
 import { paginationSchema, getPaging, buildOrderBy, paged } from "@/lib/api/query";
 
@@ -133,8 +134,14 @@ export async function resetSectionAdmin(key: string, ctx: Ctx) {
 // ───────────────────────────── Pages ─────────────────────────────
 
 /** Slugs the public website links to directly. They can be edited but never renamed or deleted. */
-export const FIXED_PAGE_SLUGS = ["about", "scholarship", "volunteer", "donate", "contact", "privacy-policy", "terms", "refund-policy", "disclaimer"] as const;
+export const FIXED_PAGE_SLUGS = ["about", "scholarship", "volunteer", "donate", "contact", "privacy-policy", "terms", "refund-policy", "disclaimer", ...TERMS_KEYS.map((k) => TERMS_DOCUMENTS[k].slug)] as const;
 export const isFixedPageSlug = (slug: string) => (FIXED_PAGE_SLUGS as readonly string[]).includes(slug);
+
+/** Where a page is shown on the website — `/{slug}`, except the terms pages, which live under the application they gate. */
+export const cmsPagePublicPath = (slug: string) => {
+  const key = termsKeyForSlug(slug);
+  return key ? TERMS_DOCUMENTS[key].path : `/${slug}`;
+};
 
 export const cmsPageSchema = z.object({
   title: z.string().trim().min(2, "Enter a title").max(200),
@@ -155,13 +162,13 @@ export async function listCmsPages(q: z.infer<typeof cmsPageListSchema>) {
   if (q.q) where.OR = [{ title: { contains: q.q, mode: "insensitive" } }, { slug: { contains: q.q, mode: "insensitive" } }];
   const orderBy = buildOrderBy(q.sort, q.order, ["updatedAt", "title", "slug", "status"] as const, "updatedAt");
   const [items, total] = await Promise.all([db.cmsPage.findMany({ where, orderBy, ...getPaging(q) }), db.cmsPage.count({ where })]);
-  return paged(items.map((p) => ({ ...p, isFixed: isFixedPageSlug(p.slug) })), total, q);
+  return paged(items.map((p) => ({ ...p, isFixed: isFixedPageSlug(p.slug), publicPath: cmsPagePublicPath(p.slug) })), total, q);
 }
 
 export async function getCmsPage(id: string) {
   const page = await db.cmsPage.findUnique({ where: { id } });
   if (!page) throw Errors.notFound("Page");
-  return { ...page, isFixed: isFixedPageSlug(page.slug) };
+  return { ...page, isFixed: isFixedPageSlug(page.slug), publicPath: cmsPagePublicPath(page.slug) };
 }
 
 /**
@@ -211,7 +218,7 @@ export async function createCmsPage(input: CmsPageInput, ctx: Ctx) {
   assertCanPublish(ctx.user, input.status === "PUBLISHED");
   const slug = await uniqueSlug("cmsPage", input.slug || input.title);
   const page = await db.cmsPage.create({ data: { title: input.title, slug, excerpt: input.excerpt || null, content: input.content, seoTitle: input.seoTitle || null, seoDescription: input.seoDescription || null, status: input.status, updatedById: ctx.user.id } });
-  await audit({ user: ctx.user, action: "create", module: "cms", recordType: "CmsPage", recordId: page.id, description: `${ctx.user.name} created page "${page.title}" (/${page.slug})`, newValue: page, ip: ctx.ip, userAgent: ctx.userAgent });
+  await audit({ user: ctx.user, action: "create", module: "cms", recordType: "CmsPage", recordId: page.id, description: `${ctx.user.name} created page "${page.title}" (${cmsPagePublicPath(page.slug)})`, newValue: page, ip: ctx.ip, userAgent: ctx.userAgent });
   return page;
 }
 
@@ -222,7 +229,7 @@ export async function updateCmsPage(id: string, input: CmsPageInput, ctx: Ctx) {
   let slug = existing.slug;
   if (!isFixedPageSlug(existing.slug) && input.slug && input.slug !== existing.slug) slug = await uniqueSlug("cmsPage", input.slug, id);
   const page = await db.cmsPage.update({ where: { id }, data: { title: input.title, slug, excerpt: input.excerpt || null, content: input.content, seoTitle: input.seoTitle || null, seoDescription: input.seoDescription || null, status: input.status, updatedById: ctx.user.id } });
-  await audit({ user: ctx.user, action: "update", module: "cms", recordType: "CmsPage", recordId: id, description: `${ctx.user.name} updated page "${page.title}" (/${page.slug})`, oldValue: existing, newValue: page, ip: ctx.ip, userAgent: ctx.userAgent });
+  await audit({ user: ctx.user, action: "update", module: "cms", recordType: "CmsPage", recordId: id, description: `${ctx.user.name} updated page "${page.title}" (${cmsPagePublicPath(page.slug)})`, oldValue: existing, newValue: page, ip: ctx.ip, userAgent: ctx.userAgent });
   return page;
 }
 

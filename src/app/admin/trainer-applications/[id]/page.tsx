@@ -15,6 +15,8 @@ import { ApplicationActions } from "@/components/admin/trainers/application-acti
 import { DocumentActions } from "@/components/admin/trainers/document-actions";
 import { NoteForm } from "@/components/admin/trainers/note-form";
 import { RecordIdentity } from "@/components/admin/locations/list-kit";
+import { AcceptedTerms } from "@/components/admin/terms/accepted-terms";
+import { InChargeDeclaration, VolunteerTeacherDeclaration } from "@/components/site/terms-declarations";
 
 export const metadata = { title: "Trainer Application" };
 
@@ -213,6 +215,78 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
           </Card>
 
           <Card>
+            <CardHeader
+              title="Terms & Conditions"
+              description={
+                app.volunteerTermsAcceptedAt || app.inChargeTermsAcceptedAt
+                  ? "What the applicant accepted while applying, with the exact text, version and time."
+                  : "Acceptance was not recorded for this application."
+              }
+            />
+            <CardBody className="space-y-6">
+              <section aria-labelledby="volunteer-terms-heading" className="space-y-3">
+                <h3 id="volunteer-terms-heading" className="text-h4 text-navy">
+                  Volunteer Teacher Terms &amp; Conditions
+                </h3>
+                <AcceptedTerms
+                  acceptedAt={app.volunteerTermsAcceptedAt}
+                  terms={app.acceptedVolunteerTerms}
+                  declaration={
+                    app.volunteerTermsAcceptedAt && (
+                      <VolunteerTeacherDeclaration
+                        gender={app.gender}
+                        values={{
+                          name: app.name,
+                          mobile: app.mobile,
+                          address: shortForm ? undefined : [app.address, app.pincode].filter(Boolean).join(", "),
+                          date: formatDate(app.volunteerTermsAcceptedAt),
+                        }}
+                        signature={`Accepted online on ${formatDateTime(app.volunteerTermsAcceptedAt)}`}
+                      />
+                    )
+                  }
+                  missing={<Alert tone="warning">Not recorded — this application was submitted before applicants had to accept the Volunteer Teacher Terms &amp; Conditions online.</Alert>}
+                />
+              </section>
+
+              {(app.inChargeTermsAcceptedAt || (!shortForm && (app.level === "BLOCK" || app.level === "DISTRICT"))) && (
+                <section aria-labelledby="in-charge-terms-heading" className="space-y-3 border-t border-line pt-5">
+                  <h3 id="in-charge-terms-heading" className="text-h4 text-navy">
+                    {app.level === "BLOCK" ? "Block" : "District"} In-Charge Terms, Roles &amp; Conditions
+                  </h3>
+                  <AcceptedTerms
+                    acceptedAt={app.inChargeTermsAcceptedAt}
+                    terms={app.acceptedInChargeTerms}
+                    declaration={
+                      app.inChargeTermsAcceptedAt && (
+                        <InChargeDeclaration
+                          gender={app.gender}
+                          values={{
+                            name: app.name,
+                            designation: app.level === "BLOCK" ? "Block In-Charge" : "District In-Charge",
+                            district: app.district?.name ?? null,
+                            state: app.state.name,
+                            mobile: app.mobile,
+                            email: app.email,
+                            date: formatDate(app.inChargeTermsAcceptedAt),
+                            place: app.block?.name ?? app.district?.name ?? null,
+                          }}
+                          signature={`Accepted online on ${formatDateTime(app.inChargeTermsAcceptedAt)}`}
+                        />
+                      )
+                    }
+                    missing={
+                      <Alert tone="warning">
+                        Not recorded — this {titleCase(app.level).toLowerCase()} level application was submitted before applicants had to accept the In-Charge terms online.
+                      </Alert>
+                    }
+                  />
+                </section>
+              )}
+            </CardBody>
+          </Card>
+
+          <Card>
             <CardHeader title="Documents" description={app.documents.length ? `${verifiedDocs} verified · ${pendingDocs} pending · ${app.documents.length - verifiedDocs - pendingDocs} rejected` : "Uploaded by the applicant during or after the application."} />
             {app.documents.length === 0 ? (
               <CardBody>
@@ -331,6 +405,10 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
               <KeyValue label="Last reviewed by" value={reviewer?.name ?? "—"} />
               <KeyValue label="Review notes" value={app.reviewNotes ? <span className="whitespace-pre-line">{app.reviewNotes}</span> : "—"} />
               <KeyValue label="Documents" value={`${app.documents.length} uploaded · ${verifiedDocs} verified`} />
+              <KeyValue label="Volunteer Teacher Terms" value={app.volunteerTermsAcceptedAt ? `Accepted ${formatDateTime(app.volunteerTermsAcceptedAt)}` : "Not recorded"} />
+              {(app.inChargeTermsAcceptedAt || (!shortForm && (app.level === "BLOCK" || app.level === "DISTRICT"))) && (
+                <KeyValue label="In-Charge Terms" value={app.inChargeTermsAcceptedAt ? `Accepted ${formatDateTime(app.inChargeTermsAcceptedAt)}` : "Not recorded"} />
+              )}
               <KeyValue label="Last updated" value={formatDateTime(app.updatedAt)} />
             </CardBody>
           </Card>

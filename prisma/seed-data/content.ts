@@ -4,6 +4,9 @@
  * from the admin panel after seeding.
  */
 
+import { TERMS_DOCUMENTS } from "../../src/lib/terms/documents";
+import { DEFAULT_TERMS } from "../../src/lib/terms/defaults";
+
 export const DOCUMENT_TYPES = [
   { key: "photo", name: "Passport-size photograph", appliesTo: "STUDENT", isRequired: true, sortOrder: 1, description: "Recent colour photograph (JPG/PNG)." },
   { key: "id_proof", name: "Identity proof (Aadhaar / Voter ID / PAN)", appliesTo: "STUDENT", isRequired: true, sortOrder: 2 },
@@ -157,6 +160,10 @@ _Edit this page from Admin → CMS → Pages._`,
 
 Information on this website is provided in good faith. Course availability, fees, batch schedules and center details may change; the details in your application and dashboard are authoritative. EduSkill India Foundation does not guarantee employment on completion of a course.`,
   },
+  // Terms & Conditions applicants accept before they apply (also inserted by the terms_consent migration).
+  { slug: TERMS_DOCUMENTS.centreInCharge.slug, ...DEFAULT_TERMS.centreInCharge },
+  { slug: TERMS_DOCUMENTS.volunteerTeacher.slug, ...DEFAULT_TERMS.volunteerTeacher },
+  { slug: TERMS_DOCUMENTS.inCharge.slug, ...DEFAULT_TERMS.inCharge },
 ] as const;
 
 export const IMPACT_STATS = [

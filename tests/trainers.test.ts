@@ -1,13 +1,26 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
-import { approveTrainerApplication, assignTrainer, lookupTrainerApplication, resolveTrainerLocation, submitTeacherApplication, submitTrainerApplication, transitionTrainerApplication } from "@/server/trainers";
+import { approveTrainerApplication, assignTrainer, getTrainerApplicationDetail, lookupTrainerApplication, resolveTrainerLocation, submitTeacherApplication, submitTrainerApplication, transitionTrainerApplication } from "@/server/trainers";
+import { getTerms } from "@/server/terms";
 import { teacherApplicationSchema, trainerApplicationSchema } from "@/lib/validation/trainers";
 import { isPrivateKey, keyFromUrl, validateUpload } from "@/lib/storage";
 import { ensureAdmin, ensureDocumentTypes, makeBatch, makeCenter, makeCourse, makeLocation, uid } from "./helpers";
 
+/** Fingerprints of the terms the forms would show right now. */
+let volunteerTermsVersion = "";
+let inChargeTermsVersion = "";
+beforeAll(async () => {
+  volunteerTermsVersion = (await getTerms("volunteerTeacher")).version;
+  inChargeTermsVersion = (await getTerms("inCharge")).version;
+});
+
 function baseInput(loc: Awaited<ReturnType<typeof makeLocation>>, level: "BLOCK" | "DISTRICT" | "STATE") {
   const n = String(Math.floor(Math.random() * 1e8)).padStart(8, "0");
   return {
+    acceptVolunteerTerms: true,
+    volunteerTermsVersion,
+    // Block and District level volunteers also accept the In-Charge terms on the Level step.
+    ...(level === "STATE" ? {} : { acceptInChargeTerms: true, inChargeTermsVersion }),
     name: `Trainer ${uid()}`,
     mobile: `92${n}`,
     whatsapp: "",
@@ -110,6 +123,8 @@ function teacherInput(districtId: string, over: Partial<Record<string, unknown>>
     experienceBand: "YEARS_3_5",
     teachingMode: "BOTH",
     consent: "true",
+    acceptVolunteerTerms: "true",
+    volunteerTermsVersion,
     ...over,
   };
 }
@@ -117,6 +132,71 @@ function teacherInput(districtId: string, over: Partial<Record<string, unknown>>
 async function resume(name = "resume.pdf") {
   return validateUpload(new File([PDF_BYTES], name, { type: "application/pdf" }), { preset: "resume" });
 }
+
+describe("terms accepted before applying", () => {
+  it("requires the Volunteer Teacher terms on every level and the In-Charge terms for Block and District", async () => {
+    const loc = await makeLocation();
+    for (const level of ["BLOCK", "DISTRICT", "STATE"] as const) {
+      expect(trainerApplicationSchema.safeParse(baseInput(loc, level)).success).toBe(true);
+      expect(trainerApplicationSchema.safeParse({ ...baseInput(loc, level), acceptVolunteerTerms: false }).success).toBe(false);
+      // A real boolean, not the string "true".
+      expect(trainerApplicationSchema.safeParse({ ...baseInput(loc, level), acceptVolunteerTerms: "true" }).success).toBe(false);
+      expect(trainerApplicationSchema.safeParse({ ...baseInput(loc, level), volunteerTermsVersion: "" }).success).toBe(false);
+    }
+    for (const level of ["BLOCK", "DISTRICT"] as const) {
+      const missing = trainerApplicationSchema.safeParse({ ...baseInput(loc, level), acceptInChargeTerms: undefined, inChargeTermsVersion: undefined });
+      expect(missing.success).toBe(false);
+      expect(missing.error?.issues.map((i) => i.path.join("."))).toContain("acceptInChargeTerms");
+      expect(trainerApplicationSchema.safeParse({ ...baseInput(loc, level), acceptInChargeTerms: false }).success).toBe(false);
+    }
+    // The short teacher form asks only for the Volunteer Teacher terms.
+    expect(teacherApplicationSchema.safeParse(teacherInput(loc.district.id)).success).toBe(true);
+    expect(teacherApplicationSchema.safeParse(teacherInput(loc.district.id, { acceptVolunteerTerms: "" })).success).toBe(false);
+    expect(teacherApplicationSchema.safeParse(teacherInput(loc.district.id, { acceptVolunteerTerms: "false" })).success).toBe(false);
+    expect(teacherApplicationSchema.safeParse(teacherInput(loc.district.id, { volunteerTermsVersion: "" })).success).toBe(false);
+  });
+
+  it("records the exact texts accepted: both for a district volunteer, Volunteer Teacher only for state level", async () => {
+    const [volunteer, inCharge] = await Promise.all([getTerms("volunteerTeacher"), getTerms("inCharge")]);
+    const district = await submitTrainerApplication(trainerApplicationSchema.parse(baseInput(await makeLocation(), "DISTRICT")));
+    // A state-level body that also carries an In-Charge acceptance: nothing to record for that level.
+    const state = await submitTrainerApplication(trainerApplicationSchema.parse({ ...baseInput(await makeLocation(), "STATE"), acceptInChargeTerms: true, inChargeTermsVersion }));
+    const rows = await db.trainerApplication.findMany({
+      where: { id: { in: [district.id, state.id] } },
+      include: { volunteerTermsVersion: true, inChargeTermsVersion: true },
+    });
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const d = byId.get(district.id)!;
+    const s = byId.get(state.id)!;
+    for (const row of [d, s]) {
+      expect(row.volunteerTermsAcceptedAt).toBeInstanceOf(Date);
+      expect(row.volunteerTermsVersion).toMatchObject({ document: "volunteer-teacher-terms", version: volunteer.version, title: volunteer.title, content: volunteer.content });
+    }
+    expect(d.inChargeTermsAcceptedAt).toBeInstanceOf(Date);
+    expect(d.inChargeTermsVersion).toMatchObject({ document: "district-in-charge-terms", version: inCharge.version, content: inCharge.content });
+    expect(s.inChargeTermsVersionId).toBeNull();
+    expect(s.inChargeTermsAcceptedAt).toBeNull();
+    // One snapshot per document version, shared by everyone who accepted it.
+    expect(d.volunteerTermsVersionId).toBe(s.volunteerTermsVersionId);
+
+    const detail = await getTrainerApplicationDetail(district.id);
+    expect(detail.acceptedVolunteerTerms?.version).toBe(volunteer.version);
+    expect(detail.acceptedInChargeTerms?.version).toBe(inCharge.version);
+  });
+
+  it("refuses an acceptance of an older text with a 422 on the field of that terms step", async () => {
+    const loc = await makeLocation();
+    const staleVolunteer = trainerApplicationSchema.parse({ ...baseInput(loc, "BLOCK"), volunteerTermsVersion: "0000000000000000" });
+    await expect(submitTrainerApplication(staleVolunteer)).rejects.toMatchObject({ status: 422, details: { acceptVolunteerTerms: expect.any(String) } });
+    const staleInCharge = trainerApplicationSchema.parse({ ...baseInput(loc, "BLOCK"), inChargeTermsVersion: "0000000000000000" });
+    await expect(submitTrainerApplication(staleInCharge)).rejects.toMatchObject({ status: 422, details: { acceptInChargeTerms: expect.any(String) } });
+    expect(await db.trainerApplication.count({ where: { email: { in: [staleVolunteer.email, staleInCharge.email] } } })).toBe(0);
+
+    const staleTeacher = teacherApplicationSchema.parse(teacherInput(loc.district.id, { volunteerTermsVersion: "0000000000000000" }));
+    await ensureDocumentTypes();
+    await expect(submitTeacherApplication(staleTeacher, await resume())).rejects.toMatchObject({ status: 422, details: { acceptVolunteerTerms: expect.any(String) } });
+  });
+});
 
 describe("short teacher application", () => {
   beforeAll(async () => {

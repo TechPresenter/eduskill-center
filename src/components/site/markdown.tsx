@@ -276,8 +276,28 @@ export function parseMarkdown(source: string): Block[] {
   return blocks;
 }
 
-export function Markdown({ source, className }: { source: string; className?: string }) {
+export function Markdown({
+  source,
+  className,
+  anchors = true,
+  topHeadingLevel,
+  headingClassName,
+}: {
+  source: string;
+  className?: string;
+  /** Render the focusable "#" permalink in each heading. Off for text read in a box (one Tab stop per heading). */
+  anchors?: boolean;
+  /**
+   * Render the shallowest heading in the source at this level (deeper ones keep their relative
+   * depth, up to h6), to fit the page's outline — e.g. 2 when the page's own h1 sits right above.
+   */
+  topHeadingLevel?: 2 | 3 | 4;
+  /** Extra classes on every heading (e.g. a smaller size when `topHeadingLevel` raises them). */
+  headingClassName?: string;
+}) {
   const blocks = parseMarkdown(source ?? "");
+  const shallowest = Math.min(...blocks.map((b) => (b.type === "heading" ? renderedLevel(b.level) : 99)));
+  const headingShift = topHeadingLevel && shallowest !== 99 ? topHeadingLevel - shallowest : 0;
   // ONE de-duplication map for the whole document, advanced in block order. `extractHeadings`
   // does exactly the same walk, which is what keeps every TOC link pointing at a real anchor.
   const seen = new Map<string, number>();
@@ -287,16 +307,18 @@ export function Markdown({ source, className }: { source: string; className?: st
         const key = `b${idx}`;
         switch (b.type) {
           case "heading": {
-            const Tag = (`h${renderedLevel(b.level)}` as "h2" | "h3" | "h4" | "h5");
+            const Tag = `h${Math.min(6, Math.max(2, renderedLevel(b.level) + headingShift))}` as "h2" | "h3" | "h4" | "h5" | "h6";
             const id = headingId(b.text, seen);
             return (
-              <Tag key={key} id={id} className="group scroll-mt-28">
+              <Tag key={key} id={id} className={cn("group scroll-mt-28", headingClassName)}>
                 {renderInline(b.text, key)}
                 {/* Deliberately not aria-hidden: it is a real, focusable link to this section, just
                     a quiet one — invisible until the heading is hovered or the link is focused. */}
-                <a href={`#${id}`} className="heading-anchor" aria-label={`Permalink to ${inlineText(b.text)}`}>
-                  #
-                </a>
+                {anchors && (
+                  <a href={`#${id}`} className="heading-anchor" aria-label={`Permalink to ${inlineText(b.text)}`}>
+                    #
+                  </a>
+                )}
               </Tag>
             );
           }

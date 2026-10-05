@@ -40,6 +40,8 @@ export const POST = apiHandler({ auth: "none", rateLimit: { limit: 5, windowSec:
     experienceBand: text("experienceBand"),
     teachingMode: text("teachingMode"),
     consent: text("consent"),
+    acceptVolunteerTerms: text("acceptVolunteerTerms"),
+    volunteerTermsVersion: text("volunteerTermsVersion"),
   });
 
   // Validate the resume BEFORE anything is written, and report it on the `resume` field so the

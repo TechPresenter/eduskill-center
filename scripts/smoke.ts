@@ -45,6 +45,8 @@ const ORIGIN = (() => {
 const PUBLIC_ROUTES = [
   "/", "/about", "/programs", "/courses", "/training-centers", "/become-a-trainer", "/become-a-trainer/apply", "/become-a-trainer/status",
   "/open-a-centre", "/open-a-centre/apply", "/open-a-centre/status",
+  // Terms & Conditions applicants accept before they apply.
+  "/open-a-centre/terms", "/become-a-trainer/terms", "/become-a-trainer/in-charge-terms",
   "/scholarship", "/success-stories", "/contact", "/verify-certificate", "/blog", "/events", "/gallery", "/faq", "/donate",
   "/privacy-policy", "/terms", "/refund-policy", "/disclaimer", "/login", "/login/admin", "/register", "/forgot-password", "/sitemap.xml", "/robots.txt",
   "/manifest.webmanifest", "/api/public/locations", "/api/public/courses", "/api/public/centers", "/api/public/centers/map", "/api/public/stats",

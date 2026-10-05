@@ -17,6 +17,8 @@ import { CentreStatusBadge } from "@/components/admin/centre-applications/status
 import { StepProgress } from "@/components/admin/centre-applications/step-progress";
 import { CentreDocumentActions } from "@/components/admin/centre-applications/document-actions";
 import { CentreApplicationActions } from "@/components/admin/centre-applications/application-actions";
+import { CentreDeclaration } from "@/components/site/terms-declarations";
+import { AcceptedTerms } from "@/components/admin/terms/accepted-terms";
 
 export const metadata: Metadata = { title: "Centre Application · Foundation Admin" };
 
@@ -55,6 +57,8 @@ export default async function CentreApplicationDetailPage({ params }: { params: 
   const verifiedDocs = app.documents.filter((d) => d.status === "VERIFIED").length;
   const pendingDocs = app.documents.filter((d) => d.status === "PENDING").length;
   const facilities = FACILITY_LABELS.filter(([key]) => app[key]).map(([, label]) => label);
+  // Past the agreement there is nothing left to ask an applicant who predates online acceptance.
+  const agreementDone = !!app.agreementSignedAt || ["AGREEMENT_SIGNED", "ORIENTATION", "APPROVED"].includes(app.status);
 
   return (
     <div>
@@ -219,6 +223,41 @@ export default async function CentreApplicationDetailPage({ params }: { params: 
 
           <Card>
             <CardHeader
+              title="Centre In-charge Terms & Conditions"
+              description={app.termsAcceptedAt ? "Read and accepted by the applicant before the application form opened." : "Acceptance was not recorded for this application."}
+            />
+            <CardBody>
+              <AcceptedTerms
+                acceptedAt={app.termsAcceptedAt}
+                terms={app.acceptedTerms}
+                declaration={
+                  app.termsAcceptedAt && (
+                    <CentreDeclaration
+                      gender={app.gender}
+                      values={{
+                        name: app.applicantName,
+                        centreName: app.proposedName,
+                        address: [app.address, app.villageTown, app.block.name, app.district.name, app.state.name, app.pincode].filter(Boolean).join(", "),
+                        mobile: app.mobile,
+                        date: formatDate(app.termsAcceptedAt),
+                        place: app.villageTown,
+                      }}
+                      signature={`Accepted online on ${formatDateTime(app.termsAcceptedAt)}`}
+                    />
+                  )
+                }
+                missing={
+                  <Alert tone={agreementDone ? "info" : "warning"}>
+                    This application was submitted before applicants had to accept the Centre In-charge Terms &amp; Conditions online.
+                    {!agreementDone && " Ask the applicant to accept them before the agreement is signed."}
+                  </Alert>
+                }
+              />
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader
               title="Documents"
               description={
                 app.documents.length
@@ -370,6 +409,7 @@ export default async function CentreApplicationDetailPage({ params }: { params: 
               <KeyValue label="Review notes" value={app.reviewNotes ? <span className="whitespace-pre-line">{app.reviewNotes}</span> : "—"} />
               <KeyValue label="Documents" value={`${app.documents.length} uploaded · ${verifiedDocs} verified`} />
               <KeyValue label="Facilities declared" value={facilities.length ? facilities.join(", ") : "None declared"} />
+              <KeyValue label="Centre In-charge Terms" value={app.termsAcceptedAt ? `Accepted ${formatDateTime(app.termsAcceptedAt)}` : "Not recorded"} />
               <KeyValue label="Last updated" value={formatDateTime(app.updatedAt)} />
             </CardBody>
           </Card>

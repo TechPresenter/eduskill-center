@@ -5,6 +5,8 @@ import { getSetting } from "@/lib/settings";
 import { Alert } from "@/components/ui/feedback";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHero } from "@/components/site/page-hero";
+import { termsProp } from "@/components/site/terms-page";
+import { getTerms } from "@/server/terms";
 import { TrainerApplyForm } from "./apply-form";
 
 export const metadata: Metadata = {
@@ -15,9 +17,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function TrainerApplyPage() {
-  const [open, documentTypes] = await Promise.all([
+  const [open, documentTypes, volunteerTerms, inChargeTerms] = await Promise.all([
     getSetting<boolean>("admissions.trainerApplicationsOpen"),
     db.documentType.findMany({ where: { appliesTo: "TRAINER", isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }], select: { key: true, name: true, description: true, isRequired: true } }),
+    getTerms("volunteerTeacher"),
+    getTerms("inCharge"),
   ]);
 
   return (
@@ -26,7 +30,7 @@ export default async function TrainerApplyPage() {
         compact
         eyebrow="Volunteer with us"
         title="Become a [[Volunteer Trainer]]"
-        description="Share your skills with learners in your block, district or state. The application takes about ten minutes, and you can upload your documents right after submitting — or later, from the status page."
+        description="Share your skills with learners in your block, district or state. First read and accept the Volunteer Teacher Terms & Conditions; the application then takes about ten minutes, and you can upload your documents right after submitting — or later, from the status page."
         breadcrumbs={[{ label: "Home", href: "/" }, { label: "Become a Trainer", href: "/become-a-trainer" }, { label: "Apply" }]}
       >
         <ButtonLink href="/become-a-trainer/status" variant="white" leftIcon={<Search className="h-4 w-4" />}>
@@ -37,7 +41,7 @@ export default async function TrainerApplyPage() {
       <section className="bg-surface">
         <div className="container-x section-y">
           {open ? (
-            <TrainerApplyForm documentTypes={documentTypes} />
+            <TrainerApplyForm documentTypes={documentTypes} volunteerTerms={termsProp(volunteerTerms)} inChargeTerms={termsProp(inChargeTerms)} />
           ) : (
             <div className="mx-auto max-w-2xl">
               <Alert tone="warning" title="Volunteer trainer applications are currently closed">

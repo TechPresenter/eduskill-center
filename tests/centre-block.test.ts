@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import {
   approveCentreApplication,
@@ -8,7 +8,14 @@ import {
 import { createCenter, updateCenter } from "@/server/centers";
 import { centreApplicationSchema } from "@/lib/validation/centre-applications";
 import { centerInputSchema, centerUpdateSchema } from "@/lib/validation/centers";
+import { getTerms } from "@/server/terms";
 import { daysFromNow, ensureAdmin, makeLocation, uid } from "./helpers";
+
+/** Fingerprint of the Centre In-charge Terms the form would show right now. */
+let termsVersion = "";
+beforeAll(async () => {
+  termsVersion = (await getTerms("centreInCharge")).version;
+});
 
 /**
  * Block is typable on the Open-a-Centre application and the admin training-centre form: the server
@@ -22,6 +29,8 @@ type Loc = Awaited<ReturnType<typeof makeLocation>>;
 function applicationBody(loc: Loc, block: { blockId?: string | null; blockName?: string | null }) {
   const n = String(Math.floor(Math.random() * 1e8)).padStart(8, "0");
   return {
+    acceptCentreTerms: true,
+    termsVersion,
     applicantName: `Applicant ${uid()}`,
     mobile: `93${n}`,
     whatsapp: "",

@@ -33,9 +33,12 @@ const STATIC_PAGES: { path: string; priority: number; changeFrequency: Freq }[] 
   { path: "/training-centers", priority: 0.9, changeFrequency: "daily" },
   { path: "/become-a-trainer", priority: 0.8, changeFrequency: "monthly" },
   { path: "/become-a-trainer/apply", priority: 0.6, changeFrequency: "monthly" },
+  { path: "/become-a-trainer/terms", priority: 0.4, changeFrequency: "yearly" },
+  { path: "/become-a-trainer/in-charge-terms", priority: 0.4, changeFrequency: "yearly" },
   { path: "/become-a-trainer/status", priority: 0.3, changeFrequency: "yearly" },
   { path: "/open-a-centre", priority: 0.8, changeFrequency: "monthly" },
   { path: "/open-a-centre/apply", priority: 0.6, changeFrequency: "monthly" },
+  { path: "/open-a-centre/terms", priority: 0.4, changeFrequency: "yearly" },
   // /open-a-centre/status is noindex (it exposes an applicant's own record), so it is not listed.
   { path: "/scholarship", priority: 0.8, changeFrequency: "monthly" },
   { path: "/success-stories", priority: 0.7, changeFrequency: "weekly" },

@@ -31,6 +31,14 @@ export const SPACE_TYPES = [
 /** Public application to open a Normal Education Centre (Class 1–4). */
 export const centreApplicationSchema = z
   .object({
+    // Before the form – the Centre In-charge Terms & Conditions, read and accepted first.
+    // `termsVersion` is the fingerprint of the text the applicant was shown; the service refuses a
+    // stale one, so nobody is recorded as accepting terms they never saw.
+    acceptCentreTerms: z
+      .boolean({ error: "Read the Terms & Conditions and tick the box to accept them" })
+      .refine((v) => v, "Read the Terms & Conditions and tick the box to accept them"),
+    termsVersion: z.string({ error: "Read the Terms & Conditions and tick the box to accept them" }).trim().min(1).max(64),
+
     // Step 1 – applicant
     applicantName: z.string().trim().min(2, "Enter your full name").max(120),
     mobile: mobileSchema,

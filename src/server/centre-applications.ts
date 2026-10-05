@@ -11,6 +11,7 @@ import { normalizeEmail, normalizeMobile } from "@/server/auth";
 import { mobileVariants } from "@/lib/phone";
 import { createCenter } from "@/server/centers";
 import { resolveBlockId } from "@/server/locations";
+import { acceptedTermsByIds, requireCurrentTerms, snapshotTerms } from "@/server/terms";
 import type { CentreApplicationInput } from "@/lib/validation/centre-applications";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid, optionalDate } from "@/lib/api/query";
 import { z } from "zod";
@@ -113,6 +114,8 @@ export async function submitCentreApplication(input: CentreApplicationInput, met
   if (!(await getSetting<boolean>("centres.applicationsOpen"))) {
     throw Errors.forbidden("Centre applications are currently closed. Please check back soon.");
   }
+  // The applicant accepted the text they were shown; an older text (edited since the form loaded) is refused.
+  const terms = await requireCurrentTerms("centreInCharge", input.termsVersion, "acceptCentreTerms");
   const district = await db.district.findFirst({ where: { id: input.districtId, stateId: input.stateId, isActive: true, state: { isActive: true } }, select: { id: true } });
   if (!district) throw Errors.validation("Please correct the highlighted fields.", { districtId: "District must belong to the selected state" });
 
@@ -137,6 +140,8 @@ export async function submitCentreApplication(input: CentreApplicationInput, met
     { source: "the Open a Centre application", quotaKey: meta.ip ? `ip:${meta.ip}` : null }
   );
   if (!blockId) throw Errors.validation("Please correct the highlighted fields.", { blockId: "Select or type your block" });
+
+  const termsVersionId = await snapshotTerms(terms);
 
   const app = await db.$transaction(async (tx) => {
     const applicationNo = await generateCentreApplicationNo(tx);
@@ -171,6 +176,8 @@ export async function submitCentreApplication(input: CentreApplicationInput, met
         expectedStudents: input.expectedStudents,
         classes: input.classes,
         motivation: input.motivation,
+        termsVersionId,
+        termsAcceptedAt: new Date(),
         status: "SUBMITTED",
         statusHistory: { create: [{ toStatus: "SUBMITTED" }] },
       },
@@ -183,7 +190,7 @@ export async function submitCentreApplication(input: CentreApplicationInput, met
     module: "centre_applications",
     recordType: "CentreApplication",
     recordId: app.id,
-    description: `Centre application ${app.applicationNo} submitted by ${app.applicantName} for ${app.villageTown}`,
+    description: `Centre application ${app.applicationNo} submitted by ${app.applicantName} for ${app.villageTown}, after accepting the Centre In-charge Terms & Conditions (version ${terms.version})`,
     ip: meta.ip,
     userAgent: meta.userAgent,
   });
@@ -501,9 +508,14 @@ export async function listCentreApplications(q: CentreApplicationListQuery) {
 export async function getCentreApplicationDetail(id: string) {
   const app = await load(id);
   const actorIds = [...new Set(app.statusHistory.map((h) => h.changedById).filter((v): v is string => !!v))];
-  const actors = actorIds.length ? await db.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true } }) : [];
+  const [actors, acceptedTerms] = await Promise.all([
+    actorIds.length ? db.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true } }) : Promise.resolve([]),
+    // The exact text the applicant accepted — only the detail page needs it, so not in detailInclude.
+    acceptedTermsByIds([app.termsVersionId]),
+  ]);
   return {
     ...app,
+    acceptedTerms: app.termsVersionId ? (acceptedTerms.get(app.termsVersionId) ?? null) : null,
     step: CENTRE_STEP_OF[app.status],
     message: centreStatusMessage(app.status),
     actors: Object.fromEntries(actors.map((a) => [a.id, a.name])),

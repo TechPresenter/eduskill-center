@@ -5,10 +5,12 @@ import { absoluteUrl } from "@/lib/utils";
 import { Alert } from "@/components/ui/feedback";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHero } from "@/components/site/page-hero";
+import { termsProp } from "@/components/site/terms-page";
+import { getTerms } from "@/server/terms";
 import { TeacherApplyForm } from "./teacher-form";
 
 const TITLE = "Apply as a Teacher";
-const DESCRIPTION = "A short application to teach with EduSkill India Foundation: your subjects, the classes you can take, your experience and your resume. Takes about two minutes.";
+const DESCRIPTION = "A short application to teach with EduSkill India Foundation: your subjects, the classes you can take, your experience and your resume. After the Volunteer Teacher Terms & Conditions, it takes about two minutes.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -25,7 +27,7 @@ export const dynamic = "force-dynamic";
  * queue, one status page at /become-a-trainer/status — and the URL should say so.
  */
 export default async function TeacherApplyPage() {
-  const open = await getSetting<boolean>("admissions.trainerApplicationsOpen").catch(() => true);
+  const [open, terms] = await Promise.all([getSetting<boolean>("admissions.trainerApplicationsOpen").catch(() => true), getTerms("volunteerTeacher")]);
 
   return (
     <>
@@ -33,7 +35,7 @@ export default async function TeacherApplyPage() {
         compact
         eyebrow="Teach with us"
         title="Apply as a [[Teacher]]"
-        description="Tell us what you teach and attach your resume. That is all we need to start screening — about two minutes."
+        description="First read and accept the Volunteer Teacher Terms & Conditions; the form itself then takes about two minutes — tell us what you teach and attach your resume."
         breadcrumbs={[{ label: "Home", href: "/" }, { label: "Become a Trainer", href: "/become-a-trainer" }, { label: "Apply as a Teacher" }]}
       >
         <ButtonLink href="/become-a-trainer/status" variant="white" leftIcon={<Search className="h-4 w-4" />}>
@@ -44,7 +46,7 @@ export default async function TeacherApplyPage() {
       <section className="bg-surface">
         <div className="container-x section-y">
           {open !== false ? (
-            <TeacherApplyForm />
+            <TeacherApplyForm terms={termsProp(terms)} />
           ) : (
             <div className="mx-auto max-w-2xl">
               <Alert tone="warning" title="Teacher applications are currently closed">

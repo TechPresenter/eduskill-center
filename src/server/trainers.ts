@@ -22,6 +22,8 @@ import {
 } from "@/lib/validation/trainers";
 import { paginationSchema, getPaging, buildOrderBy, paged, optionalUuid, optionalDate } from "@/lib/api/query";
 import { resolveBlockId } from "@/server/locations";
+import { acceptedTermsByIds, requireCurrentTerms, snapshotTerms } from "@/server/terms";
+import { levelNeedsInChargeTerms } from "@/lib/terms/documents";
 import { z } from "zod";
 
 export interface Ctx {
@@ -113,6 +115,14 @@ export interface TrainerApplicationServiceInput {
   trainingMode: CourseMode;
   motivation?: string | null;
   photoUrl?: string | null;
+  /** Fingerprint of the Volunteer Teacher Terms the applicant accepted before the form opened (both forms). */
+  volunteerTermsVersion: string;
+  /**
+   * Fingerprint of the Block / District In-Charge terms accepted on the wizard's Level step. Recorded for
+   * Block and District level only; the schema requires it there for the wizard, while the short teacher
+   * form (filed as District level) asks only for the Volunteer Teacher terms.
+   */
+  inChargeTermsVersion?: string | null;
 }
 
 export interface SubmitTrainerApplicationMeta {
@@ -140,6 +150,10 @@ function identityWhere(email: string | null, mobiles: string[]): Prisma.UserWher
 
 export async function submitTrainerApplication(input: TrainerApplicationServiceInput, meta: SubmitTrainerApplicationMeta = {}) {
   if (!(await getSetting<boolean>("admissions.trainerApplicationsOpen"))) throw Errors.forbidden("Volunteer trainer applications are currently closed.");
+  // The applicant accepted the texts they were shown; an older text (edited since the form loaded) is refused.
+  const volunteerTerms = await requireCurrentTerms("volunteerTeacher", input.volunteerTermsVersion, "acceptVolunteerTerms");
+  const inChargeTerms =
+    levelNeedsInChargeTerms(input.level) && input.inChargeTermsVersion ? await requireCurrentTerms("inCharge", input.inChargeTermsVersion, "acceptInChargeTerms") : null;
   const email = input.email ? normalizeEmail(input.email) : null;
   const mobile = normalizeMobile(input.mobile);
 
@@ -155,6 +169,8 @@ export async function submitTrainerApplication(input: TrainerApplicationServiceI
   // A typed block is found in the district or added to it, so this runs after the duplicate checks
   // (a refused application adds no block) and before the transaction (resolveBlockId's rule).
   const loc = await resolveTrainerLocation(input.level, input, { quotaKey: meta.ip ? `ip:${meta.ip}` : null });
+  const [volunteerTermsVersionId, inChargeTermsVersionId] = await Promise.all([snapshotTerms(volunteerTerms), inChargeTerms ? snapshotTerms(inChargeTerms) : null]);
+  const acceptedAt = new Date();
 
   const app = await db.$transaction(async (tx) => {
     const applicationNo = await generateTrainerApplicationNo(tx);
@@ -183,6 +199,10 @@ export async function submitTrainerApplication(input: TrainerApplicationServiceI
         availability: input.availability ?? null,
         trainingMode: input.trainingMode,
         motivation: input.motivation ?? null,
+        volunteerTermsVersionId,
+        volunteerTermsAcceptedAt: acceptedAt,
+        inChargeTermsVersionId,
+        inChargeTermsAcceptedAt: inChargeTermsVersionId ? acceptedAt : null,
         status: "SUBMITTED",
         statusHistory: { create: [{ toStatus: "SUBMITTED", note: meta.submissionNote ?? null }] },
       },
@@ -195,7 +215,7 @@ export async function submitTrainerApplication(input: TrainerApplicationServiceI
     module: "trainers",
     recordType: "TrainerApplication",
     recordId: app.id,
-    description: meta.auditDescription?.(app.applicationNo) ?? `Volunteer trainer application ${app.applicationNo} submitted by ${app.name} (${titleCase(app.level)} level)`,
+    description: `${meta.auditDescription?.(app.applicationNo) ?? `Volunteer trainer application ${app.applicationNo} submitted by ${app.name} (${titleCase(app.level)} level)`}, after accepting the Volunteer Teacher Terms & Conditions (version ${volunteerTerms.version})${inChargeTerms ? ` and the In-Charge terms (version ${inChargeTerms.version})` : ""}`,
     ip: meta.ip,
     userAgent: meta.userAgent,
   });
@@ -294,6 +314,7 @@ export async function submitTeacherApplication(input: TeacherApplicationInput, r
       preferredCourseIds,
       languages: [],
       trainingMode: TEACHING_MODE_COURSE_MODE[input.teachingMode],
+      volunteerTermsVersion: input.volunteerTermsVersion,
     },
     {
       ...meta,
@@ -572,8 +593,19 @@ export async function getTrainerApplicationDetail(id: string) {
   if (!app) throw Errors.notFound("Trainer application");
   const courses = app.preferredCourseIds.length ? await db.course.findMany({ where: { id: { in: app.preferredCourseIds } }, select: { id: true, name: true, code: true } }) : [];
   const actorIds = [...new Set(app.statusHistory.map((h) => h.changedById).filter((v): v is string => !!v))];
-  const actors = actorIds.length ? await db.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true } }) : [];
-  return { ...app, preferredCourses: courses, actors: Object.fromEntries(actors.map((a) => [a.id, a.name])), allowedTransitions: TRAINER_TRANSITIONS[app.status] };
+  const [actors, accepted] = await Promise.all([
+    actorIds.length ? db.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true } }) : Promise.resolve([]),
+    // The exact texts the applicant accepted — only the detail page needs them.
+    acceptedTermsByIds([app.volunteerTermsVersionId, app.inChargeTermsVersionId]),
+  ]);
+  return {
+    ...app,
+    preferredCourses: courses,
+    actors: Object.fromEntries(actors.map((a) => [a.id, a.name])),
+    allowedTransitions: TRAINER_TRANSITIONS[app.status],
+    acceptedVolunteerTerms: app.volunteerTermsVersionId ? (accepted.get(app.volunteerTermsVersionId) ?? null) : null,
+    acceptedInChargeTerms: app.inChargeTermsVersionId ? (accepted.get(app.inChargeTermsVersionId) ?? null) : null,
+  };
 }
 
 export const trainerListSchema = paginationSchema.extend({

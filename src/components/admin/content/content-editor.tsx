@@ -40,6 +40,8 @@ export interface ContentEditorProps {
    * search-result preview beside the form on wide screens.
    */
   publicPrefix?: string;
+  /** The record's fixed public address, when it is not `${publicPrefix}/${slug}` (a page shown under another section). */
+  publicPath?: string;
   /** Rendered above the form (e.g. informational alerts). */
   children?: React.ReactNode;
 }
@@ -47,7 +49,7 @@ export interface ContentEditorProps {
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** How the record will look in a listing card and as a search result, updated as the author types. */
-function LivePreview({ values, publicPrefix }: { values: FormValues; publicPrefix: string }) {
+function LivePreview({ values, publicPrefix, publicPath }: { values: FormValues; publicPrefix: string; publicPath?: string }) {
   const title = str(values.title) || "Untitled";
   const summary = str(values.excerpt) || str(values.summary);
   const image = str(values.coverImage) || str(values.image);
@@ -85,7 +87,7 @@ function LivePreview({ values, publicPrefix }: { values: FormValues; publicPrefi
           <Globe className="h-4 w-4" aria-hidden /> Search result
         </h2>
         <p className="truncate font-mono text-caption text-success-dark">
-          {publicPrefix}/{slug}
+          {publicPath ?? `${publicPrefix}/${slug}`}
         </p>
         <p className="text-body font-semibold break-words text-navy-light">{truncate(seoTitle, 70)}</p>
         <p className="text-body-sm text-muted">{seoDescription ? truncate(seoDescription, 160) : "Search engines will pick text from the page."}</p>
@@ -94,7 +96,7 @@ function LivePreview({ values, publicPrefix }: { values: FormValues; publicPrefi
   );
 }
 
-export function ContentEditor({ endpoint, id, fields, initial, itemLabel, backHref, canEdit, canDelete = canEdit, deleteLocked, viewHref, meta, publicPrefix, children }: ContentEditorProps) {
+export function ContentEditor({ endpoint, id, fields, initial, itemLabel, backHref, canEdit, canDelete = canEdit, deleteLocked, viewHref, meta, publicPrefix, publicPath, children }: ContentEditorProps) {
   const router = useRouter();
   const [saved, setSaved] = React.useState<FormValues>(initial);
   const [values, setValues] = React.useState<FormValues>(initial);
@@ -178,7 +180,7 @@ export function ContentEditor({ endpoint, id, fields, initial, itemLabel, backHr
         {preview && (
           <aside className="hidden xl:block" aria-label="Live preview">
             <div className="sticky top-20">
-              <LivePreview values={values} publicPrefix={publicPrefix} />
+              <LivePreview values={values} publicPrefix={publicPrefix} publicPath={publicPath} />
             </div>
           </aside>
         )}

@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, Search, Send } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, CheckCircle2, Search, Send } from "lucide-react";
 import { api, ApiClientError } from "@/lib/api-client";
 import { phoneIssue } from "@/lib/phone";
 import { withBasePath } from "@/lib/base-path";
@@ -19,6 +20,7 @@ import { TagInput } from "@/components/ui/file-upload";
 import { FileDropzone } from "@/components/ui/file-dropzone";
 import { DistrictCombobox, type DistrictOption } from "@/components/shared/district-combobox";
 import { toast } from "@/components/ui/toast";
+import { TermsReader, type TermsProp } from "@/components/site/terms-reader";
 import {
   TEACHING_CLASS_BANDS,
   TEACHING_CLASS_LABEL,
@@ -128,7 +130,19 @@ function validate(f: FormState, district: DistrictOption | null, resume: File | 
   return e;
 }
 
-export function TeacherApplyForm() {
+const TERMS_REQUIRED = "Read the Volunteer Teacher Terms & Conditions to the end and tick the box to accept them";
+
+/**
+ * `terms`: the Volunteer Teacher Terms & Conditions. They are read and accepted on a first screen;
+ * the form itself opens only after that (and closes again if the server reports a newer text).
+ */
+export function TeacherApplyForm({ terms }: { terms: TermsProp }) {
+  const router = useRouter();
+  /** The terms version that was on screen when the box was ticked; accepted only while it is the current one. */
+  const [acceptedTermsVersion, setAcceptedTermsVersion] = React.useState<string | null>(null);
+  const [termsDone, setTermsDone] = React.useState(false);
+  const [termsError, setTermsError] = React.useState<string | null>(null);
+  const termsAccepted = acceptedTermsVersion === terms.version;
   const [form, setForm] = React.useState<FormState>(INITIAL);
   const [district, setDistrict] = React.useState<DistrictOption | null>(null);
   const [resume, setResume] = React.useState<File | null>(null);
@@ -152,8 +166,29 @@ export function TeacherApplyForm() {
       return next;
     });
 
+  /** Back to the terms screen, at its top — the form above it was longer, so the page would sit on the footer. */
+  const reopenTerms = () => {
+    setTermsDone(false);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const continueToForm = () => {
+    if (!termsAccepted) {
+      setTermsError(TERMS_REQUIRED);
+      return;
+    }
+    setTermsError(null);
+    setTermsDone(true);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const submit = async (ev: React.FormEvent) => {
     ev.preventDefault();
+    if (!termsAccepted) {
+      setTermsError(TERMS_REQUIRED);
+      reopenTerms();
+      return;
+    }
     const e = validate(form, district, resume);
     setErrors(e);
     setFormError(null);
@@ -174,6 +209,8 @@ export function TeacherApplyForm() {
       fd.append("experienceBand", form.experienceBand);
       fd.append("teachingMode", form.teachingMode);
       fd.append("consent", "true");
+      fd.append("acceptVolunteerTerms", "true");
+      fd.append("volunteerTermsVersion", acceptedTermsVersion ?? "");
       fd.append("resume", resume!);
       const data = await api.post<Submitted>("/api/public/teacher-applications", fd);
       setSubmitted(data);
@@ -181,7 +218,13 @@ export function TeacherApplyForm() {
       topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
       if (err instanceof ApiClientError) {
-        if (err.status === 422) {
+        if (err.status === 422 && err.fieldErrors.acceptVolunteerTerms) {
+          // The terms were edited while this form was open: back to the first screen with the new text.
+          setAcceptedTermsVersion(null);
+          setTermsError(err.fieldErrors.acceptVolunteerTerms);
+          reopenTerms();
+          router.refresh();
+        } else if (err.status === 422) {
           setErrors(err.fieldErrors);
           setFormError(err.message);
         } else if (err.status === 409) {
@@ -248,8 +291,54 @@ export function TeacherApplyForm() {
     .filter(([key]) => errors[key])
     .map(([key, id]) => ({ id, message: `${FIELD_LABELS[key] ?? key}: ${errors[key]}` }));
 
+  if (!termsDone) {
+    return (
+      <div ref={topRef} className="mx-auto max-w-4xl scroll-mt-24">
+        <Card>
+          <CardBody className="card-p space-y-5 sm:p-8">
+            <div>
+              <p className="text-overline text-orange">Step 1 of 2</p>
+              <h2 className="mt-1 text-h3 text-navy">Read the terms before you apply</h2>
+              <p className="mt-1 text-body text-muted">
+                Every volunteer teacher with EduSkill India Foundation agrees to these terms. Read them to the end and tick the box to accept them — the application form opens after that.
+              </p>
+            </div>
+            {/* Keyed by version: when the terms change, the reader starts again. */}
+            <TermsReader
+              key={terms.version}
+              terms={terms}
+              checkboxLabel="I have read and understood the Volunteer Teacher Terms & Conditions, and I agree to follow them."
+              accepted={termsAccepted}
+              onAcceptedChange={(v) => {
+                setAcceptedTermsVersion(v ? terms.version : null);
+                setTermsError(null);
+              }}
+              error={termsError ?? undefined}
+            />
+            <div className="border-t border-line pt-6">
+              <Button type="button" size="lg" fullWidth onClick={continueToForm} rightIcon={<ArrowRight className="h-4 w-4" />} className="sm:w-auto sm:min-w-64">
+                Continue to the application
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div ref={topRef} className="mx-auto max-w-4xl scroll-mt-24">
+      <Alert
+        tone="success"
+        className="mb-5 items-center"
+        action={
+          <Button type="button" variant="ghost" size="sm" onClick={reopenTerms} className="shrink-0">
+            Read them again
+          </Button>
+        }
+      >
+        <span className="font-semibold">Step 2 of 2.</span> You accepted the Volunteer Teacher Terms &amp; Conditions.
+      </Alert>
       <form noValidate onSubmit={submit}>
         <Card>
           <CardBody className="card-p space-y-6 sm:p-8">

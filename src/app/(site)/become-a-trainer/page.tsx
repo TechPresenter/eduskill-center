@@ -7,6 +7,7 @@ import { stripHighlight } from "@/components/ui/highlight";
 import { getSection } from "@/lib/cms";
 import { getSetting } from "@/lib/settings";
 import { absoluteUrl } from "@/lib/utils";
+import { TERMS_DOCUMENTS } from "@/lib/terms/documents";
 import { PageHero } from "@/components/site/page-hero";
 import { Reveal } from "@/components/site/reveal";
 import { SectionHeading } from "@/components/site/section-heading";
@@ -71,6 +72,17 @@ export default async function BecomeTrainerPage() {
             .
           </p>
         )}
+        <p className="mt-2 text-body-sm text-white/80">
+          Before you apply you read and accept the{" "}
+          <Link href={TERMS_DOCUMENTS.volunteerTeacher.path} className="ring-focus-inverse rounded-xs font-semibold text-white underline underline-offset-4 hover:text-orange-light">
+            Volunteer Teacher Terms &amp; Conditions
+          </Link>
+          ; Block and District level volunteers also accept the{" "}
+          <Link href={TERMS_DOCUMENTS.inCharge.path} className="ring-focus-inverse rounded-xs font-semibold text-white underline underline-offset-4 hover:text-orange-light">
+            In-Charge terms
+          </Link>
+          .
+        </p>
       </PageHero>
 
       {(section.benefits ?? []).length > 0 && (
@@ -147,7 +159,7 @@ export default async function BecomeTrainerPage() {
 
       <CtaBand
         title="Ready to [[teach]]?"
-        description="The short teacher application takes about two minutes — keep your resume handy. The full volunteer application asks for your documents and photo as well."
+        description="After you accept the Volunteer Teacher Terms & Conditions, the short teacher application takes about two minutes — keep your resume handy. The full volunteer application asks for your documents and photo as well."
         primary={open !== false ? { label: "Apply as a Teacher", href: "/become-a-trainer/teach" } : undefined}
         secondary={{ label: "Track application", href: "/become-a-trainer/status" }}
       />

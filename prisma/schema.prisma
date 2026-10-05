@@ -1068,13 +1068,25 @@ model TrainerApplication {
   interviewMode           String?                  @map("interview_mode")
   interviewNotes          String?                  @map("interview_notes")
   reviewedById            String?                  @map("reviewed_by_id") @db.Uuid
-  submittedAt             DateTime                 @default(now()) @map("submitted_at")
-  createdAt               DateTime                 @default(now()) @map("created_at")
-  updatedAt               DateTime                 @updatedAt @map("updated_at")
 
-  state    State     @relation(fields: [stateId], references: [id], onDelete: Restrict)
-  district District? @relation(fields: [districtId], references: [id], onDelete: Restrict)
-  block    Block?    @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  /// The Volunteer Teacher Terms & Conditions, read and accepted before the form opened (both forms).
+  /// Null only on applications submitted before acceptance was required.
+  volunteerTermsVersionId  String?   @map("volunteer_terms_version_id") @db.Uuid
+  volunteerTermsAcceptedAt DateTime? @map("volunteer_terms_accepted_at")
+  /// The Block / District In-Charge terms, accepted on the wizard's Level step by Block and District
+  /// level applicants. Null for State level, the short teacher form and older applications.
+  inChargeTermsVersionId   String?   @map("in_charge_terms_version_id") @db.Uuid
+  inChargeTermsAcceptedAt  DateTime? @map("in_charge_terms_accepted_at")
+
+  submittedAt DateTime @default(now()) @map("submitted_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  state                 State         @relation(fields: [stateId], references: [id], onDelete: Restrict)
+  district              District?     @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  block                 Block?        @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  volunteerTermsVersion TermsVersion? @relation("VolunteerTerms", fields: [volunteerTermsVersionId], references: [id], onDelete: Restrict)
+  inChargeTermsVersion  TermsVersion? @relation("InChargeTerms", fields: [inChargeTermsVersionId], references: [id], onDelete: Restrict)
 
   documents     TrainerDocument[]
   statusHistory TrainerApplicationStatusHistory[]
@@ -2253,14 +2265,20 @@ model CentreApplication {
   /// Set when the application is approved and the training center record is created.
   centerId String? @unique @map("center_id") @db.Uuid
 
+  /// The Centre In-charge Terms & Conditions the applicant read and accepted before the form opened.
+  /// Null only on applications submitted before acceptance was required.
+  termsVersionId  String?   @map("terms_version_id") @db.Uuid
+  termsAcceptedAt DateTime? @map("terms_accepted_at")
+
   submittedAt DateTime @default(now()) @map("submitted_at")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  state    State    @relation(fields: [stateId], references: [id], onDelete: Restrict)
-  district District @relation(fields: [districtId], references: [id], onDelete: Restrict)
-  block    Block    @relation(fields: [blockId], references: [id], onDelete: Restrict)
-  center   Center?  @relation(fields: [centerId], references: [id], onDelete: SetNull)
+  state        State         @relation(fields: [stateId], references: [id], onDelete: Restrict)
+  district     District      @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  block        Block         @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  center       Center?       @relation(fields: [centerId], references: [id], onDelete: SetNull)
+  termsVersion TermsVersion? @relation(fields: [termsVersionId], references: [id], onDelete: Restrict)
 
   documents     CentreApplicationDocument[]
   statusHistory CentreApplicationStatusHistory[]
@@ -2305,6 +2323,27 @@ model CentreApplicationStatusHistory {
 
   @@index([applicationId])
   @@map("centre_application_status_history")
+}
+
+/// Exact text of each version of a Terms & Conditions document that an applicant accepted (Centre
+/// In-charge, Volunteer Teacher, Block / District In-Charge — `TERMS_DOCUMENTS` in src/lib/terms).
+/// The live text is an editable CMS page; this keeps what each applicant actually agreed to.
+model TermsVersion {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  /// Which document: its CMS page slug.
+  document  String
+  /// First 16 hex characters of SHA-256 over title + content (`termsVersion`).
+  version   String
+  title     String
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  centreApplications         CentreApplication[]
+  volunteerTermsApplications TrainerApplication[] @relation("VolunteerTerms")
+  inChargeTermsApplications  TrainerApplication[] @relation("InChargeTerms")
+
+  @@unique([document, version])
+  @@map("terms_versions")
 }
 
 // ───────────────────────────── MANUAL EMAIL ─────────────────────────────

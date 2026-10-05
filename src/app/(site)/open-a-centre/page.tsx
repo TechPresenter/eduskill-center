@@ -28,6 +28,7 @@ import { getSetting } from "@/lib/settings";
 import { absoluteUrl } from "@/lib/utils";
 import { CENTRE_CLASSES } from "@/lib/validation/centre-applications";
 import { CENTRE_STEPS } from "@/server/centre-applications";
+import { TERMS_DOCUMENTS } from "@/lib/terms/documents";
 import { CentreSteps } from "@/components/site/centre-steps";
 import { CtaBand } from "@/components/site/cta-band";
 import { JsonLd } from "@/components/site/json-ld";
@@ -213,6 +214,12 @@ export default async function OpenACentrePage() {
                     Track an application
                   </ButtonLink>
                 )}
+                <Link
+                  href={TERMS_DOCUMENTS.centreInCharge.path}
+                  className="ring-focus mt-2 flex min-h-11 items-center justify-center rounded-md text-body-sm font-semibold text-navy underline-offset-4 hover:underline"
+                >
+                  Read the Centre In-charge Terms &amp; Conditions
+                </Link>
               </div>
             </div>
           </Reveal>
@@ -423,6 +430,13 @@ export default async function OpenACentrePage() {
                   Track your application
                 </ButtonLink>
               </div>
+              <p className="mt-4 text-body-sm text-muted">
+                Before the form opens you read and accept the{" "}
+                <Link href={TERMS_DOCUMENTS.centreInCharge.path} className="font-semibold text-orange underline-offset-4 hover:underline">
+                  Centre In-charge Terms &amp; Conditions
+                </Link>
+                .
+              </p>
             </div>
           </Reveal>
           <Reveal className="lg:col-span-7" delay={90}>

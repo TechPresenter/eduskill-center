@@ -72,7 +72,7 @@ export default async function CmsPagesPage({ searchParams }: { searchParams: Pro
                 href={`${base}/${p.id}`}
                 leading={<IconTile tone={p.status === "PUBLISHED" ? "lavender" : "neutral"}>{p.isFixed ? <Lock /> : <FileText />}</IconTile>}
                 title={p.title}
-                subtitle={`/${p.slug}`}
+                subtitle={p.publicPath}
                 clamp={1}
                 meta={
                   <>
@@ -111,7 +111,7 @@ export default async function CmsPagesPage({ searchParams }: { searchParams: Pro
                     </TD>
                     <TD>
                       <span className="inline-flex items-center gap-1 font-mono text-caption text-muted">
-                        /{p.slug}
+                        {p.publicPath}
                         {p.isFixed && (
                           <Badge tone="neutral" className="ml-1">
                             <Lock className="h-3 w-3" aria-hidden /> System

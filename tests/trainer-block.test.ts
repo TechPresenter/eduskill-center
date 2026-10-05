@@ -1,8 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import { approveTrainerApplication, resolveTrainerLocation, submitTrainerApplication, transitionTrainerApplication } from "@/server/trainers";
 import { trainerApplicationSchema } from "@/lib/validation/trainers";
+import { getTerms } from "@/server/terms";
 import { ensureAdmin, makeLocation, uid } from "./helpers";
+
+/** Fingerprints of the terms the form would show right now. */
+let volunteerTermsVersion = "";
+let inChargeTermsVersion = "";
+beforeAll(async () => {
+  volunteerTermsVersion = (await getTerms("volunteerTeacher")).version;
+  inChargeTermsVersion = (await getTerms("inCharge")).version;
+});
 
 /**
  * Block is typable on the Become a Trainer application: a BLOCK-level volunteer picks the block or
@@ -18,6 +27,9 @@ type Level = "BLOCK" | "DISTRICT" | "STATE";
 function applicationBody(loc: Loc, level: Level, block: { blockId?: string | null; blockName?: string | null } = {}) {
   const n = String(Math.floor(Math.random() * 1e8)).padStart(8, "0");
   return {
+    acceptVolunteerTerms: true,
+    volunteerTermsVersion,
+    ...(level === "STATE" ? {} : { acceptInChargeTerms: true, inChargeTermsVersion }),
     name: `Trainer ${uid()}`,
     mobile: `95${n}`,
     whatsapp: "",

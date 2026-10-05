@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Armchair, CheckCircle2, Droplets, FileText, Pencil, Search, Toilet, Zap } from "lucide-react";
 import { api, ApiClientError } from "@/lib/api-client";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -19,6 +20,9 @@ import { Field, FormGrid, FormSection } from "@/components/ui/form";
 import { FileUpload, type UploadedFile } from "@/components/ui/file-upload";
 import { WizardShell } from "@/components/ui/wizard-shell";
 import { toast } from "@/components/ui/toast";
+import { formatDate } from "@/lib/utils";
+import { CentreDeclaration } from "@/components/site/terms-declarations";
+import { TermsReader, type TermsProp } from "@/components/site/terms-reader";
 import { LocationCascade, type LocationValue } from "@/components/shared/location-cascade";
 import { CentreSteps, type CentreStepItem } from "@/components/site/centre-steps";
 import { CENTRE_DOCUMENT_TYPES, CENTRE_MAX_SPACE_PHOTOS } from "../centre-documents";
@@ -35,6 +39,8 @@ export interface CentreApplyFormProps {
   classes: readonly Option[];
   /** `SPACE_TYPES` – kinds of space the centre may use. */
   spaceTypes: readonly Option[];
+  /** The Centre In-charge Terms & Conditions (`getTerms("centreInCharge")`), read and accepted before the form. */
+  terms: TermsProp;
 }
 
 interface Submitted {
@@ -44,6 +50,8 @@ interface Submitted {
 }
 
 interface FormState {
+  /** The terms version that was on screen when the box was ticked; accepted only while it is the current one. */
+  acceptedTermsVersion: string | null;
   applicantName: string;
   mobile: string;
   whatsapp: string;
@@ -78,6 +86,7 @@ interface FormState {
 }
 
 const INITIAL: FormState = {
+  acceptedTermsVersion: null,
   applicantName: "",
   mobile: "",
   whatsapp: "",
@@ -106,6 +115,7 @@ const INITIAL: FormState = {
 };
 
 const WIZARD_STEPS = [
+  { label: "Terms", description: "Read and accept first" },
   { label: "Applicant", description: "About you" },
   { label: "Location", description: "Where the centre will run" },
   { label: "Centre", description: "Space, rooms and classes" },
@@ -115,7 +125,11 @@ const WIZARD_STEPS = [
 
 const LAST_STEP = WIZARD_STEPS.length - 1;
 
+/** Wizard step indexes, so validation and the review cards follow the order above. */
+const STEP = { terms: 0, applicant: 1, location: 2, centre: 3, motivation: 4, review: LAST_STEP } as const;
+
 const STEP_FIELDS: string[][] = [
+  ["acceptCentreTerms", "termsVersion"],
   ["applicantName", "mobile", "whatsapp", "email", "dob", "gender", "qualification", "occupation", "teachingExperienceYears"],
   ["stateId", "districtId", "blockId", "blockName", "villageTown", "address", "pincode"],
   ["proposedName", "spaceType", "roomCount", "areaSqft", "seatingCapacity", "hasElectricity", "hasToilet", "hasDrinkingWater", "hasFurniture", "expectedStudents", "classes"],
@@ -165,9 +179,12 @@ function blockFieldIssue(f: FormState): string | null {
   return parsed.success ? null : (parsed.error.issues[0]?.message ?? "Enter your block name");
 }
 
-function validateStep(step: number, f: FormState): Record<string, string> {
+function validateStep(step: number, f: FormState, termsVersion: string): Record<string, string> {
   const e: Record<string, string> = {};
-  if (step === 0) {
+  if (step === STEP.terms) {
+    if (f.acceptedTermsVersion !== termsVersion) e.acceptCentreTerms = "Read the Terms & Conditions to the end and tick the box to accept them";
+  }
+  if (step === STEP.applicant) {
     if (f.applicantName.trim().length < 2) e.applicantName = "Enter your full name";
     const mobileIssue = phoneIssue(f.mobile);
     if (mobileIssue) e.mobile = mobileIssue;
@@ -178,7 +195,7 @@ function validateStep(step: number, f: FormState): Record<string, string> {
     if (f.qualification.trim().length < 2) e.qualification = "Enter your highest qualification";
     if (!intBetween(f.teachingExperienceYears, 0, 60)) e.teachingExperienceYears = "Enter a number between 0 and 60";
   }
-  if (step === 1) {
+  if (step === STEP.location) {
     if (!f.stateId) e.stateId = "Select your state";
     if (!f.districtId) e.districtId = "Select your district";
     const blockIssue = blockFieldIssue(f);
@@ -187,7 +204,7 @@ function validateStep(step: number, f: FormState): Record<string, string> {
     if (f.address.trim().length < 5) e.address = "Enter the full address of the centre";
     if (!PIN_RE.test(f.pincode.trim())) e.pincode = "Enter a valid 6-digit PIN code";
   }
-  if (step === 2) {
+  if (step === STEP.centre) {
     if (f.proposedName.trim().length < 3) e.proposedName = "Enter a name for the centre";
     if (!f.spaceType) e.spaceType = "Select the kind of space";
     if (!intBetween(f.roomCount, 1, 50)) e.roomCount = "At least one room is required";
@@ -196,7 +213,7 @@ function validateStep(step: number, f: FormState): Record<string, string> {
     if (!intBetween(f.expectedStudents, 1, 500)) e.expectedStudents = "Enter the expected number of children";
     if (f.classes.length === 0) e.classes = "Select at least one class";
   }
-  if (step === 3) {
+  if (step === STEP.motivation) {
     if (f.motivation.trim().length < 30) e.motivation = "Please write at least a few sentences (30+ characters)";
     if (!f.acceptTerms) e.acceptTerms = "You must accept the declaration to continue";
   }
@@ -204,19 +221,21 @@ function validateStep(step: number, f: FormState): Record<string, string> {
 }
 
 /** All steps before `upto`, so Review can never submit an incomplete form. */
-function validateThrough(upto: number, f: FormState): { step: number; errors: Record<string, string> } | null {
+function validateThrough(upto: number, f: FormState, termsVersion: string): { step: number; errors: Record<string, string> } | null {
   for (let s = 0; s <= upto; s++) {
-    const errors = validateStep(s, f);
+    const errors = validateStep(s, f, termsVersion);
     if (Object.keys(errors).length) return { step: s, errors };
   }
   return null;
 }
 
-export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormProps) {
+export function CentreApplyForm({ steps, classes, spaceTypes, terms }: CentreApplyFormProps) {
+  const router = useRouter();
   const [step, setStep] = React.useState(0);
   const [form, setForm] = React.useState<FormState>(INITIAL);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [formError, setFormError] = React.useState<React.ReactNode>(null);
+  const [notice, setNotice] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [submitted, setSubmitted] = React.useState<Submitted | null>(null);
   const [names, setNames] = React.useState<{ state?: string; district?: string; block?: string }>({});
@@ -226,6 +245,8 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
   const [docs, setDocs] = React.useState<Record<string, UploadedFile | null>>({});
   const [spacePhotos, setSpacePhotos] = React.useState<(UploadedFile | null)[]>([null]);
   const topRef = React.useRef<HTMLDivElement>(null);
+  /** The terms version on first render — what a saved draft's acceptance is compared with. */
+  const termsVersionAtMount = React.useRef(terms.version);
 
   /* ── Restore a saved draft / an in-progress upload step (survives a refresh) ── */
   React.useEffect(() => {
@@ -248,10 +269,17 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
         }
         const rawDraft = localStorage.getItem(DRAFT_KEY);
         if (rawDraft) {
-          const draft = JSON.parse(rawDraft) as { form?: Partial<FormState>; step?: number };
+          const draft = JSON.parse(rawDraft) as { form?: Partial<FormState>; step?: number; names?: { state?: string; district?: string; block?: string } };
           if (draft?.form) {
-            setForm({ ...INITIAL, ...draft.form, acceptTerms: false });
-            setStep(Math.min(Math.max(draft.step ?? 0, 0), LAST_STEP));
+            // An acceptance carries over only for the exact text that was accepted. A draft saved
+            // before the terms changed (or before they existed) reopens on the Terms step, answers kept.
+            const termsAccepted = draft.form.acceptedTermsVersion === termsVersionAtMount.current;
+            setForm({ ...INITIAL, ...draft.form, acceptTerms: false, acceptedTermsVersion: termsAccepted ? termsVersionAtMount.current : null });
+            setStep(termsAccepted ? Math.min(Math.max(draft.step ?? 0, 0), LAST_STEP) : STEP.terms);
+            if (!termsAccepted) setNotice("We restored the answers you saved on this device. Read and accept the Centre In-charge Terms & Conditions to continue.");
+            // The place names come from the Location step's pickers; restored straight onto a later step,
+            // Review and the declaration still need them.
+            if (draft.names) setNames(draft.names);
             setDraftSaved(true);
           }
         }
@@ -274,14 +302,14 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
   const saveDraft = React.useCallback(
     (f: FormState, s: number) => {
       try {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({ form: { ...f, acceptTerms: false }, step: s }));
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({ form: { ...f, acceptTerms: false }, step: s, names }));
         setDraftSaved(true);
         return true;
       } catch {
         return false;
       }
     },
-    []
+    [names]
   );
 
   const clearDraft = React.useCallback(() => {
@@ -319,13 +347,14 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
   };
 
   const next = () => {
-    const e = validateStep(step, form);
+    const e = validateStep(step, form, terms.version);
     setErrors(e);
     if (Object.keys(e).length) {
       setFormError("Please correct the highlighted fields on this step.");
       return;
     }
     setFormError(null);
+    setNotice(null);
     saveDraft(form, Math.min(step + 1, LAST_STEP));
     goTo(Math.min(step + 1, LAST_STEP));
   };
@@ -336,7 +365,7 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
   };
 
   const submit = async () => {
-    const invalid = validateThrough(3, form);
+    const invalid = validateThrough(STEP.motivation, form, terms.version);
     if (invalid) {
       setErrors(invalid.errors);
       setFormError("Some details are missing. Please complete the highlighted fields.");
@@ -348,6 +377,8 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
     setFormError(null);
     try {
       const payload = {
+        acceptCentreTerms: form.acceptedTermsVersion === terms.version,
+        termsVersion: form.acceptedTermsVersion ?? "",
         applicantName: form.applicantName.trim(),
         mobile: form.mobile.trim(),
         whatsapp: form.whatsapp.trim(),
@@ -390,6 +421,11 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
       if (err instanceof ApiClientError) {
         if (err.status === 422) {
           const fe = err.fieldErrors;
+          if (fe.acceptCentreTerms) {
+            // The terms were edited while this form was open: drop the old acceptance, load the new text.
+            setForm((f) => ({ ...f, acceptedTermsVersion: null }));
+            router.refresh();
+          }
           setErrors(fe);
           const firstStep = STEP_FIELDS.findIndex((fields) => fields.some((f) => fe[f]));
           setFormError(err.message);
@@ -426,7 +462,8 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
     setPhoto(null);
     setSpacePhotos([null]);
     setForm(INITIAL);
-    setStep(0);
+    setNotice(null);
+    setStep(STEP.terms);
     scrollTop();
   };
 
@@ -615,6 +652,11 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
             {formError}
           </Alert>
         )}
+        {notice && !formError && (
+          <Alert tone="info" className="mb-5">
+            {notice}
+          </Alert>
+        )}
 
         <Card>
           <CardBody className="p-5 sm:p-8">
@@ -627,7 +669,33 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
                 else void submit();
               }}
             >
-              {step === 0 && (
+              {step === STEP.terms && (
+                <FormSection
+                  title="Read the terms before you apply"
+                  description="Every Centre In-charge authorised by EduSkill India Foundation agrees to these terms. Read them to the end and tick the box to accept them — the application form opens after that."
+                >
+                  {/* Keyed by version: when the terms change under an open form, the reader starts again. */}
+                  <TermsReader
+                    key={terms.version}
+                    terms={terms}
+                    checkboxLabel="I have read and understood the Centre In-charge Terms & Conditions, and I agree to follow them."
+                    accepted={form.acceptedTermsVersion === terms.version}
+                    onAcceptedChange={(v) => {
+                      // Ticked against the text on screen now; a newer text after a refresh unticks it.
+                      setForm((f) => ({ ...f, acceptedTermsVersion: v ? terms.version : null }));
+                      setErrors((e) => {
+                        if (!e.acceptCentreTerms) return e;
+                        const rest = { ...e };
+                        delete rest.acceptCentreTerms;
+                        return rest;
+                      });
+                    }}
+                    error={errors.acceptCentreTerms}
+                  />
+                </FormSection>
+              )}
+
+              {step === STEP.applicant && (
                 <FormSection title="Applicant details" description="The person who will run the centre. We use these details to contact you about the application.">
                   <FormGrid>
                     <Field label="Full name" required error={errors.applicantName} className="sm:col-span-2">
@@ -662,7 +730,7 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
                 </FormSection>
               )}
 
-              {step === 1 && (
+              {step === STEP.location && (
                 <FormSection title="Where the centre will run" description="Select the state and district, pick or type your block, then give the exact village or town and address of the proposed centre.">
                   <LocationCascade
                     value={{ stateId: form.stateId, districtId: form.districtId, blockId: form.blockId, blockName: form.blockName }}
@@ -697,7 +765,7 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
                 </FormSection>
               )}
 
-              {step === 2 && (
+              {step === STEP.centre && (
                 <div className="space-y-8">
                   <FormSection title="The proposed centre" description="Tell us about the space where Class 1 to 4 children would study.">
                     <FormGrid>
@@ -761,7 +829,7 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
                 </div>
               )}
 
-              {step === 3 && (
+              {step === STEP.motivation && (
                 <FormSection title="Motivation & declaration" description="In your own words, why do you want to open a Normal Education Centre in your area?">
                   <Field
                     label="Why do you want to open this centre?"
@@ -794,7 +862,15 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
 
                   {[
                     {
-                      step: 0,
+                      step: STEP.terms,
+                      title: "Terms & Conditions",
+                      rows: [
+                        { label: "Centre In-charge Terms & Conditions", value: form.acceptedTermsVersion === terms.version ? "Read and accepted" : "Not accepted" },
+                        { label: "Terms last updated", value: terms.updatedLabel ?? "—" },
+                      ],
+                    },
+                    {
+                      step: STEP.applicant,
                       title: "Applicant",
                       rows: [
                         { label: "Full name", value: form.applicantName },
@@ -809,7 +885,7 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
                       ],
                     },
                     {
-                      step: 1,
+                      step: STEP.location,
                       title: "Location",
                       rows: [
                         { label: "State", value: names.state ?? "—" },
@@ -821,7 +897,7 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
                       ],
                     },
                     {
-                      step: 2,
+                      step: STEP.centre,
                       title: "Proposed centre",
                       rows: [
                         { label: "Centre name", value: form.proposedName },
@@ -835,7 +911,7 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
                       ],
                     },
                     {
-                      step: 3,
+                      step: STEP.motivation,
                       title: "Motivation",
                       rows: [
                         { label: "Why this centre", value: form.motivation },
@@ -860,6 +936,22 @@ export function CentreApplyForm({ steps, classes, spaceTypes }: CentreApplyFormP
                       </dl>
                     </div>
                   ))}
+
+                  <CentreDeclaration
+                    gender={form.gender}
+                    values={{
+                      name: form.applicantName,
+                      centreName: form.proposedName,
+                      address: [form.address, form.villageTown, names.block ?? form.blockName, names.district, names.state, form.pincode]
+                        .map((part) => part?.trim())
+                        .filter(Boolean)
+                        .join(", "),
+                      mobile: form.mobile,
+                      date: formatDate(new Date()),
+                      place: form.villageTown,
+                    }}
+                    signature="Accepted online — pressing Submit application records your acceptance with the date and time."
+                  />
 
                   <div className="flex items-start gap-3 rounded-card border border-orange/20 bg-orange-light/50 p-4">
                     <FileText className="mt-0.5 h-5 w-5 shrink-0 text-orange" aria-hidden />

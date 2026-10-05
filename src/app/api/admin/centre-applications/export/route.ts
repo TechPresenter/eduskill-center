@@ -39,6 +39,7 @@ export const GET = apiHandler({ permission: "centre_applications.export" }, asyn
         verificationAt: a.verificationAt?.toISOString() ?? "",
         orientationAt: a.orientationAt?.toISOString() ?? "",
         centerCode: a.center?.code ?? "",
+        termsAcceptedAt: a.termsAcceptedAt?.toISOString() ?? "",
         submittedAt: a.submittedAt.toISOString(),
       });
     }

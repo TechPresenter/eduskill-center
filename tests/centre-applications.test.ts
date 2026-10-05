@@ -1,19 +1,29 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import {
   CENTRE_STEPS,
   CENTRE_STEP_OF,
   approveCentreApplication,
+  getCentreApplicationDetail,
   lookupCentreApplication,
   submitCentreApplication,
   transitionCentreApplication,
 } from "@/server/centre-applications";
 import { centreApplicationSchema } from "@/lib/validation/centre-applications";
+import { getTerms, termsVersion as termsFingerprint } from "@/server/terms";
 import { daysFromNow, ensureAdmin, makeCourse, makeLocation, uid } from "./helpers";
+
+/** Fingerprint of the Centre In-charge Terms the form would show right now. */
+let termsVersion = "";
+beforeAll(async () => {
+  termsVersion = (await getTerms("centreInCharge")).version;
+});
 
 function baseInput(loc: Awaited<ReturnType<typeof makeLocation>>) {
   const n = String(Math.floor(Math.random() * 1e8)).padStart(8, "0");
   return {
+    acceptCentreTerms: true,
+    termsVersion,
     applicantName: `Applicant ${uid()}`,
     mobile: `93${n}`,
     whatsapp: "",
@@ -52,6 +62,12 @@ describe("open a centre – seven step process", () => {
     expect(centreApplicationSchema.safeParse(baseInput(loc)).success).toBe(true);
     // The declaration must be accepted, at least one class chosen, and the motivation substantive.
     expect(centreApplicationSchema.safeParse({ ...baseInput(loc), acceptTerms: false }).success).toBe(false);
+    // The Centre In-charge Terms must be accepted (a real boolean, not the string "true") with the version read.
+    expect(centreApplicationSchema.safeParse({ ...baseInput(loc), acceptCentreTerms: false }).success).toBe(false);
+    expect(centreApplicationSchema.safeParse({ ...baseInput(loc), acceptCentreTerms: "true" }).success).toBe(false);
+    expect(centreApplicationSchema.safeParse({ ...baseInput(loc), acceptCentreTerms: undefined }).success).toBe(false);
+    expect(centreApplicationSchema.safeParse({ ...baseInput(loc), termsVersion: "" }).success).toBe(false);
+    expect(centreApplicationSchema.safeParse({ ...baseInput(loc), termsVersion: undefined }).success).toBe(false);
     expect(centreApplicationSchema.safeParse({ ...baseInput(loc), classes: [] }).success).toBe(false);
     expect(centreApplicationSchema.safeParse({ ...baseInput(loc), motivation: "I want to." }).success).toBe(false);
     expect(centreApplicationSchema.safeParse({ ...baseInput(loc), roomCount: 0 }).success).toBe(false);
@@ -70,6 +86,39 @@ describe("open a centre – seven step process", () => {
     await expect(lookupCentreApplication(app.applicationNo, "9300000000")).rejects.toMatchObject({ status: 404 });
 
     await expect(submitCentreApplication({ ...input, email: `${uid("ca")}@test.local` }, {})).rejects.toMatchObject({ status: 409 });
+  });
+
+  it("requires the current Centre In-charge Terms and keeps the exact text accepted", async () => {
+    const terms = await getTerms("centreInCharge");
+    expect(terms.version).toMatch(/^[0-9a-f]{16}$/);
+    expect(terms.content.length).toBeGreaterThan(100);
+    // Any edit to the title or text is a new version.
+    expect(termsFingerprint(terms.title, terms.content)).toBe(terms.version);
+    expect(termsFingerprint(terms.title, `${terms.content} `)).not.toBe(terms.version);
+    expect(termsFingerprint(`${terms.title}!`, terms.content)).not.toBe(terms.version);
+
+    // Accepting an older text (the terms changed while the form was open) is refused on the terms step.
+    const stale = centreApplicationSchema.parse({ ...baseInput(await makeLocation()), termsVersion: "0000000000000000" });
+    await expect(submitCentreApplication(stale, {})).rejects.toMatchObject({ status: 422, details: { acceptCentreTerms: expect.any(String) } });
+    expect(await db.centreApplication.count({ where: { email: stale.email } })).toBe(0);
+
+    const first = await submitCentreApplication(centreApplicationSchema.parse(baseInput(await makeLocation())), {});
+    const second = await submitCentreApplication(centreApplicationSchema.parse(baseInput(await makeLocation())), {});
+    const rows = await db.centreApplication.findMany({ where: { id: { in: [first.id, second.id] } }, include: { termsVersion: true } });
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.termsAcceptedAt).toBeInstanceOf(Date);
+      expect(row.termsVersion?.document).toBe("centre-in-charge-terms");
+      expect(row.termsVersion?.version).toBe(terms.version);
+      expect(row.termsVersion?.title).toBe(terms.title);
+      expect(row.termsVersion?.content).toBe(terms.content);
+    }
+    // One snapshot per version, shared by everyone who accepted it.
+    expect(rows[0].termsVersionId).toBe(rows[1].termsVersionId);
+
+    // Admin sees the accepted text with the application.
+    const detail = await getCentreApplicationDetail(first.id);
+    expect(detail.acceptedTerms).toMatchObject({ version: terms.version, title: terms.title, content: terms.content });
   });
 
   it("walks all seven steps and starts the training centre", async () => {

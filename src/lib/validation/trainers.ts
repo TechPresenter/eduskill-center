@@ -1,7 +1,17 @@
 import { z } from "zod";
+import { levelNeedsInChargeTerms } from "@/lib/terms/documents";
 import { boolish, dateString, emailSchema, mobileSchema, optionalBlockName, optionalEmail, optionalPhone, optionalString, pincodeSchema, stringList, uuid } from "@/lib/validation/common";
 
 export const trainerLevelSchema = z.enum(["BLOCK", "DISTRICT", "STATE"]);
+
+const VOLUNTEER_TERMS_MESSAGE = "Read the Volunteer Teacher Terms & Conditions and tick the box to accept them";
+const IN_CHARGE_TERMS_MESSAGE = "Block and District level volunteers must read and accept the In-Charge terms";
+
+/**
+ * Terms fingerprints (`termsVersion` in src/server/terms.ts) of the text the applicant was shown. The
+ * service refuses one that is no longer current, so nobody is recorded as accepting text they never saw.
+ */
+const termsVersionField = (message: string) => z.string({ error: message }).trim().min(1, message).max(64);
 
 /**
  * A block picked from the district's list. `""` and `null` mean "not picked" — the applicant may
@@ -42,8 +52,17 @@ export const trainerApplicationSchema = z
     motivation: z.string().trim().min(30, "Please write at least a few sentences (30+ characters)").max(3000),
     photoUrl: optionalString,
     acceptTerms: z.coerce.boolean().refine((v) => v, "You must accept the declaration"),
+    // Read and accepted before the form opened (every level)…
+    acceptVolunteerTerms: z.boolean({ error: VOLUNTEER_TERMS_MESSAGE }).refine((v) => v, VOLUNTEER_TERMS_MESSAGE),
+    volunteerTermsVersion: termsVersionField(VOLUNTEER_TERMS_MESSAGE),
+    // …and, for Block and District level, the In-Charge terms on the Level step.
+    acceptInChargeTerms: z.boolean().optional(),
+    inChargeTermsVersion: z.string().trim().max(64).optional().nullable(),
   })
   .superRefine((d, ctx) => {
+    if (levelNeedsInChargeTerms(d.level) && (d.acceptInChargeTerms !== true || !d.inChargeTermsVersion)) {
+      ctx.addIssue({ code: "custom", path: ["acceptInChargeTerms"], message: IN_CHARGE_TERMS_MESSAGE });
+    }
     if ((d.level === "BLOCK" || d.level === "DISTRICT") && !d.districtId) {
       ctx.addIssue({ code: "custom", path: ["districtId"], message: "District is required for this volunteer level" });
     }
@@ -147,6 +166,9 @@ export const teacherApplicationSchema = z.object({
    * is not an affirmative value still fails the refine, with the message that belongs to it.
    */
   consent: z.preprocess((v) => (v === "" || v == null ? "false" : v), boolish).refine((v) => v, "You must agree before submitting"),
+  /** Read and accepted before the form opened. Multipart, so it arrives as a string like `consent`. */
+  acceptVolunteerTerms: z.preprocess((v) => (v === "" || v == null ? "false" : v), boolish).refine((v) => v, VOLUNTEER_TERMS_MESSAGE),
+  volunteerTermsVersion: termsVersionField(VOLUNTEER_TERMS_MESSAGE),
 });
 
 export type TeacherApplicationInput = z.infer<typeof teacherApplicationSchema>;
