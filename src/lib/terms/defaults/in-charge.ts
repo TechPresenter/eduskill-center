@@ -14,52 +14,52 @@ export const IN_CHARGE_TERMS = {
 **Organization:** Eduskill India Foundation · **Designation:** District In-Charge
 
 ### 1. Appointment & Purpose
-Eduskill India Foundation द्वारा District In-Charge को संबंधित जिले में Foundation के educational, skill development, training, awareness, employment-support एवं social development programs के coordination और implementation में सहायता करने के लिए नियुक्त/अधिकृत किया जा सकता है।
+Eduskill India Foundation may appoint/authorize a District In-Charge to help coordinate and implement the Foundation's educational, skill development, training, awareness, employment-support and social development programs in the district concerned.
 
-District In-Charge Foundation और जिले के approved centers, schools, institutions, trainers, students एवं अन्य stakeholders के बीच coordination का कार्य करेगा।
+The District In-Charge will coordinate between the Foundation and the district's approved centers, schools, institutions, trainers, students and other stakeholders.
 
 ### 2. Main Objectives
-District In-Charge के प्रमुख उद्देश्य:
+The main objectives of the District In-Charge are:
 
-- जिले में Foundation के programs का विस्तार करना।
-- योग्य Training/Support Centers की पहचान करना।
-- Students एवं beneficiaries तक programs की जानकारी पहुँचाना।
-- Training एवं awareness programs को व्यवस्थित रूप से coordinate करना।
-- Center activities की monitoring करना।
-- Foundation को नियमित progress report देना।
-- Foundation की policies, quality standards और branding guidelines का पालन सुनिश्चित करना।
+- Expanding the Foundation's programs in the district.
+- Identifying suitable Training/Support Centers.
+- Taking information about the programs to students and beneficiaries.
+- Coordinating training and awareness programs in an organised way.
+- Monitoring center activities.
+- Giving the Foundation regular progress reports.
+- Ensuring that the Foundation's policies, quality standards and branding guidelines are followed.
 
 ### 3. Roles & Responsibilities
 **A. District-Level Coordination**
 
-District In-Charge:
+The District In-Charge will:
 
-- जिले में Foundation की approved activities का coordination करेगा।
-- संबंधित centers एवं center in-charges से नियमित संपर्क रखेगा।
-- Training schedules एवं program activities की monitoring करेगा।
-- आवश्यकतानुसार district-level meetings आयोजित/coordinate करेगा।
-- Foundation के authorized representatives के साथ coordination करेगा।
+- Coordinate the Foundation's approved activities in the district.
+- Keep in regular contact with the centers and center in-charges concerned.
+- Monitor training schedules and program activities.
+- Organise/coordinate district-level meetings as needed.
+- Coordinate with the Foundation's authorized representatives.
 
 **B. Center Development**
 
-District In-Charge:
+The District In-Charge:
 
-- संभावित centers की पहचान कर सकता है।
-- Center infrastructure और basic facilities की जानकारी collect करेगा।
-- Center In-Charge के documents एवं details Foundation को verification के लिए भेजेगा।
-- बिना written approval के किसी center को officially approved घोषित नहीं करेगा।
+- May identify potential centers.
+- Will collect information on center infrastructure and basic facilities.
+- Will send the Center In-Charge's documents and details to the Foundation for verification.
+- Will not declare any center officially approved without written approval.
 
 **C. Student & Training Coordination**
 
-- Student registration/admission process में coordination।
-- Training batch information maintain करना।
-- Attendance और training progress की monitoring।
-- Trainers के साथ coordination।
-- Examination/assessment activities में सहायता।
-- Certificate-related process में Foundation के निर्देशों का पालन।
+- Coordination in the student registration/admission process.
+- Maintaining training batch information.
+- Monitoring attendance and training progress.
+- Coordination with trainers.
+- Assistance with examination/assessment activities.
+- Following the Foundation's instructions in certificate-related processes.
 
 ### 4. School & Institutional Programs
-Foundation द्वारा अनुमोदित होने पर District In-Charge निम्न प्रकार के programs के coordination में सहायता कर सकता है:
+When approved by the Foundation, the District In-Charge may help coordinate the following types of programs:
 
 - Computer Skill Training
 - Skill Development Programs
@@ -73,33 +73,33 @@ Foundation द्वारा अनुमोदित होने पर Distr
 - Teacher/Volunteer Programs
 - School Awareness Programs
 - Employment & Placement Support
-- अन्य educational/social development programs
+- Other educational/social development programs
 
-किसी भी program को government-approved, government-certified अथवा government-sponsored बताने से पहले संबंधित लिखित authorization आवश्यक होगा।
+Written authorization is required before any program is described as government-approved, government-certified or government-sponsored.
 
 ### 5. Center Approval Rules
-District In-Charge को निम्न बातों का पालन करना होगा:
+The District In-Charge must follow these rules:
 
-- Center की final approval Foundation के authorized authority द्वारा होगी।
-- Center के लिए आवश्यक documents जमा करवाए जाएंगे।
-- Infrastructure एवं basic facilities की verification की जा सकती है।
-- Center In-Charge से undertaking/NOC लिया जा सकता है।
-- Foundation की written approval के बाद ही official branding/authorization दिया जाएगा।
-- Unauthorized center को Foundation का official center नहीं बताया जाएगा।
+- The final approval of a center will be given by the Foundation's authorized authority.
+- The documents required for the center will be submitted.
+- Infrastructure and basic facilities may be verified.
+- An undertaking/NOC may be taken from the Center In-Charge.
+- Official branding/authorization will be given only after the Foundation's written approval.
+- An unauthorized center will not be presented as an official center of the Foundation.
 
 ### 6. Financial Terms
-District In-Charge:
+The District In-Charge:
 
-- Foundation के नाम पर unauthorized payment collect नहीं करेगा।
-- किसी student/center से personal account में Foundation-related payment लेने से बचेगा।
-- सभी applicable fees एवं charges Foundation द्वारा निर्धारित policy के अनुसार होंगे।
-- Commission/Incentive, यदि लागू हो, तो केवल Foundation की written policy के अनुसार होगा।
-- सभी financial records transparent और verifiable होने चाहिए।
+- Will not collect any unauthorized payment in the name of the Foundation.
+- Will avoid taking Foundation-related payments from any student/center into a personal account.
+- All applicable fees and charges will follow the policy set by the Foundation.
+- Commission/Incentive, if applicable, will be paid only according to the Foundation's written policy.
+- All financial records must be transparent and verifiable.
 
-**महत्वपूर्ण:** District In-Charge को अपने स्तर से कोई नया fee structure, discount, commission या financial commitment घोषित करने का अधिकार नहीं होगा।
+**Important:** The District In-Charge has no authority to announce, on their own, any new fee structure, discount, commission or financial commitment.
 
 ### 7. Branding & Logo Policy
-Eduskill India Foundation का:
+Eduskill India Foundation's:
 
 - Name
 - Logo
@@ -111,30 +111,30 @@ Eduskill India Foundation का:
 - Poster
 - Social Media Creative
 
-केवल Foundation की approved guidelines के अनुसार इस्तेमाल किया जाएगा।
+will be used only according to the Foundation's approved guidelines.
 
-District In-Charge Foundation के नाम पर कोई misleading advertisement प्रकाशित नहीं करेगा।
+The District In-Charge will not publish any misleading advertisement in the Foundation's name.
 
 ### 8. Social Media Policy
-District In-Charge Foundation-related social media promotion कर सकता है, लेकिन:
+The District In-Charge may promote the Foundation on social media, but:
 
-- गलत information नहीं देगा।
-- Fake job guarantee नहीं देगा।
-- Unauthorized certificate का प्रचार नहीं करेगा।
-- Foundation की अनुमति के बिना misleading government logos/official seals का उपयोग नहीं करेगा।
-- विद्यार्थियों की photos/videos प्रकाशित करते समय आवश्यक consent और Foundation guidelines का पालन करेगा।
+- Will not give wrong information.
+- Will not give any fake job guarantee.
+- Will not promote unauthorized certificates.
+- Will not use misleading government logos/official seals without the Foundation's permission.
+- Will follow the necessary consent and the Foundation's guidelines when publishing photos/videos of students.
 
 ### 9. Student Protection
-District In-Charge को:
+The District In-Charge must:
 
-- Students के साथ professional व्यवहार करना होगा।
-- Student data confidential रखना होगा।
-- किसी student को गलत job/training/certificate guarantee नहीं देनी होगी।
-- कोई discriminatory या abusive behavior नहीं करना होगा।
-- Student complaints को उचित channel के माध्यम से Foundation तक पहुँचाना होगा।
+- Behave professionally with students.
+- Keep student data confidential.
+- Not give any student a false job/training/certificate guarantee.
+- Not engage in any discriminatory or abusive behavior.
+- Pass student complaints to the Foundation through the proper channel.
 
 ### 10. Documentation & Record Keeping
-District In-Charge निम्न records maintain/coordinate करेगा:
+The District In-Charge will maintain/coordinate the following records:
 
 - Center details
 - Center In-Charge details
@@ -146,12 +146,12 @@ District In-Charge निम्न records maintain/coordinate करेगा:
 - Assessment details
 - Certificate records
 - Activity reports
-- Financial documents, जहां applicable हों
+- Financial documents, where applicable
 
 ### 11. Monthly Reporting
-District In-Charge को आवश्यकता के अनुसार monthly report submit करनी होगी।
+The District In-Charge must submit a monthly report as required.
 
-Report में शामिल हो सकता है:
+The report may include:
 
 1. Total Centers: ……
 2. Active Centers: ……
@@ -165,9 +165,9 @@ Report में शामिल हो सकता है:
 10. Next Month Plan: ……
 
 ### 12. Confidentiality
-District In-Charge Foundation की confidential information को किसी unauthorized person या organization के साथ share नहीं करेगा।
+The District In-Charge will not share the Foundation's confidential information with any unauthorized person or organization.
 
-इसमें शामिल हो सकता है:
+This may include:
 
 - Student database
 - Center database
@@ -179,35 +179,35 @@ District In-Charge Foundation की confidential information को किस�
 - Business information
 
 ### 13. No Unauthorized Representation
-District In-Charge अपने पद का उपयोग करके:
+Using their position, the District In-Charge will not:
 
-- कोई legal agreement sign नहीं करेगा।
-- Loan/financial commitment नहीं करेगा।
-- Government approval का दावा नहीं करेगा।
-- Foundation की ओर से legal statement जारी नहीं करेगा।
-- किसी third party को partnership/franchise guarantee नहीं देगा।
+- Sign any legal agreement.
+- Make any loan/financial commitment.
+- Claim government approval.
+- Issue any legal statement on behalf of the Foundation.
+- Give any third party a partnership/franchise guarantee.
 
-जब तक Foundation की written authorization न हो।
+unless the Foundation has given written authorization.
 
 ### 14. Code of Conduct
-District In-Charge को:
+The District In-Charge must:
 
-- ईमानदारी और transparency बनाए रखनी होगी।
-- सभी stakeholders के साथ सम्मानजनक व्यवहार करना होगा।
-- किसी भी प्रकार की fraud activity से दूर रहना होगा।
-- Foundation की reputation को नुकसान पहुँचाने वाली गतिविधि नहीं करनी होगी।
-- किसी व्यक्ति से पद का गलत लाभ नहीं उठाना होगा।
+- Maintain honesty and transparency.
+- Treat all stakeholders with respect.
+- Stay away from any kind of fraudulent activity.
+- Not do anything that damages the Foundation's reputation.
+- Not take undue advantage of their position with anyone.
 
 ### 15. Conflict of Interest
-यदि District In-Charge Foundation के समान क्षेत्र में किसी अन्य organization के लिए काम करता है या कोई ऐसी commercial activity करता है जिससे Foundation के हित प्रभावित हो सकते हैं, तो उसे Foundation को जानकारी देनी होगी।
+If the District In-Charge works for another organization in the same field as the Foundation, or carries on any commercial activity that may affect the Foundation's interests, they must inform the Foundation.
 
 ### 16. Appointment Period
 Appointment/Authorization Period: From …… / …… / ………… To …… / …… / …………
 
-Appointment को performance, requirement और Foundation policy के आधार पर renew किया जा सकता है।
+The appointment may be renewed on the basis of performance, requirement and Foundation policy.
 
 ### 17. Performance Review
-District In-Charge के performance का review निम्न आधारों पर किया जा सकता है:
+The District In-Charge's performance may be reviewed on the following grounds:
 
 - Program implementation
 - Center coordination
@@ -219,48 +219,46 @@ District In-Charge के performance का review निम्न आधार
 - Compliance with Foundation policies
 
 ### 18. Termination
-Foundation निम्न परिस्थितियों में appointment/authorization समाप्त कर सकती है:
+The Foundation may end the appointment/authorization in the following circumstances:
 
-- Fraud या financial irregularity
+- Fraud or financial irregularity
 - False representation
 - Unauthorized collection
-- Misuse of Foundation name/logo
-- Confidential information leak
+- Misuse of the Foundation's name/logo
+- Leak of confidential information
 - Fake certificate/false promise
 - Serious misconduct
-- Foundation guidelines का लगातार उल्लंघन
-- Reputation को गंभीर नुकसान पहुँचाना
+- Repeated violation of the Foundation's guidelines
+- Causing serious damage to the Foundation's reputation
 
-Termination applicable agreement और कानून के अनुसार की जाएगी।
+Termination will be carried out according to the applicable agreement and law.
 
 ### 19. Return of Foundation Property
-Appointment समाप्त होने पर District In-Charge को Foundation से संबंधित:
+When the appointment ends, the District In-Charge must return or disable, as instructed by the Foundation, all Foundation-related:
 
 - ID Card
 - Certificate materials
 - Documents
-- Official seals, यदि कोई हों
+- Official seals, if any
 - Branding material
 - Login/access credentials
 - Other official property
 
-Foundation के निर्देश के अनुसार वापस/disable करनी होगी।
-
 ### 20. No Employment Guarantee
-District In-Charge की appointment को स्वतः permanent employment, salary-based employment या government employment नहीं माना जाएगा, जब तक Foundation द्वारा अलग से लिखित employment agreement जारी न किया गया हो।
+The District In-Charge's appointment will not automatically be treated as permanent employment, salary-based employment or government employment, unless the Foundation has issued a separate written employment agreement.
 
 ### 21. No Government Authority Claim
-District In-Charge स्वयं को Government Officer, Government Representative अथवा Government-authorized person के रूप में प्रस्तुत नहीं करेगा, जब तक ऐसा कोई वास्तविक और लिखित authorization उपलब्ध न हो।
+The District In-Charge will not present themselves as a Government Officer, Government Representative or Government-authorized person, unless a genuine written authorization to that effect exists.
 
 ### 22. Grievance & Complaint
-किसी भी complaint या dispute की स्थिति में District In-Charge Foundation के designated authority को लिखित रूप में जानकारी देगा।
+In the event of any complaint or dispute, the District In-Charge will inform the Foundation's designated authority in writing.
 
-सभी शिकायतों का रिकॉर्ड maintain किया जाना चाहिए।
+A record of all complaints should be maintained.
 
 ### 23. Compliance
-District In-Charge को लागू कानूनों, Foundation की internal policies और program-specific guidelines का पालन करना होगा।
+The District In-Charge must comply with the applicable laws, the Foundation's internal policies and program-specific guidelines.
 
-जहाँ किसी activity के लिए अलग government/statutory permission आवश्यक हो, वहाँ उचित permission/approval प्राप्त करना आवश्यक होगा।
+Where a separate government/statutory permission is required for an activity, the appropriate permission/approval must be obtained.
 
 **EDUSKILL INDIA FOUNDATION** — Education • Skill Development • Digital Literacy • Career Support • Social Development`,
 } as const;

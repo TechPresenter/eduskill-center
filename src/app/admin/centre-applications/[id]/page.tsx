@@ -233,7 +233,6 @@ export default async function CentreApplicationDetailPage({ params }: { params: 
                 declaration={
                   app.termsAcceptedAt && (
                     <CentreDeclaration
-                      gender={app.gender}
                       values={{
                         name: app.applicantName,
                         centreName: app.proposedName,

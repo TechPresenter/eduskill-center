@@ -719,13 +719,11 @@ export function TrainerApplyForm({
                     <Textarea id="motivation" rows={6} value={form.motivation} onChange={(e) => set("motivation", e.target.value)} invalid={!!errors.motivation} />
                   </Field>
                   <VolunteerTeacherDeclaration
-                    gender={form.gender}
                     values={{ name: form.name, mobile: form.mobile, address: [form.address, form.pincode].map((v) => v.trim()).filter(Boolean).join(", "), date: formatDate(new Date()) }}
                     signature="Accepted online — pressing Submit application records your acceptance with the date and time."
                   />
                   {needsInChargeTerms && (
                     <InChargeDeclaration
-                      gender={form.gender}
                       values={{
                         name: form.name,
                         designation,

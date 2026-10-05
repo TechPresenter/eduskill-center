@@ -62,7 +62,7 @@ export async function TermsPageView({
         <div className="container-x relative z-10">
           <article className="mx-auto max-w-3xl card rounded-card-lg p-6 sm:p-10">
             {/* The clauses are `###` in the source: raised to h2 under the page's h1, at the size they have everywhere else. */}
-            <div lang="hi">
+            <div>
               <Markdown source={terms.content} topHeadingLevel={2} headingClassName="mt-6! mb-2! text-h4!" />
             </div>
             <div className="mt-8">{declaration}</div>

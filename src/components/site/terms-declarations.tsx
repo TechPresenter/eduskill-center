@@ -9,15 +9,6 @@ import { cn } from "@/lib/utils";
  * No hooks, so server and client components can both render them.
  */
 
-type Gender = string | null | undefined;
-
-/** The verb form that matches the applicant's gender — both, as the paper form prints them, when it is not known. */
-function g(gender: Gender, masculine: string, feminine: string): string {
-  if (gender === "MALE") return masculine;
-  if (gender === "FEMALE") return feminine;
-  return `${masculine}/${feminine}`;
-}
-
 function Blank({ value }: { value?: string | null }) {
   const text = value?.trim();
   if (text) return <span className="font-semibold text-navy">{text}</span>;
@@ -39,7 +30,6 @@ interface Row {
 interface DeclarationProps {
   /** Blank, printable version for the public terms page. */
   blank?: boolean;
-  gender?: Gender;
   /** What stands in for the signature line, e.g. "Accepted online on …". Blank when omitted. */
   signature?: React.ReactNode;
   headingLevel?: 2 | 3;
@@ -69,7 +59,7 @@ function DeclarationCard({
   return (
     <section className={cn("rounded-card border border-navy/15 bg-lavender/40 p-4 sm:p-5", className)} aria-label={heading}>
       <Heading className="text-overline text-navy">{heading}</Heading>
-      <div lang="hi" className="mt-2 space-y-2 text-body leading-relaxed text-ink">
+      <div className="mt-2 space-y-2 text-body leading-relaxed text-ink">
         {statement}
       </div>
       <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
@@ -124,8 +114,8 @@ export function CentreDeclaration({ values = {}, ...props }: DeclarationProps & 
       heading="Centre In-charge Declaration"
       statement={
         <p>
-          मैं, <Blank value={props.blank ? null : values.name} />, Centre In-charge, Eduskill India Foundation Learning Centre, उपरोक्त सभी Terms &amp; Conditions को पढ़कर समझ{" "}
-          {g(props.gender, "चुका", "चुकी")} हूँ और Centre के संचालन के दौरान इनका पालन करने के लिए सहमत हूँ।
+          I, <Blank value={props.blank ? null : values.name} />, Centre In-charge, Eduskill India Foundation Learning Centre, have read and understood all the above Terms &amp; Conditions
+          and agree to follow them while running the Centre.
         </p>
       }
       rows={[
@@ -154,7 +144,6 @@ export interface VolunteerTeacherDeclarationValues {
 }
 
 export function VolunteerTeacherDeclaration({ values = {}, ...props }: DeclarationProps & { values?: VolunteerTeacherDeclarationValues }) {
-  const gender = props.gender;
   return (
     <DeclarationCard
       {...props}
@@ -162,11 +151,11 @@ export function VolunteerTeacherDeclaration({ values = {}, ...props }: Declarati
       statement={
         <>
           <p>
-            मैं घोषणा {g(gender, "करता", "करती")} हूँ कि मेरे द्वारा दी गई जानकारी सही है। मैं Eduskill India Foundation के Volunteer Teacher Program के नियमों, Code of Conduct, Child Safety
-            Guidelines एवं Training Requirements का पालन {g(gender, "करूंगा", "करूंगी")}।
+            I declare that the information I have given is correct. I will follow the rules, Code of Conduct, Child Safety Guidelines and Training Requirements of the Eduskill India
+            Foundation Volunteer Teacher Program.
           </p>
-          <p>मैं यह भी {g(gender, "समझता", "समझती")} हूँ कि यह Volunteer/Community Service Program है और इसमें कोई Salary या Permanent Employment Guarantee नहीं है।</p>
-          <p>मुझे यह जानकारी है कि Volunteer Teacher Training FREE OF COST है और Training/Registration के लिए मुझसे कोई शुल्क नहीं लिया जा रहा है।</p>
+          <p>I also understand that this is a Volunteer/Community Service Program and that it carries no Salary or Permanent Employment Guarantee.</p>
+          <p>I am aware that the Volunteer Teacher Training is FREE OF COST and that no fee is being charged to me for Training/Registration.</p>
         </>
       }
       rows={[
@@ -204,7 +193,6 @@ export interface InChargeDeclarationValues {
  * keeps the document's wording.
  */
 export function InChargeDeclaration({ values = {}, ...props }: DeclarationProps & { values?: InChargeDeclarationValues }) {
-  const gender = props.gender;
   const post = !props.blank && values.designation ? values.designation : "District In-Charge";
   return (
     <DeclarationCard
@@ -213,12 +201,12 @@ export function InChargeDeclaration({ values = {}, ...props }: DeclarationProps 
       statement={
         <>
           <p>
-            मैं, <Blank value={props.blank ? null : values.name} />, यह घोषणा {g(gender, "करता", "करती")} हूँ कि मैंने Eduskill India Foundation के {post} पद से संबंधित Terms &amp;
-            Conditions को पढ़ लिया है और उन्हें {g(gender, "समझता", "समझती")} हूँ।
+            I, <Blank value={props.blank ? null : values.name} />, declare that I have read and understood the Terms &amp; Conditions relating to the post of {post} of Eduskill India
+            Foundation.
           </p>
-          <p>मैं Foundation के नाम, logo, documents, student data और अन्य resources का उपयोग केवल authorized purpose के लिए {g(gender, "करूंगा", "करूंगी")}।</p>
-          <p>मैं Foundation की reputation, confidentiality, transparency और professional standards को बनाए रखने का पूर्ण प्रयास {g(gender, "करूंगा", "करूंगी")}।</p>
-          <p>मैं बिना authorization के कोई financial, legal या official commitment नहीं {g(gender, "करूंगा", "करूंगी")}।</p>
+          <p>I will use the Foundation&rsquo;s name, logo, documents, student data and other resources only for authorized purposes.</p>
+          <p>I will make every effort to maintain the Foundation&rsquo;s reputation, confidentiality, transparency and professional standards.</p>
+          <p>I will not make any financial, legal or official commitment without authorization.</p>
         </>
       }
       rows={[

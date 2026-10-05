@@ -234,7 +234,6 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
                   declaration={
                     app.volunteerTermsAcceptedAt && (
                       <VolunteerTeacherDeclaration
-                        gender={app.gender}
                         values={{
                           name: app.name,
                           mobile: app.mobile,
@@ -260,7 +259,6 @@ export default async function TrainerApplicationDetailPage({ params }: { params:
                     declaration={
                       app.inChargeTermsAcceptedAt && (
                         <InChargeDeclaration
-                          gender={app.gender}
                           values={{
                             name: app.name,
                             designation: app.level === "BLOCK" ? "Block In-Charge" : "District In-Charge",

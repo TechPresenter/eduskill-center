@@ -938,7 +938,6 @@ export function CentreApplyForm({ steps, classes, spaceTypes, terms }: CentreApp
                   ))}
 
                   <CentreDeclaration
-                    gender={form.gender}
                     values={{
                       name: form.applicantName,
                       centreName: form.proposedName,

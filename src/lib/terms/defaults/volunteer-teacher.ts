@@ -11,44 +11,44 @@ export const VOLUNTEER_TEACHER_TERMS = {
 **“Free Training • Community Service • Quality Education”**
 
 ### 1. PROGRAM INTRODUCTION
-Eduskill India Foundation द्वारा Volunteer Teacher Program का उद्देश्य विद्यार्थियों को गुणवत्तापूर्ण शिक्षा, अतिरिक्त कक्षाएँ, Computer/Digital Skills, Basic English, General Awareness एवं अन्य शैक्षणिक सहयोग उपलब्ध कराना है।
+The Volunteer Teacher Program of Eduskill India Foundation aims to provide students with quality education, extra classes, Computer/Digital Skills, Basic English, General Awareness and other academic support.
 
-यह कार्यक्रम सामाजिक एवं शैक्षणिक सेवा की भावना से संचालित किया जाता है।
+The program is run in a spirit of social and educational service.
 
 ### 2. FREE TRAINING & NO FEE POLICY
-Volunteer Teacher के लिए संस्था द्वारा निर्धारित Training पूर्णतः FREE OF COST है।
+The Training set by the organization for Volunteer Teachers is completely FREE OF COST.
 
-- Volunteer Teacher से Training Fee नहीं ली जाएगी।
-- Volunteer Teacher से Registration Fee नहीं ली जाएगी।
-- Volunteer Teacher से Admission Fee नहीं ली जाएगी।
-- संस्था की ओर से Training के नाम पर कोई Hidden Charge नहीं लिया जाएगा।
-- किसी व्यक्ति द्वारा संस्था के नाम पर अनधिकृत शुल्क मांगना मान्य नहीं होगा।
+- No Training Fee will be charged to a Volunteer Teacher.
+- No Registration Fee will be charged to a Volunteer Teacher.
+- No Admission Fee will be charged to a Volunteer Teacher.
+- The organization will not charge any Hidden Charge in the name of Training.
+- Any demand by any person for an unauthorized fee in the name of the organization is not valid.
 
-किसी विशेष सुविधा/सामग्री के लिए यदि कोई अलग खर्च लागू हो, तो उसकी जानकारी पहले से दी जाएगी।
+If any separate cost applies to a special facility/material, it will be communicated in advance.
 
 ### 3. ELIGIBILITY
-Volunteer Teacher के लिए निम्न योग्यताएँ वांछनीय हो सकती हैं:
+The following qualifications may be desirable for a Volunteer Teacher:
 
-- कम से कम 12वीं पास / Graduate को प्राथमिकता।
-- विद्यार्थियों को पढ़ाने में रुचि।
-- Basic communication skills।
-- बच्चों के साथ सम्मानजनक व्यवहार।
-- समय की उपलब्धता।
-- Computer/Digital knowledge होने पर प्राथमिकता।
+- At least Class 12 pass; preference for Graduates.
+- Interest in teaching students.
+- Basic communication skills.
+- Respectful behaviour towards children.
+- Availability of time.
+- Preference for those with Computer/Digital knowledge.
 
-स्थानीय क्षेत्र एवं विद्यालय की आवश्यकताओं के अनुसार अन्य योग्यताओं पर भी विचार किया जा सकता है।
+Other qualifications may also be considered according to the needs of the local area and school.
 
 ### 4. SELECTION PROCESS
-Volunteer Teacher का चयन संस्था द्वारा आवश्यकता, योग्यता, उपलब्धता एवं Interview/Interaction के आधार पर किया जा सकता है।
+Volunteer Teachers may be selected by the organization on the basis of need, qualification, availability and an Interview/Interaction.
 
-चयन होने के बाद Volunteer Teacher को संस्था की ओर से Orientation/Training दी जा सकती है।
+After selection, the organization may provide the Volunteer Teacher with Orientation/Training.
 
-Selection संस्था की आवश्यकता एवं उपलब्ध पदों/केंद्रों के अनुसार होगा।
+Selection will depend on the organization's needs and the positions/centres available.
 
 ### 5. TRAINING & ORIENTATION
-Volunteer Teacher को निर्धारित Training में भाग लेना आवश्यक होगा।
+A Volunteer Teacher must attend the prescribed Training.
 
-Training में निम्न विषय शामिल हो सकते हैं:
+The Training may include the following topics:
 
 - Teaching Methodology
 - Classroom Management
@@ -63,135 +63,133 @@ Training में निम्न विषय शामिल हो सकत
 - Discipline & Child Safety
 - Academic Support Methods
 
-Volunteer Teacher को संस्था द्वारा समय-समय पर दिए गए Training/Orientation में भाग लेना होगा।
+A Volunteer Teacher must attend the Training/Orientation given by the organization from time to time.
 
 ### 6. TRAINING ATTENDANCE
-Volunteer Teacher को निर्धारित समय पर Training में उपस्थित होना होगा।
+A Volunteer Teacher must attend the Training at the scheduled time.
 
-बिना उचित कारण Training से लगातार अनुपस्थित रहने पर संस्था Volunteer status की समीक्षा कर सकती है।
+If a Volunteer Teacher is continuously absent from the Training without a valid reason, the organization may review their Volunteer status.
 
-Training completion के लिए न्यूनतम attendance criteria संस्था द्वारा निर्धारित किया जा सकता है।
+The organization may set minimum attendance criteria for completing the Training.
 
-Emergency/Medical/Personal कारण होने पर संबंधित Coordinator को सूचना देना अपेक्षित होगा।
+For Emergency/Medical/Personal reasons, the Volunteer Teacher is expected to inform the concerned Coordinator.
 
 ### 7. VOLUNTEER SERVICE
-Volunteer Teacher का मुख्य उद्देश्य विद्यार्थियों एवं समुदाय को शैक्षणिक सहयोग देना होगा।
+The main purpose of a Volunteer Teacher will be to provide academic support to students and the community.
 
-Volunteer Teacher निम्न कार्य कर सकता/सकती है:
+A Volunteer Teacher may:
 
-- विद्यार्थियों को पढ़ाना।
-- अतिरिक्त कक्षाएँ लेना।
-- Basic Computer/Digital Skills सिखाना।
-- Homework/Practice में सहायता करना।
-- विद्यार्थियों को motivate करना।
-- कमजोर विद्यार्थियों को अतिरिक्त academic support देना।
-- Educational activities में सहयोग करना।
-- संस्था द्वारा स्वीकृत awareness/learning activities में भाग लेना।
+- Teach students.
+- Take extra classes.
+- Teach Basic Computer/Digital Skills.
+- Help with Homework/Practice.
+- Motivate students.
+- Give additional academic support to weaker students.
+- Support educational activities.
+- Take part in awareness/learning activities approved by the organization.
 
 ### 8. DUTIES & RESPONSIBILITIES
-Volunteer Teacher को:
+A Volunteer Teacher must:
 
-- समय का पालन करना होगा।
-- विद्यार्थियों के साथ सम्मानजनक व्यवहार करना होगा।
-- किसी भी विद्यार्थी के साथ भेदभाव नहीं करना होगा।
-- विद्यार्थियों की सुरक्षा एवं dignity का ध्यान रखना होगा।
-- बिना अनुमति विद्यार्थी की फोटो/video/publication नहीं करनी चाहिए।
-- संस्था एवं विद्यालय की property का उचित उपयोग करना होगा।
-- Academic records को सही रखना होगा।
-- संस्था/विद्यालय के नियमों का पालन करना होगा।
+- Be punctual.
+- Treat students with respect.
+- Not discriminate against any student.
+- Take care of students' safety and dignity.
+- Not take or publish photos/videos of any student without permission.
+- Use the property of the organization and the school properly.
+- Keep academic records accurate.
+- Follow the rules of the organization/school.
 
 ### 9. CHILD SAFETY & PROTECTION
-Volunteer Teacher को विद्यार्थियों के साथ किसी भी प्रकार का:
+A Volunteer Teacher must not engage in any form of:
 
-- दुर्व्यवहार,
-- शारीरिक दंड,
-- मानसिक उत्पीड़न,
-- अपमानजनक व्यवहार,
-- भेदभाव,
-- अनुचित communication,
-- अनुचित physical contact
+- Abuse,
+- Physical punishment,
+- Mental harassment,
+- Humiliating behaviour,
+- Discrimination,
+- Inappropriate communication,
+- Inappropriate physical contact
 
-नहीं करना होगा।
+with students.
 
-किसी गंभीर शिकायत या child-safety concern की स्थिति में संस्था आवश्यक कार्रवाई कर सकती है।
+In the case of a serious complaint or a child-safety concern, the organization may take the necessary action.
 
 ### 10. CODE OF CONDUCT
-Volunteer Teacher को:
+A Volunteer Teacher must not:
 
-- नशे की स्थिति में Centre/School में उपस्थित नहीं होना चाहिए।
-- किसी विद्यार्थी या अभिभावक से अनुचित व्यवहार नहीं करना चाहिए।
-- संस्था के नाम का व्यक्तिगत/व्यावसायिक गलत उपयोग नहीं करना चाहिए।
-- संस्था की अनुमति के बिना official letterhead, logo, ID card या certificate जारी नहीं करना चाहिए।
-- संस्था की गोपनीय जानकारी को अनधिकृत व्यक्ति से साझा नहीं करना चाहिए।
+- Be present at the Centre/School under the influence of alcohol or drugs.
+- Behave inappropriately with any student or parent.
+- Misuse the organization's name for personal/commercial purposes.
+- Issue an official letterhead, logo, ID card or certificate without the organization's permission.
+- Share the organization's confidential information with any unauthorized person.
 
 ### 11. NO SALARY / EMPLOYMENT GUARANTEE
-Volunteer Teacher Program एक Volunteer/Community Service Program है।
+The Volunteer Teacher Program is a Volunteer/Community Service Program.
 
-इस Program में शामिल होने से:
+Joining this Program does not guarantee:
 
-- Permanent Job की गारंटी नहीं है।
-- Government Job की गारंटी नहीं है।
-- Fixed Salary की गारंटी नहीं है।
-- भविष्य में रोजगार मिलने की कोई automatic guarantee नहीं है।
+- A Permanent Job.
+- A Government Job.
+- A Fixed Salary.
+- Any automatic future employment.
 
-यदि किसी अलग project में paid position उपलब्ध होती है, तो उसकी शर्तें अलग से लिखित रूप में बताई जाएंगी।
+If a paid position becomes available in a separate project, its terms will be communicated separately in writing.
 
 ### 12. TRAVEL & PERSONAL EXPENSES
-Volunteer Teacher के:
+A Volunteer Teacher's:
 
 - Travel,
 - Food,
 - Personal expenses,
 - Mobile/Internet,
-- अन्य व्यक्तिगत खर्च
+- Other personal expenses
 
-सामान्यतः Volunteer की स्वयं की जिम्मेदारी होंगे, जब तक संस्था द्वारा लिखित रूप से अलग व्यवस्था न की गई हो।
+will generally be the Volunteer's own responsibility, unless the organization has made a different arrangement in writing.
 
 ### 13. CENTER / SCHOOL RULES
-यदि Volunteer Teacher किसी Center या School पर सेवा दे रहा/रही है, तो उसे उस Center/School के निर्धारित नियमों का पालन करना होगा।
+A Volunteer Teacher serving at a Center or School must follow the rules set by that Center/School.
 
-Center In-Charge/Coordinator संस्था के निर्देशों के अनुसार Volunteer Teacher की attendance, activities एवं basic performance report रख सकता है।
+The Center In-Charge/Coordinator may keep a record of the Volunteer Teacher's attendance, activities and basic performance as instructed by the organization.
 
 ### 14. ATTENDANCE & REPORTING
-Volunteer Teacher को:
+A Volunteer Teacher must:
 
-- Attendance maintain करनी होगी।
-- निर्धारित समय पर class शुरू एवं समाप्त करनी होगी।
-- आवश्यक होने पर daily/weekly report देना होगा।
-- Student attendance एवं academic activities की जानकारी Center In-Charge को देनी होगी।
+- Maintain attendance.
+- Start and finish classes at the scheduled time.
+- Submit a daily/weekly report when required.
+- Give the Center In-Charge information on student attendance and academic activities.
 
 ### 15. ID CARD / CERTIFICATE
-संस्था आवश्यकता एवं अपनी नीति के अनुसार Volunteer Teacher को:
+According to its needs and policy, the organization may issue a Volunteer Teacher:
 
-- Volunteer ID Card,
-- Training Certificate,
-- Participation Certificate,
-- Volunteer Service Certificate
+- A Volunteer ID Card,
+- A Training Certificate,
+- A Participation Certificate,
+- A Volunteer Service Certificate.
 
-जारी कर सकती है।
-
-Certificate केवल निर्धारित Training/Service requirements पूरी होने पर जारी किया जाएगा।
+A Certificate will be issued only after the prescribed Training/Service requirements have been completed.
 
 ### 16. CERTIFICATE MISUSE
-Volunteer Teacher संस्था द्वारा जारी Certificate, ID Card या अन्य document में किसी प्रकार का बदलाव, editing या गलत उपयोग नहीं करेगा/करेगी।
+A Volunteer Teacher will not alter, edit or misuse any Certificate, ID Card or other document issued by the organization.
 
-ऐसा पाए जाने पर Certificate/Volunteer status वापस लिया जा सकता है।
+If this is found, the Certificate/Volunteer status may be withdrawn.
 
 ### 17. CONFIDENTIALITY
-Volunteer Teacher को विद्यार्थियों, अभिभावकों, विद्यालय एवं संस्था से संबंधित confidential information को बिना अनुमति सार्वजनिक या किसी third party के साथ साझा नहीं करना चाहिए।
+A Volunteer Teacher must not make public, or share with any third party, without permission, confidential information relating to students, parents, the school or the organization.
 
 ### 18. SOCIAL MEDIA POLICY
-Volunteer Teacher संस्था के नाम, logo, project, school, student या official activity से संबंधित सामग्री को सोशल मीडिया पर प्रकाशित करने से पहले आवश्यक अनुमति प्राप्त करेगा/करेगी।
+A Volunteer Teacher will obtain the necessary permission before publishing on social media any content relating to the organization's name, logo, projects, schools, students or official activities.
 
-संस्था की अनुमति के बिना कोई misleading advertisement या official announcement नहीं किया जा सकता।
+No misleading advertisement or official announcement may be made without the organization's permission.
 
 ### 19. FINANCIAL POLICY
-Volunteer Teacher को विद्यार्थियों या अभिभावकों से संस्था के नाम पर कोई पैसा collect नहीं करना चाहिए, जब तक संस्था द्वारा लिखित authorization न दिया गया हो।
+A Volunteer Teacher must not collect any money from students or parents in the name of the organization unless the organization has given written authorization.
 
-यदि कोई व्यक्ति संस्था के नाम पर unauthorized payment collect करता पाया जाता है, तो संस्था उसके विरुद्ध उचित कार्रवाई कर सकती है।
+If any person is found collecting an unauthorized payment in the name of the organization, the organization may take appropriate action against them.
 
 ### 20. NO UNAUTHORIZED REPRESENTATION
-Volunteer Teacher स्वयं को संस्था का:
+A Volunteer Teacher will not present themselves as the organization's:
 
 - Director,
 - Manager,
@@ -199,68 +197,66 @@ Volunteer Teacher स्वयं को संस्था का:
 - Legal Representative,
 - Government Representative
 
-बिना लिखित authorization के नहीं बताएगा/बताएगी।
+without written authorization.
 
 ### 21. DISCIPLINARY ACTION
-निम्न परिस्थितियों में संस्था Volunteer Teacher का status suspend या terminate कर सकती है:
+The organization may suspend or terminate a Volunteer Teacher's status in the following circumstances:
 
 - Misconduct
-- लगातार अनुपस्थिति
-- विद्यार्थी से दुर्व्यवहार
-- संस्था के नाम का गलत उपयोग
-- Fraud या financial misconduct
-- गलत जानकारी/दस्तावेज
-- Confidential information leak
-- School/Centre rules का गंभीर उल्लंघन
-- Child safety policy का उल्लंघन
+- Continuous absence
+- Misbehaviour with a student
+- Misuse of the organization's name
+- Fraud or financial misconduct
+- False information/documents
+- Leak of confidential information
+- Serious violation of School/Centre rules
+- Violation of the child safety policy
 
 ### 22. VOLUNTARY WITHDRAWAL
-Volunteer Teacher अपनी इच्छा से Program छोड़ सकता/सकती है।
+A Volunteer Teacher may leave the Program of their own accord.
 
-यथासंभव संस्था को पहले से सूचना देना अपेक्षित होगा ताकि Center/Class की व्यवस्था प्रभावित न हो।
+As far as possible, advance notice to the organization is expected, so that Center/Class arrangements are not affected.
 
 ### 23. TERMINATION BY ORGANIZATION
-Eduskill India Foundation आवश्यकता, project closure, performance, conduct, attendance या अन्य उचित कारणों के आधार पर Volunteer engagement को समाप्त कर सकती है।
+Eduskill India Foundation may end a Volunteer engagement on the basis of need, project closure, performance, conduct, attendance or other reasonable grounds.
 
 ### 24. NO GUARANTEE OF CONTINUOUS ASSIGNMENT
-Volunteer Teacher को किसी particular School, Center या Project में लगातार assignment मिलने की guarantee नहीं है।
+A Volunteer Teacher is not guaranteed a continuous assignment at any particular School, Center or Project.
 
-Assignment संस्था की आवश्यकता, project availability एवं local requirements पर निर्भर करेगा।
+Assignments will depend on the organization's needs, project availability and local requirements.
 
 ### 25. DOCUMENT VERIFICATION
-Volunteer Teacher द्वारा दिए गए documents/details सही एवं सत्य होने चाहिए।
+The documents/details given by a Volunteer Teacher must be correct and true.
 
-गलत, forged या misleading documents पाए जाने पर candidature/volunteer engagement समाप्त किया जा सकता है।
+If false, forged or misleading documents are found, the candidature/volunteer engagement may be ended.
 
 ### 26. CENTER IN-CHARGE RESPONSIBILITY
-Center In-Charge/Coordinator को:
+The Center In-Charge/Coordinator must:
 
-- Volunteer Teacher की attendance maintain करनी होगी।
-- Training participation का record रखना होगा।
-- Student activities की basic monitoring करनी होगी।
-- संस्था को आवश्यक report देनी होगी।
-- संस्था के नाम पर unauthorized fee collection नहीं करना होगा।
-- किसी भी serious complaint को संस्था के authorized team तक पहुँचाना होगा।
+- Maintain the Volunteer Teacher's attendance.
+- Keep a record of Training participation.
+- Carry out basic monitoring of student activities.
+- Submit the necessary reports to the organization.
+- Not collect any unauthorized fee in the name of the organization.
+- Pass any serious complaint on to the organization's authorized team.
 
 ### 27. NO FEE TO VOLUNTEER TEACHER
-**विशेष घोषणा:**
+**Special declaration:**
 
-> “Eduskill India Foundation के Volunteer Teacher Training Program में चयनित Volunteer Teacher से Training, Registration या Admission के नाम पर कोई शुल्क नहीं लिया जा रहा है। यह Training Program FREE OF COST है।”
+> “No fee is being charged to Volunteer Teachers selected for the Eduskill India Foundation Volunteer Teacher Training Program in the name of Training, Registration or Admission. This Training Program is FREE OF COST.”
 
 ### 28. PROGRAM MODIFICATION
-संस्था आवश्यकता के अनुसार Program की:
+The organization may make reasonable changes, as required, to the Program's:
 
 - Training schedule,
 - Course content,
 - Duration,
 - Center allocation,
 - Activities,
-- Reporting system
-
-में उचित बदलाव कर सकती है।
+- Reporting system.
 
 ### 29. ACCEPTANCE OF TERMS
-Volunteer Teacher द्वारा इस Program में शामिल होना यह दर्शाता है कि उसने ऊपर दिए गए Terms & Conditions को पढ़ लिया है और उनका पालन करने के लिए सहमत है।
+By joining this Program, a Volunteer Teacher confirms that they have read the above Terms & Conditions and agree to follow them.
 
 ### IMPORTANT NOTICE
 This document is intended as the general Terms & Conditions for the Eduskill India Foundation Volunteer Teacher Program. Specific project, school, center, safeguarding and legal requirements may be added according to the applicable program and local requirements.`,

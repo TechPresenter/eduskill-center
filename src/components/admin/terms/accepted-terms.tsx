@@ -48,7 +48,7 @@ export function AcceptedTerms({
             <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-micro group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
           </summary>
           {/* Focusable so the box can be scrolled from the keyboard (the text has no links to land on). */}
-          <div lang="hi" tabIndex={0} role="region" aria-labelledby={titleId} className="ring-focus-inset relative max-h-[28rem] overflow-y-auto border-t border-line px-4 py-4">
+          <div tabIndex={0} role="region" aria-labelledby={titleId} className="ring-focus-inset relative max-h-[28rem] overflow-y-auto border-t border-line px-4 py-4">
             <h3 id={titleId} className="mb-3 text-h4 text-navy">
               {terms.title}
             </h3>

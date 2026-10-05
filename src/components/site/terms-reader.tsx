@@ -119,7 +119,6 @@ export function TermsReader({
           tabIndex={0}
           role="region"
           aria-labelledby={titleId}
-          lang="hi"
           className="ring-focus-inset relative max-h-[max(12rem,calc(100svh_-_var(--header-h)_-_var(--sticky-bar-h)_-_var(--bottom-nav-h)_-_15rem))] overflow-y-auto px-4 py-4 sm:px-6 lg:max-h-[28rem]"
         >
           {terms.body}
