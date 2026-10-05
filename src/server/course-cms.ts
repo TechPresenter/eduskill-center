@@ -18,7 +18,7 @@ import { audit } from "@/lib/audit";
 import { toNumber } from "@/lib/utils";
 import { money, optionalString, uuid } from "@/lib/validation/common";
 import {
-  feePlanFromCourse,
+  feeDisplayFromCourse,
   formatCourseFee,
   pickEffectiveOffer,
   type FeeDisplay,
@@ -173,7 +173,11 @@ export async function listCourseNodes(courseId: string, opts: { activeOnly?: boo
   return rows.map(toNodeDto);
 }
 
-/** Builds the MODULE → CHAPTER → TOPIC → LESSON tree from one flat query. */
+/**
+ * Builds the MODULE → CHAPTER → TOPIC → LESSON tree from one flat query. A node whose parent is not
+ * in the list — on the public page, a hidden (inactive) module or chapter — is dropped together with
+ * everything under it, never promoted to the top level: hiding a module hides its lessons.
+ */
 export function buildCourseNodeTree(nodes: CourseNodeDto[]): CourseNodeTreeItem[] {
   const byId = new Map<string, CourseNodeTreeItem>();
   for (const n of nodes) byId.set(n.id, { ...n, children: [] });
@@ -182,7 +186,7 @@ export function buildCourseNodeTree(nodes: CourseNodeDto[]): CourseNodeTreeItem[
     const item = byId.get(n.id)!;
     const parent = n.parentId ? byId.get(n.parentId) : undefined;
     if (parent) parent.children.push(item);
-    else roots.push(item);
+    else if (!n.parentId) roots.push(item);
   }
   const sort = (list: CourseNodeTreeItem[]) => {
     list.sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title));
@@ -460,7 +464,8 @@ export const courseOfferInputSchema = z
     if (typeof v.offerPrice === "number" && typeof v.originalPrice === "number" && v.offerPrice > v.originalPrice) {
       ctx.addIssue({ code: "custom", path: ["offerPrice"], message: "The offer price must be lower than the original price" });
     }
-    if (v.offerPrice == null && v.discountPercent == null) {
+    // The admin form sends "" for an empty field, so "" counts as not given.
+    if ((v.offerPrice == null || v.offerPrice === "") && (v.discountPercent == null || v.discountPercent === "")) {
       ctx.addIssue({ code: "custom", path: ["offerPrice"], message: "Enter an offer price or a discount percentage" });
     }
   });
@@ -777,6 +782,28 @@ const courseCmsCourseSelect = {
   category: { select: { id: true, name: true, slug: true, icon: true } },
 } as const;
 
+export interface BilledFees {
+  courseFee: number;
+  registrationFee: number;
+  examFee: number;
+  certificateFee: number;
+}
+
+/**
+ * The price the site shows: the fee plan the Foundation published, or — with no plan — exactly what
+ * admission bills. A plan can never make a course that bills something read "No fee" (a FREE plan,
+ * or a discount down to zero): that falls back to the billed fees, because the student will be
+ * charged them. No offer is applied (see getCoursePageData).
+ */
+export function publicCourseFee(plan: CourseFeePlanDto | null, fees: BilledFees): { fee: FeeDisplay; fromPlan: boolean } {
+  const billed = fees.courseFee + fees.registrationFee + fees.examFee + fees.certificateFee;
+  if (plan) {
+    const shown = formatCourseFee(plan);
+    if (!(shown.isFree && billed > 0)) return { fee: shown, fromPlan: true };
+  }
+  return { fee: feeDisplayFromCourse(fees), fromPlan: false };
+}
+
 export interface CoursePageData {
   course: Omit<Prisma.CourseGetPayload<{ select: typeof courseCmsCourseSelect }>, "courseFee" | "registrationFee" | "examFee" | "certificateFee"> & {
     courseFee: number;
@@ -787,9 +814,14 @@ export interface CoursePageData {
   };
   curriculum: CourseNodeTreeItem[];
   feePlan: CourseFeePlanDto | null;
-  /** Ready-to-render price. Falls back to the course's own `courseFee` when no plan exists. */
+  /**
+   * Ready-to-render price: the fee plan when there is one, otherwise exactly what admission bills
+   * (`feeDisplayFromCourse`). Offers are NOT applied: billing does not honour them yet, so the site
+   * must not show a price the student will not be charged.
+   */
   fee: FeeDisplay;
-  offer: CourseOfferDto | null;
+  /** True when `fee` is the published plan; false when it is the billed fees (no plan, or a plan that would read "No fee"). */
+  feeFromPlan: boolean;
   faqs: CourseFaqDto[];
   gallery: CourseMediaDto[];
   promotional: CourseMediaDto[];
@@ -797,23 +829,21 @@ export interface CoursePageData {
 
 /**
  * Everything the public course page needs, in one call: the course, its category, the curriculum
- * tree, the fee plan already formatted for display, the currently-effective offer, the per-course
- * FAQ and both media sets. Only published/active rows come back.
+ * tree, the fee already formatted for display, the per-course FAQ and both media sets. Only
+ * published/active rows come back. Offers stay admin-only until billing applies them.
  *
  * `Promise.all` is safe here — these run on the pooled `db` client, not on a transaction client.
  */
-export async function getCoursePageData(slug: string, opts: { now?: Date; includeInactiveCourse?: boolean } = {}): Promise<CoursePageData | null> {
-  const now = opts.now ?? new Date();
+export async function getCoursePageData(slug: string, opts: { includeInactiveCourse?: boolean } = {}): Promise<CoursePageData | null> {
   const course = await db.course.findFirst({
     where: { slug, deletedAt: null, ...(opts.includeInactiveCourse ? {} : { status: "ACTIVE" }) },
     select: courseCmsCourseSelect,
   });
   if (!course) return null;
 
-  const [nodes, feePlan, offer, faqs, media] = await Promise.all([
+  const [nodes, feePlan, faqs, media] = await Promise.all([
     listCourseNodes(course.id, { activeOnly: true }),
     getCourseFeePlan(course.id),
-    getEffectiveOffer(course.id, now),
     listCourseFaqs(course.id, { activeOnly: true }),
     listCourseMedia(course.id, { activeOnly: true }),
   ]);
@@ -827,8 +857,10 @@ export async function getCoursePageData(slug: string, opts: { now?: Date; includ
     course: { ...course, courseFee, registrationFee, examFee, certificateFee, totalFee: courseFee + registrationFee + examFee + certificateFee },
     curriculum: buildCourseNodeTree(nodes),
     feePlan,
-    fee: formatCourseFee(feePlan ?? feePlanFromCourse({ courseFee, registrationFee }), offer),
-    offer,
+    ...(() => {
+      const shown = publicCourseFee(feePlan, { courseFee, registrationFee, examFee, certificateFee });
+      return { fee: shown.fee, feeFromPlan: shown.fromPlan };
+    })(),
     faqs,
     gallery: media.filter((m) => m.kind === "GALLERY"),
     promotional: media.filter((m) => m.kind === "PROMOTIONAL"),
@@ -840,6 +872,8 @@ export interface CourseCmsBundle {
   curriculum: CourseNodeTreeItem[];
   feePlan: CourseFeePlanDto | null;
   feePreview: FeeDisplay;
+  /** True when `feePreview` is the plan; false when the site shows the billed fees instead. */
+  feeFromPlan: boolean;
   offers: CourseOfferDto[];
   effectiveOfferId: string | null;
   faqs: CourseFaqDto[];
@@ -860,15 +894,22 @@ export async function getCourseCmsBundle(courseId: string, opts: { now?: Date } 
     listCourseOffers(courseId),
     listCourseFaqs(courseId),
     listCourseMedia(courseId),
-    db.course.findUniqueOrThrow({ where: { id: courseId }, select: { courseFee: true, registrationFee: true } }),
+    db.course.findUniqueOrThrow({ where: { id: courseId }, select: { courseFee: true, registrationFee: true, examFee: true, certificateFee: true } }),
   ]);
   const effective = pickEffectiveOffer(offers, now);
-  const plan = feePlan ?? feePlanFromCourse({ courseFee: toNumber(course.courseFee), registrationFee: toNumber(course.registrationFee) });
+  // Exactly what the public page shows — no offer applied (see getCoursePageData).
+  const shown = publicCourseFee(feePlan, {
+    courseFee: toNumber(course.courseFee),
+    registrationFee: toNumber(course.registrationFee),
+    examFee: toNumber(course.examFee),
+    certificateFee: toNumber(course.certificateFee),
+  });
   return {
     courseId,
     curriculum: buildCourseNodeTree(nodes),
     feePlan,
-    feePreview: formatCourseFee(plan, effective),
+    feePreview: shown.fee,
+    feeFromPlan: shown.fromPlan,
     offers,
     effectiveOfferId: effective?.id ?? null,
     faqs,

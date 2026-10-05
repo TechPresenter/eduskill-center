@@ -271,6 +271,49 @@ export async function updateCourse(id: string, input: CourseInput, ctx: Ctx) {
   return serializeCourse(course);
 }
 
+/**
+ * The four single-slot media fields the Course CMS renders on the public course page. Kept out of
+ * `courseInputSchema` deliberately: the Media tab swaps one image at a time and must not have to
+ * round-trip — and therefore risk overwriting — the whole course record to do it.
+ *
+ * Stored paths come from `src/lib/storage` via POST /api/admin/uploads, so an inline `data:`
+ * payload is refused rather than written into a column.
+ */
+const slotPath = z
+  .string()
+  .trim()
+  .max(1000)
+  .refine((v) => !v.toLowerCase().startsWith("data:"), "Upload the file instead of pasting inline data");
+const optionalSlotPath = z.union([z.literal(""), slotPath]).optional().nullable();
+
+export const courseMediaSlotsSchema = z.object({
+  bannerImage: optionalSlotPath,
+  instructorImage: optionalSlotPath,
+  promoVideoUrl: optionalSlotPath,
+  videoThumbnail: optionalSlotPath,
+});
+export type CourseMediaSlotsInput = z.infer<typeof courseMediaSlotsSchema>;
+
+const mediaSlotSelect = { id: true, code: true, bannerImage: true, instructorImage: true, promoVideoUrl: true, videoThumbnail: true } as const;
+
+export async function setCourseMediaSlots(id: string, input: CourseMediaSlotsInput, ctx: Ctx) {
+  const existing = await db.course.findFirst({ where: { id, deletedAt: null }, select: mediaSlotSelect });
+  if (!existing) throw Errors.notFound("Course");
+  const blank = (v: string | null | undefined) => (v ?? "").trim() || null;
+  const course = await db.course.update({
+    where: { id },
+    data: {
+      bannerImage: blank(input.bannerImage),
+      instructorImage: blank(input.instructorImage),
+      promoVideoUrl: blank(input.promoVideoUrl),
+      videoThumbnail: blank(input.videoThumbnail),
+    },
+    select: mediaSlotSelect,
+  });
+  await audit({ user: ctx.user, action: "update", module: "courses", recordType: "Course", recordId: id, description: `${ctx.user.name} updated the media of course ${existing.code}`, oldValue: existing, newValue: course, ip: ctx.ip, userAgent: ctx.userAgent });
+  return course;
+}
+
 export async function setCourseStatus(id: string, status: CourseStatus, ctx: Ctx) {
   const existing = await db.course.findFirst({ where: { id, deletedAt: null } });
   if (!existing) throw Errors.notFound("Course");

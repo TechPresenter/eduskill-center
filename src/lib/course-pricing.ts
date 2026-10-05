@@ -51,6 +51,8 @@ export interface FeeDisplay {
   priceText: string;
   /** The full label: "No fee", "₹999 One Time", "₹499 / Month", "₹1,999 → ₹999 One Time". */
   text: string;
+  /** What the headline price is called: "Course fee", "Monthly fee", "Registration fee", "Fees", "Fee" or "Cost". */
+  label: string;
 }
 
 /** Printed for a course with nothing payable. Deliberately not "Free": the site never advertises free training. */
@@ -107,11 +109,11 @@ export function formatCourseFee(plan: FeePlanLike | null | undefined, offer?: Of
 
   if (p.feeType === "CUSTOM") {
     const label = (p.customLabel ?? "").trim() || CUSTOM_FALLBACK_LABEL;
-    return { feeType: "CUSTOM", currency, isFree: false, paymentRequired, amount: null, originalAmount: null, discountPercent: null, suffix: null, enrolmentFee, priceText: label, text: label };
+    return { feeType: "CUSTOM", currency, isFree: false, paymentRequired, amount: null, originalAmount: null, discountPercent: null, suffix: null, enrolmentFee, priceText: label, text: label, label: "Fee" };
   }
 
   if (p.feeType === "FREE") {
-    return { feeType: "FREE", currency, isFree: true, paymentRequired: false, amount: 0, originalAmount: null, discountPercent: null, suffix: null, enrolmentFee, priceText: FREE_LABEL, text: FREE_LABEL };
+    return { feeType: "FREE", currency, isFree: true, paymentRequired: false, amount: 0, originalAmount: null, discountPercent: null, suffix: null, enrolmentFee, priceText: FREE_LABEL, text: FREE_LABEL, label: "Cost" };
   }
 
   const candidates: number[] = [];
@@ -133,11 +135,11 @@ export function formatCourseFee(plan: FeePlanLike | null | undefined, offer?: Of
   const suffix = p.feeType === "MONTHLY" ? "/ Month" : "One Time";
 
   if (isFree) {
-    return { feeType: p.feeType, currency, isFree: true, paymentRequired: false, amount: 0, originalAmount, discountPercent, suffix: null, enrolmentFee, priceText: FREE_LABEL, text: FREE_LABEL };
+    return { feeType: p.feeType, currency, isFree: true, paymentRequired: false, amount: 0, originalAmount, discountPercent, suffix: null, enrolmentFee, priceText: FREE_LABEL, text: FREE_LABEL, label: "Cost" };
   }
 
   const priceText = originalAmount != null ? `${formatMoney(originalAmount, currency)} → ${formatMoney(amount, currency)}` : formatMoney(amount, currency);
-  return { feeType: p.feeType, currency, isFree: false, paymentRequired, amount, originalAmount, discountPercent, suffix, enrolmentFee, priceText, text: `${priceText} ${suffix}` };
+  return { feeType: p.feeType, currency, isFree: false, paymentRequired, amount, originalAmount, discountPercent, suffix, enrolmentFee, priceText, text: `${priceText} ${suffix}`, label: p.feeType === "MONTHLY" ? "Monthly fee" : "Course fee" };
 }
 
 /**
@@ -154,6 +156,24 @@ export function feePlanFromCourse(course: { courseFee: number; registrationFee?:
     enrolmentFee: round2(num(course.registrationFee)),
     paymentRequired: baseFee > 0,
   };
+}
+
+/**
+ * The price of a course with NO fee plan: exactly what admission bills, from the course's own fee
+ * columns (`computeFeeLines` in src/server/applications.ts), headlined the way the course cards and
+ * the earlier course page do it (`feeHeadline`). A course whose only charge is a registration fee —
+ * Class 1–4: no course fee, a ₹50 registration fee — reads "Registration fee ₹50", never "No fee".
+ * Only a course that bills nothing at all is FREE.
+ */
+export function feeDisplayFromCourse(
+  c: { courseFee: number; registrationFee?: number | null; examFee?: number | null; certificateFee?: number | null },
+  currency = "INR"
+): FeeDisplay {
+  const h = feeHeadline(c, currency);
+  if (h.kind === "none") return formatCourseFee({ feeType: "FREE", currency, baseFee: 0 });
+  if (h.kind === "course") return formatCourseFee({ feeType: "ONE_TIME", currency, baseFee: h.amount, enrolmentFee: 0, paymentRequired: true });
+  const priceText = formatMoney(h.amount, currency);
+  return { feeType: "ONE_TIME", currency, isFree: false, paymentRequired: true, amount: h.amount, originalAmount: null, discountPercent: null, suffix: null, enrolmentFee: 0, priceText, text: priceText, label: h.label };
 }
 
 // ───────────────────────────── Fee period ─────────────────────────────

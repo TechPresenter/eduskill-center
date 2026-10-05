@@ -1,387 +1,407 @@
+import { cache } from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, BadgeCheck, CalendarDays, Clock, FileCheck, Layers, ListChecks, MapPin, MonitorSmartphone, Users } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarDays, Clock, Layers, MapPin, MonitorSmartphone, Tag } from "lucide-react";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth/session";
 import { getBranding } from "@/lib/settings";
-import { absoluteUrl, formatINR, titleCase } from "@/lib/utils";
-import { ADMISSION_FEE_LABEL, FREE_LABEL, feeHeadline, feePeriodSuffix } from "@/lib/course-pricing";
-import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/feedback";
+import { absoluteUrl, titleCase } from "@/lib/utils";
 import { ButtonLink } from "@/components/ui/button";
-import { DynamicIcon } from "@/components/ui/icon";
-import { getDocumentTypeNames, listCentersForCourse, publicCourseSelect, toCourseCard } from "@/server/public";
+import { StickyActionBar } from "@/components/ui/sticky-action-bar";
+import { getCoursePageData } from "@/server/course-cms";
+import { getDocumentTypeNames, listCentersForCourse } from "@/server/public";
 import { trackEvent } from "@/server/analytics";
 import { PageHero } from "@/components/site/page-hero";
-import { Markdown } from "@/components/site/markdown";
-import { Media } from "@/components/site/safe-image";
-import { StickyActionBar } from "@/components/ui/sticky-action-bar";
 import { JsonLd } from "@/components/site/json-ld";
 import { CtaBand } from "@/components/site/cta-band";
 import { applyHref } from "@/components/site/apply-link";
+import { markdownExcerpt } from "@/components/site/markdown";
+import { CourseSection } from "@/components/site/course/course-section";
+import { CourseBanner } from "@/components/site/course/course-banner";
+import { CourseOverview, type CourseFact } from "@/components/site/course/course-overview";
+import { CourseFee, type FeeBreakdownRow } from "@/components/site/course/course-fee";
+import { CourseCurriculum } from "@/components/site/course/course-curriculum";
+import { CourseSyllabus, parseSyllabus } from "@/components/site/course/course-syllabus";
+import { CourseBenefits, courseBenefits } from "@/components/site/course/course-benefits";
+import { CourseInstructor } from "@/components/site/course/course-instructor";
+import { CourseMaterials, type CourseMaterialItem } from "@/components/site/course/course-materials";
+import { CourseFaqs } from "@/components/site/course/course-faqs";
+import { CourseEnrol, type EnrolCentre } from "@/components/site/course/course-enrol";
+import { curriculumStats, flattenCurriculum, formatMinutes, resolveFileLink, resolveImageSrc, toPublicCurriculum } from "@/components/site/course/public-view";
 
-type Props = { params: Promise<{ slug: string }> };
+/**
+ * The public course page.
+ *
+ * Every section is driven by what the Foundation configured in the Course CMS, in the order the
+ * page reads: banner, overview, fee, content, benefits, instructor, study material, FAQs, enrol.
+ * A section with nothing behind it is not rendered — a course with no curriculum and no FAQ still
+ * gets a complete page rather than empty headings.
+ *
+ * ONE aggregate read: `getCoursePageData()` fetches the course, curriculum, fee plan, FAQs and both
+ * media sets together, and `cache()` shares that single call between `generateMetadata()` and the
+ * render. The few extra reads below are other modules (centres, document types, course-level study
+ * material), batched on the pooled client.
+ *
+ * Not shown yet, on purpose: course offers (billing does not apply them, so the page must not
+ * advertise a price nobody is charged) and the assigned trainers (they have not agreed to a public
+ * profile). The instructor section shows only the image the Foundation uploads.
+ */
+const loadCourse = cache((slug: string) => getCoursePageData(slug));
 
-const courseDetailSelect = {
-  ...publicCourseSelect,
-  description: true,
-  eligibility: true,
-  minAge: true,
-  maxAge: true,
-  syllabus: true,
-  totalClasses: true,
-  certificateEligibility: true,
-  minAttendancePct: true,
-  passingMarksPct: true,
-  requiredDocuments: true,
-  seoTitle: true,
-  seoDescription: true,
-} as const;
-
-async function loadCourse(slug: string) {
-  return db.course.findFirst({ where: { slug, status: "ACTIVE", deletedAt: null }, select: courseDetailSelect });
-}
-
-interface SyllabusModule {
-  module?: number;
-  title: string;
-  topics?: string[];
-}
-
-function toSyllabusModule(item: unknown, index: number): SyllabusModule | null {
-  if (typeof item === "string") return item.trim() ? { module: index + 1, title: item } : null;
-  if (item && typeof item === "object") {
-    const o = item as Record<string, unknown>;
-    const title = typeof o.title === "string" ? o.title : typeof o.name === "string" ? o.name : "";
-    if (!title) return null;
-    const topics = Array.isArray(o.topics) ? o.topics.filter((t): t is string => typeof t === "string") : undefined;
-    return { module: typeof o.module === "number" ? o.module : index + 1, title, topics };
-  }
-  return null;
-}
-
-function parseSyllabus(raw: unknown): SyllabusModule[] {
-  if (!Array.isArray(raw)) return [];
-  const out: SyllabusModule[] = [];
-  raw.forEach((item, i) => {
-    const m = toSyllabusModule(item, i);
-    if (m) out.push(m);
-  });
-  return out;
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/courses/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const course = await loadCourse(slug);
-  if (!course) return { title: "Course not found" };
+  const data = await loadCourse(slug);
+  if (!data) return { title: "Course not found" };
+  const { course } = data;
   const title = course.seoTitle || course.name;
-  const description = course.seoDescription || course.shortDescription || `${course.name} – ${course.durationText}, ${titleCase(course.level)} level ${titleCase(course.mode)} course at EduSkill training centers.`;
+  const description =
+    course.seoDescription ||
+    course.shortDescription ||
+    `${course.name} – ${course.durationText}, ${titleCase(course.level)} level ${titleCase(course.mode)} course at EduSkill training centers.`;
+  const image = resolveImageSrc(course.bannerImage) ?? resolveImageSrc(course.image);
   return {
     title,
     description,
     alternates: { canonical: absoluteUrl(`/courses/${course.slug}`) },
-    openGraph: { title, description, url: absoluteUrl(`/courses/${course.slug}`), type: "article", images: course.image ? [{ url: course.image }] : undefined },
+    openGraph: {
+      title,
+      description,
+      url: absoluteUrl(`/courses/${course.slug}`),
+      type: "article",
+      images: image ? [{ url: absoluteUrl(image) }] : undefined,
+    },
   };
 }
 
-export default async function CourseDetailPage({ params }: Props) {
+export default async function CourseDetailPage({ params }: PageProps<"/courses/[slug]">) {
   const { slug } = await params;
-  const raw = await loadCourse(slug);
-  if (!raw) notFound();
-  const course = toCourseCard(raw);
-  const [documents, centers, user, branding] = await Promise.all([getDocumentTypeNames(raw.requiredDocuments), listCentersForCourse(raw.id), getSessionUser().catch(() => null), getBranding()]);
-  void trackEvent({ type: "COURSE_VIEW", refId: raw.id, path: `/courses/${raw.slug}` });
-  const syllabus = parseSyllabus(raw.syllabus);
-  const apply = applyHref(user, { courseId: raw.id });
+  const data = await loadCourse(slug);
+  if (!data) notFound();
+  const { course, curriculum, feePlan, fee, feeFromPlan, faqs, gallery, promotional } = data;
 
-  // A monthly course (Class 5 and above) bills `courseFee` every month; what admission collects —
-  // the course fee plus any one-time fee — is called the registration fees. A registration-only
-  // course (Class 1–4) has a single "Registration fee" row and no total.
-  const monthly = course.feePeriod === "month";
-  const headline = feeHeadline(course);
-  const feeRows = [
-    { label: monthly ? "Monthly fee" : "Course fee", value: course.courseFee, suffix: feePeriodSuffix(course.feePeriod) },
-    { label: "Registration fee", value: course.registrationFee, suffix: "" },
-    { label: "Exam fee", value: course.examFee, suffix: "" },
-    { label: "Certificate fee", value: course.certificateFee, suffix: "" },
-  ].filter((r) => r.value > 0);
+  const [documents, centres, user, branding, studyMaterials] = await Promise.all([
+    getDocumentTypeNames(course.requiredDocuments),
+    listCentersForCourse(course.id),
+    getSessionUser().catch(() => null),
+    getBranding(),
+    // Course-level material only: a trainer's upload belongs to their batch (batchId set) and is for
+    // that batch's students, not for anonymous visitors.
+    db.studyMaterial.findMany({
+      where: { courseId: course.id, batchId: null, isPublished: true },
+      orderBy: { createdAt: "desc" },
+      take: 24,
+      select: { id: true, title: true, description: true, fileUrl: true, fileType: true },
+    }),
+  ]);
 
-  const jsonLd = {
+  void trackEvent({ type: "COURSE_VIEW", refId: course.id, path: `/courses/${course.slug}` });
+
+  // ── The gate: paid material loses its URLs here, before any component sees the tree ──
+  const nodes = toPublicCurriculum(curriculum);
+  const stats = curriculumStats(nodes);
+  const flatNodes = flattenCurriculum(nodes);
+  const syllabus = nodes.length === 0 ? parseSyllabus(course.syllabus) : [];
+
+  const apply = applyHref(user, { courseId: course.id });
+  const centersHref = `/training-centers?courseId=${course.id}`;
+  const signInHref = `/login?next=${encodeURIComponent(`/courses/${course.slug}`)}`;
+
+  // ── Media ──
+  const bannerSrc = resolveImageSrc(course.bannerImage) ?? resolveImageSrc(course.image);
+  const promoVideo = resolveFileLink(course.promoVideoUrl);
+  // A private upload is skipped: an anonymous visitor cannot play a file the file route refuses.
+  const videoSrc = promoVideo && !promoVideo.requiresLogin ? promoVideo.href : null;
+  const posterSrc = resolveImageSrc(course.videoThumbnail) ?? bannerSrc;
+  const galleryImages = gallery.flatMap((m) => {
+    const src = resolveImageSrc(m.url);
+    return src ? [{ id: m.id, src, alt: m.alt, caption: m.caption }] : [];
+  });
+  const promoImages = promotional.flatMap((m) => {
+    const src = resolveImageSrc(m.url);
+    return src ? [{ id: m.id, src, alt: m.alt, caption: m.caption }] : [];
+  });
+
+  // ── Overview facts: every one of them a column on the course record ──
+  const facts: CourseFact[] = [
+    { icon: Clock, label: "Duration", value: course.durationText },
+    { icon: Layers, label: "Level", value: titleCase(course.level) },
+    { icon: MonitorSmartphone, label: "Mode", value: titleCase(course.mode) },
+  ];
+  if (course.totalClasses > 0) facts.push({ icon: CalendarDays, label: "Classes", value: `${course.totalClasses} classes` });
+  if (stats.totalMinutes > 0) facts.push({ icon: BookOpen, label: "Course content", value: formatMinutes(stats.totalMinutes) });
+  if (course.category) facts.push({ icon: Tag, label: "Category", value: course.category.name });
+
+  const ageText =
+    course.minAge || course.maxAge
+      ? `Age: ${course.minAge ? `${course.minAge}+` : ""}${course.minAge && course.maxAge ? " to " : ""}${course.maxAge ? `${course.maxAge} years` : course.minAge ? " years" : ""}`
+      : null;
+
+  // ── Fee: the plan is the published price; a course with NO plan shows what admission bills.
+  //    Either way the one-time exam and certificate fees admission also bills are listed, and
+  //    without a plan the rows add up to the total. A single registration-only row (Class 1–4) is
+  //    already the headline, so it is not repeated. ──
+  const billedRows: FeeBreakdownRow[] = feeFromPlan
+    ? [
+        { label: "Exam fee", value: course.examFee },
+        { label: "Certificate fee", value: course.certificateFee },
+      ]
+    : [
+        { label: "Course fee", value: course.courseFee },
+        { label: "Registration fee", value: course.registrationFee },
+        { label: "Exam fee", value: course.examFee },
+        { label: "Certificate fee", value: course.certificateFee },
+      ];
+  const nonZeroRows = billedRows.filter((r) => r.value > 0);
+  const breakdown = !feeFromPlan && nonZeroRows.length === 1 ? [] : nonZeroRows;
+  const total = !feeFromPlan && breakdown.length > 1 ? course.totalFee : null;
+
+  // ── Study material: curriculum attachments first, then the course library ──
+  const materials: CourseMaterialItem[] = [];
+  for (const n of flatNodes) {
+    if (!n.attached.material && !n.attached.document) continue;
+    const link = n.preview?.material ?? n.preview?.document ?? null;
+    const openable = link && !link.requiresLogin ? link : null;
+    materials.push({
+      id: `node-${n.id}`,
+      title: n.title,
+      description: n.description,
+      meta: n.isFreePreview ? "Preview" : titleCase(n.kind),
+      link: openable,
+      locked: !openable,
+      signInOnly: Boolean(link?.requiresLogin),
+    });
+  }
+  for (const m of studyMaterials) {
+    const link = resolveFileLink(m.fileUrl);
+    const openable = link && !link.requiresLogin ? link : null;
+    materials.push({
+      id: m.id,
+      title: m.title,
+      description: m.description,
+      meta: m.fileType ? m.fileType.toUpperCase() : null,
+      link: openable,
+      locked: !openable,
+      signInOnly: Boolean(link?.requiresLogin),
+    });
+  }
+
+  const benefits = courseBenefits({
+    mode: course.mode,
+    durationText: course.durationText,
+    totalClasses: course.totalClasses,
+    certificateEligibility: course.certificateEligibility,
+    minAttendancePct: course.minAttendancePct,
+    passingMarksPct: course.passingMarksPct,
+    scholarshipAvailable: course.scholarshipAvailable,
+    scholarshipNote: course.scholarshipNote,
+    centerCount: centres.length,
+    materialCount: materials.length,
+    freePreviewCount: stats.freePreviews,
+    isFree: fee.isFree,
+  });
+
+  const instructorSrc = resolveImageSrc(course.instructorImage);
+
+  const enrolCentres: EnrolCentre[] = centres.map((c) => ({
+    id: c.id,
+    name: c.name,
+    code: c.code,
+    href: `/training-centers/${c.state.slug}/${c.district.slug}/${c.slug}`,
+    location: [c.villageTown, c.block.name, c.district.name, c.state.name].filter(Boolean).join(", "),
+    isVerified: c.isVerified,
+  }));
+
+  // ── Structured data: the Course graph the page already published, extended with the curriculum
+  //    the CMS now holds, the published price and a FAQ graph when there are questions. ──
+  const courseJsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Course",
     name: course.name,
     description: course.shortDescription ?? undefined,
     courseCode: course.code,
     url: absoluteUrl(`/courses/${course.slug}`),
+    image: bannerSrc ? absoluteUrl(bannerSrc) : undefined,
     provider: { "@type": "Organization", name: branding.siteName, url: absoluteUrl("/") },
     educationalLevel: titleCase(course.level),
     timeRequired: course.durationWeeks > 0 ? `P${course.durationWeeks}W` : undefined,
-    offers: { "@type": "Offer", price: course.totalFee, priceCurrency: "INR", availability: "https://schema.org/InStock", url: absoluteUrl(`/courses/${course.slug}`) },
-    hasCourseInstance: centers.slice(0, 20).map((c) => ({
+    offers: {
+      "@type": "Offer",
+      // What admission collects without a plan; the plan's published amount when there is one.
+      price: feeFromPlan ? (fee.amount ?? course.totalFee) : course.totalFee,
+      priceCurrency: fee.currency,
+      availability: "https://schema.org/InStock",
+      url: absoluteUrl(`/courses/${course.slug}`),
+    },
+    ...(nodes.length > 0
+      ? { syllabusSections: nodes.map((n) => ({ "@type": "Syllabus", name: n.title, description: n.description ?? undefined })) }
+      : {}),
+    hasCourseInstance: centres.slice(0, 20).map((c) => ({
       "@type": "CourseInstance",
       courseMode: course.mode === "ONLINE" ? "online" : course.mode === "HYBRID" ? "blended" : "onsite",
       location: { "@type": "Place", name: c.name, address: { "@type": "PostalAddress", addressLocality: c.district.name, addressRegion: c.state.name, addressCountry: "IN" } },
     })),
   };
+  const jsonLd: Record<string, unknown>[] = [courseJsonLd];
+  if (faqs.length > 0) {
+    jsonLd.push({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      url: absoluteUrl(`/courses/${course.slug}`),
+      mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.question, acceptedAnswer: { "@type": "Answer", text: markdownExcerpt(f.answer, 2000) } })),
+    });
+  }
+
+  const hasContent = nodes.length > 0 || syllabus.length > 0;
 
   return (
     <>
       <JsonLd data={jsonLd} />
-      <PageHero eyebrow={course.category?.name ?? "Course"} title={course.name} description={course.shortDescription ?? undefined} breadcrumbs={[{ label: "Home", href: "/" }, { label: "Courses", href: "/courses" }, { label: course.name }]}>
+
+      <PageHero
+        eyebrow={course.category?.name ?? "Course"}
+        title={course.name}
+        description={course.shortDescription ?? undefined}
+        breadcrumbs={[{ label: "Home", href: "/" }, { label: "Courses", href: "/courses" }, { label: course.name }]}
+      >
         <div className="flex flex-col gap-6">
           <dl className="flex flex-wrap gap-x-8 gap-y-3 text-body text-white/85">
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-orange" aria-hidden />
+              <Clock className="h-4 w-4 text-orange-on-navy" aria-hidden />
               <dt className="sr-only">Duration</dt>
               <dd>{course.durationText}</dd>
             </div>
             <div className="flex items-center gap-2">
-              <Layers className="h-4 w-4 text-orange" aria-hidden />
+              <Layers className="h-4 w-4 text-orange-on-navy" aria-hidden />
               <dt className="sr-only">Level</dt>
               <dd>{titleCase(course.level)}</dd>
             </div>
             <div className="flex items-center gap-2">
-              <MonitorSmartphone className="h-4 w-4 text-orange" aria-hidden />
+              <MonitorSmartphone className="h-4 w-4 text-orange-on-navy" aria-hidden />
               <dt className="sr-only">Mode</dt>
               <dd>{titleCase(course.mode)}</dd>
             </div>
-            {raw.totalClasses > 0 && (
-              <div className="flex items-center gap-2">
-                <CalendarDays className="h-4 w-4 text-orange" aria-hidden />
-                <dt className="sr-only">Classes</dt>
-                <dd>{raw.totalClasses} classes</dd>
-              </div>
-            )}
             <div className="flex items-center gap-2">
-              <span className="text-overline text-white/60">Code</span>
-              <dd>{course.code}</dd>
+              <dt className="text-overline text-white/60">{fee.label}</dt>
+              <dd className="font-semibold">{fee.text}</dd>
             </div>
           </dl>
           <div className="flex flex-col gap-3 sm:flex-row">
             <ButtonLink href={apply} size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
-              Apply Now
+              Enrol Now
             </ButtonLink>
-            <ButtonLink href={`/training-centers?courseId=${course.id}`} size="lg" variant="white" leftIcon={<MapPin className="h-4 w-4" />}>
+            <ButtonLink href={centersHref} size="lg" variant="white" leftIcon={<MapPin className="h-4 w-4" />}>
               Find a Center
             </ButtonLink>
           </div>
         </div>
       </PageHero>
 
-      <section className="container-x grid gap-10 section-y lg:grid-cols-12 lg:gap-12">
-        <div className="space-y-12 lg:col-span-8">
-          {course.image && (
-            <div className="rounded-card-lg shadow-e1">
-              <Media src={course.image} alt={course.name} seed={course.slug} ratio="16x9" sizes="(max-width: 1024px) 100vw, 800px" priority />
-            </div>
-          )}
+      <CourseBanner title={course.name} seed={course.slug} bannerSrc={bannerSrc} videoSrc={videoSrc} posterSrc={posterSrc} />
 
-          {raw.description && (
-            <div>
-              <h2 className="mb-4 text-h2">About this course</h2>
-              <Markdown source={raw.description} />
-            </div>
-          )}
+      <CourseSection id="course-overview" label="Overview" title="Course [[overview]]" tone="white">
+        <CourseOverview
+          description={course.description}
+          summary={course.shortDescription}
+          facts={facts}
+          eligibility={course.eligibility}
+          ageText={ageText}
+          gallery={galleryImages}
+          seed={course.slug}
+        />
+      </CourseSection>
 
-          {(raw.eligibility || raw.minAge || raw.maxAge) && (
-            <div className="card card-p sm:p-8">
-              <h2 className="flex items-center gap-2 text-h3">
-                <Users className="h-5 w-5 shrink-0 text-orange" aria-hidden /> Eligibility
-              </h2>
-              {raw.eligibility && <p className="mt-3 text-body-lg text-ink">{raw.eligibility}</p>}
-              {(raw.minAge || raw.maxAge) && (
-                <p className="mt-3 text-body-sm text-muted">
-                  Age: {raw.minAge ? `${raw.minAge}+` : ""}
-                  {raw.minAge && raw.maxAge ? " to " : ""}
-                  {raw.maxAge ? `${raw.maxAge} years` : raw.minAge ? " years" : ""}
-                </p>
-              )}
-            </div>
-          )}
+      <CourseSection id="course-fee" label="Fees" title="What you [[pay]]" tone="lavender">
+        <CourseFee
+          fee={fee}
+          offer={null}
+          planNote={feeFromPlan ? (feePlan?.note ?? null) : null}
+          breakdown={breakdown}
+          total={total}
+          scholarshipNote={course.scholarshipAvailable ? course.scholarshipNote || "Need-based and merit scholarships reduce the payable fee. The final amount is decided during application review." : null}
+          applyHref={apply}
+          centersHref={centersHref}
+          promotional={promoImages}
+          seed={course.slug}
+        />
+      </CourseSection>
 
-          {syllabus.length > 0 && (
-            <div>
-              <h2 className="mb-4 flex items-center gap-2 text-h2">
-                <ListChecks className="h-6 w-6 shrink-0 text-orange" aria-hidden /> Syllabus
-              </h2>
-              <ol className="space-y-3">
-                {syllabus.map((m, i) => (
-                  <li key={i} className="card flex gap-4 card-p">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-orange-light font-heading text-sm font-extrabold text-orange tabular-nums">{String(m.module ?? i + 1).padStart(2, "0")}</span>
-                    <div className="min-w-0">
-                      <h3 className="text-h4 text-navy">{m.title}</h3>
-                      {m.topics && m.topics.length > 0 && <p className="mt-1 text-body-sm text-muted">{m.topics.join(" · ")}</p>}
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="card card-p">
-              <h2 className="flex items-center gap-2 text-h3">
-                <BadgeCheck className="h-5 w-5 shrink-0 text-orange" aria-hidden /> Certificate eligibility
-              </h2>
-              <p className="mt-3 text-body text-ink">{raw.certificateEligibility || `Minimum ${raw.minAttendancePct}% attendance and ${raw.passingMarksPct}% in assessments.`}</p>
-              <ul className="mt-3 space-y-1 text-body-sm text-muted">
-                <li>Minimum attendance: {raw.minAttendancePct}%</li>
-                <li>Passing marks: {raw.passingMarksPct}%</li>
-                <li>Certificates carry a unique number verifiable online.</li>
-              </ul>
-            </div>
-            <div className="card card-p">
-              <h2 className="flex items-center gap-2 text-h3">
-                <FileCheck className="h-5 w-5 shrink-0 text-orange" aria-hidden /> Required documents
-              </h2>
-              {documents.length > 0 ? (
-                <ul className="mt-3 space-y-2 text-body">
-                  {documents.map((d) => (
-                    <li key={d.key} className="flex items-start gap-2">
-                      <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${d.isRequired ? "bg-orange" : "bg-muted"}`} aria-hidden />
-                      <span>
-                        <span className="font-medium text-ink">{d.name}</span>
-                        {d.description && <span className="block text-body-sm text-muted">{d.description}</span>}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-3 text-body-sm text-muted">Documents will be requested during your application.</p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <h2 className="mb-4 flex items-center gap-2 text-h2">
-              <MapPin className="h-6 w-6 shrink-0 text-orange" aria-hidden /> Centers offering this course
-            </h2>
-            {centers.length === 0 ? (
-              <EmptyState
-                icon={<MapPin className="h-7 w-7" />}
-                title="No center lists this course yet"
-                description="Please check back soon, or browse every EduSkill training center."
-                action={
-                  <ButtonLink href="/training-centers" variant="outline">
-                    Browse all centers
-                  </ButtonLink>
-                }
-              />
-            ) : (
-              <ul className="grid gap-4 sm:grid-cols-2">
-                {centers.map((c) => (
-                  <li key={c.id}>
-                    <Link href={`/training-centers/${c.state.slug}/${c.district.slug}/${c.slug}`} className="card card-hover flex h-full flex-col card-p">
-                      <span className="flex items-start gap-2">
-                        <span className="text-h4 text-navy">{c.name}</span>
-                        {c.isVerified && <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-label="Verified" />}
-                      </span>
-                      <span className="mt-1 font-mono text-caption text-muted">{c.code}</span>
-                      <span className="mt-2 text-body-sm text-muted">
-                        {[c.villageTown, c.block.name, c.district.name, c.state.name].filter(Boolean).join(", ")}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        <aside className="lg:col-span-4">
-          <div className="space-y-6 lg:sticky lg:top-24">
-            <div className="card overflow-hidden">
-              <div className="flex items-center gap-3 bg-navy px-5 py-4 text-white sm:px-6">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white/10">
-                  <DynamicIcon name={course.icon ?? course.category?.icon ?? undefined} className="h-5 w-5" aria-hidden />
-                </span>
-                <h2 className="text-h4 text-white">Fee breakdown</h2>
-              </div>
-              <div className="card-p">
-                {feeRows.length === 0 ? (
-                  <p className="text-h1 text-navy">{FREE_LABEL}</p>
-                ) : (
-                  <dl className="space-y-2 text-body">
-                    {feeRows.map((r) => (
-                      <div key={r.label} className="flex items-baseline justify-between gap-4">
-                        <dt className="text-muted">{r.label}</dt>
-                        <dd className="font-semibold text-ink tabular-nums">
-                          {formatINR(r.value)}
-                          {r.suffix}
-                        </dd>
-                      </div>
-                    ))}
-                    {(monthly || feeRows.length > 1) && (
-                      <div className="flex items-baseline justify-between gap-4 border-t border-line pt-3">
-                        <dt className="font-bold text-navy">{monthly ? ADMISSION_FEE_LABEL : "Total"}</dt>
-                        <dd className="text-h3 text-navy tabular-nums">{formatINR(course.totalFee)}</dd>
-                      </div>
-                    )}
-                  </dl>
+      {hasContent && (
+        <CourseSection
+          id="course-content"
+          label="Curriculum"
+          title="Course [[content]]"
+          tone="white"
+          aside={
+            nodes.length > 0 ? (
+              <p className="text-body-sm text-muted">
+                <span className="font-semibold text-ink tabular-nums">{stats.sections}</span> sections ·{" "}
+                <span className="font-semibold text-ink tabular-nums">{stats.lessons}</span> lessons
+                {stats.totalMinutes > 0 && <> · {formatMinutes(stats.totalMinutes)}</>}
+                {stats.freePreviews > 0 && (
+                  <>
+                    {" "}
+                    · <span className="font-semibold text-success-dark tabular-nums">{stats.freePreviews}</span> open to preview
+                  </>
                 )}
-                {monthly && feeRows.length > 0 && <p className="mt-3 text-body-sm text-muted">Registration fees are paid at admission. After that, the course fee is charged every month.</p>}
-                {course.scholarshipAvailable && (
-                  <div className="mt-4 rounded-card bg-orange-light p-4">
-                    <Badge tone="orange" className="mb-2">
-                      Scholarship available
-                    </Badge>
-                    <p className="text-body-sm text-ink">{course.scholarshipNote || "Need-based and merit scholarships reduce the payable fee. The final amount is decided during application review."}</p>
-                    <Link href="/scholarship" className="mt-2 inline-flex min-h-11 items-center text-body-sm font-semibold text-orange ring-focus hover:underline">
-                      Check eligibility →
-                    </Link>
-                  </div>
-                )}
-                <ButtonLink href={apply} fullWidth size="lg" className="mt-5" rightIcon={<ArrowRight className="h-4 w-4" />}>
-                  Apply Now
-                </ButtonLink>
-                <ButtonLink href={`/training-centers?courseId=${course.id}`} variant="outline" fullWidth className="mt-2" leftIcon={<MapPin className="h-4 w-4" />}>
-                  Find a Center
-                </ButtonLink>
-              </div>
-            </div>
-            <div className="card card-p">
-              <h2 className="text-overline text-muted">At a glance</h2>
-              <dl className="mt-3 space-y-2 text-body">
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted">Duration</dt>
-                  <dd className="font-medium text-ink">{course.durationText}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted">Level</dt>
-                  <dd className="font-medium text-ink">{titleCase(course.level)}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted">Mode</dt>
-                  <dd className="font-medium text-ink">{titleCase(course.mode)}</dd>
-                </div>
-                {course.category && (
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-muted">Category</dt>
-                    <dd className="font-medium text-ink">{course.category.name}</dd>
-                  </div>
-                )}
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted">Centers</dt>
-                  <dd className="font-medium text-ink tabular-nums">{centers.length}</dd>
-                </div>
-              </dl>
-            </div>
-          </div>
-        </aside>
-      </section>
+              </p>
+            ) : undefined
+          }
+        >
+          {nodes.length > 0 ? <CourseCurriculum nodes={nodes} signInHref={signInHref} /> : <CourseSyllabus modules={syllabus} />}
+        </CourseSection>
+      )}
 
-      <CtaBand title="Start your [[application]] today" description="Register in minutes, choose this course and the nearest center, and our team will guide you through admission." primary={{ label: "Apply Now", href: apply }} secondary={{ label: "Ask a Question", href: "/contact?type=ADMISSION" }} />
+      {benefits.length > 0 && (
+        <CourseSection id="course-benefits" label="Benefits" title="What you [[get]]" tone="lavender">
+          <CourseBenefits benefits={benefits} />
+        </CourseSection>
+      )}
+
+      {instructorSrc && (
+        <CourseSection id="course-instructor" label="Instructor" title="Who [[teaches]] you" tone="white">
+          <CourseInstructor imageSrc={instructorSrc} trainers={[]} courseName={course.name} seed={course.slug} />
+        </CourseSection>
+      )}
+
+      {materials.length > 0 && (
+        <CourseSection
+          id="course-material"
+          label="Study material"
+          title="Notes and [[resources]]"
+          description="Course files are served through EduSkill with the same access check as the student portal."
+          tone="lavender"
+        >
+          <CourseMaterials items={materials} signInHref={signInHref} />
+        </CourseSection>
+      )}
+
+      {faqs.length > 0 && (
+        <CourseSection id="course-faq" label="Questions" title="Frequently asked [[questions]]" tone="white">
+          <CourseFaqs faqs={faqs.map((f) => ({ id: f.id, question: f.question, answer: f.answer }))} />
+        </CourseSection>
+      )}
+
+      <CourseSection id="course-enrol" label="Enrol now" title={`Join the next [[${course.name}]] batch`} tone="surface">
+        <CourseEnrol fee={fee} applyHref={apply} centersHref={centersHref} centres={enrolCentres} documents={documents} courseName={course.name} />
+      </CourseSection>
+
+      <CtaBand
+        title="Start your [[application]] today"
+        description="Register in minutes, choose this course and the nearest center, and our team will guide you through admission."
+        primary={{ label: "Enrol Now", href: apply }}
+        secondary={{ label: "Ask a Question", href: "/contact?type=ADMISSION" }}
+      />
+
       {/* Phone + tablet conversion bar. StickyActionBar publishes its height as --sticky-bar-h, which
           the chat launcher and the Toaster both read, so the three can never overlap. Hidden at lg,
-          where the sidebar's Apply button is always in view. */}
+          where the fee card and the enrol section carry the button. */}
       <StickyActionBar desktop="hidden" innerClassName="justify-between">
         <span className="min-w-0">
-          <span className="block text-overline text-muted">{headline.label}</span>
-          <span className="block truncate text-h4 text-navy tabular-nums">{headline.text}</span>
+          <span className="block text-overline text-muted">{fee.label}</span>
+          <span className="block truncate text-h4 text-navy tabular-nums">{fee.text}</span>
         </span>
         <ButtonLink href={apply} size="md" className="shrink-0" rightIcon={<ArrowRight className="h-4 w-4" />}>
-          Apply Now
+          Enrol Now
         </ButtonLink>
       </StickyActionBar>
     </>

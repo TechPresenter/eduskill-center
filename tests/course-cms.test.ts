@@ -5,6 +5,7 @@ import {
   CUSTOM_FALLBACK_LABEL,
   FREE_LABEL,
   feeHeadline,
+  feeDisplayFromCourse,
   feePeriodOf,
   feePlanFromCourse,
   formatCourseFee,
@@ -262,15 +263,17 @@ describe("course CMS services", () => {
     expect(effective?.offerPrice).toBe(999);
     expect(effective?.couponCode).toBe("FEST");
 
+    // The public page does not apply offers: billing does not honour them yet, so the site must not
+    // promise a price nobody is charged. The admin still sees which offer is effective.
     const page = await getCoursePageData(course.slug);
-    expect(page!.offer?.id).toBe(live.id);
-    expect(page!.fee.priceText).toBe("₹1,999 → ₹999");
+    expect(page).not.toHaveProperty("offer");
+    expect(page!.fee.priceText).toBe("₹1,999");
+    expect((await getCourseCmsBundle(course.id)).feePreview.priceText).toBe("₹1,999");
 
     // A moment after the festive offer ends, the scheduled one takes over by itself: no cron run,
     // no row was touched, the dates alone decided it.
     const later = new Date(future.getTime() + 1000);
     expect((await getEffectiveOffer(course.id, later))?.title).toBe("Next month");
-    expect((await getCoursePageData(course.slug, { now: later }))!.fee.priceText).toBe("₹1,999 → ₹299");
 
     // A course whose only offer has expired shows no offer and the plain price again.
     const solo = await makeCourse({ courseFee: 1999 });
@@ -278,11 +281,63 @@ describe("course CMS services", () => {
     await createCourseOffer(solo.id, { title: "One week only", offerPrice: 499, startsAt: past, endsAt: recentlyEnded, isActive: true }, ctx);
     expect(await getEffectiveOffer(solo.id)).toBeNull();
     const soloPage = await getCoursePageData(solo.slug);
-    expect(soloPage!.offer).toBeNull();
     expect(soloPage!.fee.priceText).toBe("₹1,999");
     // …yet it was live while its window was open, and it is still there for the admin to see.
     expect((await getEffectiveOffer(solo.id, new Date(recentlyEnded.getTime() - 1000)))?.title).toBe("One week only");
     expect(await db.courseOffer.count({ where: { courseId: solo.id, deletedAt: null, isActive: true } })).toBe(1);
+  });
+
+  it("prices a course with no plan exactly as admission bills it, and never as 'No fee' when something is billed", async () => {
+    const admin = await ensureAdmin();
+    const ctx = { user: admin };
+
+    // Class 1–4: no course fee, a ₹50 registration fee, no plan.
+    const reg = await makeCourse({ courseFee: 0, registrationFee: 50 });
+    const regPage = await getCoursePageData(reg.slug);
+    expect(regPage!.feeFromPlan).toBe(false);
+    expect(regPage!.fee.isFree).toBe(false);
+    expect(regPage!.fee.amount).toBe(50);
+    expect(regPage!.fee.label).toBe("Registration fee");
+    expect(regPage!.fee.text).toBe("₹50");
+
+    // A plan that would read "No fee" for a course that bills something falls back to the bill.
+    await upsertCourseFeePlan(reg.id, { feeType: "FREE", currency: "INR", baseFee: 0, enrolmentFee: 0, paymentRequired: false }, ctx);
+    const guarded = await getCoursePageData(reg.slug);
+    expect(guarded!.feeFromPlan).toBe(false);
+    expect(guarded!.fee.isFree).toBe(false);
+    expect(guarded!.fee.text).toBe("₹50");
+    expect((await getCourseCmsBundle(reg.id)).feePreview.text).toBe("₹50");
+
+    // A course that bills nothing at all is genuinely free.
+    const none = await makeCourse({ courseFee: 0, registrationFee: 0 });
+    expect((await getCoursePageData(none.slug))!.fee.isFree).toBe(true);
+
+    // The headline follows the course cards: course fee first, then registration-only, then the total.
+    expect(feeDisplayFromCourse({ courseFee: 2000, registrationFee: 100 }).text).toBe("₹2,000 One Time");
+    expect(feeDisplayFromCourse({ courseFee: 2000, registrationFee: 100 }).label).toBe("Course fee");
+    expect(feeDisplayFromCourse({ courseFee: 0, registrationFee: 50, examFee: 100 })).toMatchObject({ label: "Fees", amount: 150, isFree: false });
+    expect(feeDisplayFromCourse({ courseFee: 0 }).isFree).toBe(true);
+  });
+
+  it("hides everything under a hidden module on the public page", async () => {
+    const admin = await ensureAdmin();
+    const ctx = { user: admin };
+    const course = await makeCourse();
+    const draft = await createCourseNode(course.id, { kind: "MODULE", title: "Draft module", isFreePreview: false, isActive: false }, ctx);
+    const chapter = await createCourseNode(course.id, { parentId: draft.id, kind: "CHAPTER", title: "Draft chapter", isFreePreview: false, isActive: true }, ctx);
+    await createCourseNode(course.id, { parentId: chapter.id, kind: "LESSON", title: "Draft lesson", isFreePreview: true, isActive: true }, ctx);
+    await createCourseNode(course.id, { kind: "MODULE", title: "Published module", isFreePreview: false, isActive: true }, ctx);
+
+    // The chapter and lesson are active themselves, but their module is hidden: none of them is public.
+    const page = await getCoursePageData(course.slug);
+    expect(page!.curriculum.map((n) => n.title)).toEqual(["Published module"]);
+    expect(page!.curriculum[0].children).toEqual([]);
+
+    // The admin editor still has the whole tree.
+    const bundle = await getCourseCmsBundle(course.id);
+    const draftNode = bundle.curriculum.find((n) => n.id === draft.id);
+    expect(draftNode?.children.map((c) => c.title)).toEqual(["Draft chapter"]);
+    expect(draftNode?.children[0].children.map((c) => c.title)).toEqual(["Draft lesson"]);
   });
 
   it("keeps per-course FAQs and media out of the site-wide tables and reorders each set", async () => {

@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Building2, CalendarDays, ClipboardList, GraduationCap, Award, Star, ExternalLink } from "lucide-react";
+import { Building2, CalendarDays, ClipboardList, GraduationCap, Award, Star, ExternalLink, BadgePercent, HelpCircle, Images, ListTree } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/guards";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { formatDate, formatINR, formatNumber, titleCase } from "@/lib/utils";
+import { db } from "@/lib/db";
 import { getCourseAdmin, studentDocumentTypes } from "@/server/courses";
+import { getCourseCmsBundle } from "@/server/course-cms";
 import { PageHeader, KeyValue } from "@/components/ui/misc";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { StatsCard } from "@/components/ui/stats";
@@ -13,6 +15,8 @@ import { DynamicIcon } from "@/components/ui/icon";
 import { TableWrap, THead, TH, TBody, TR, TD, EmptyRow } from "@/components/ui/table";
 import { orNotFound } from "@/components/admin/shared/server";
 import { CourseHeaderActions } from "@/components/admin/courses/course-actions";
+import { CourseTabs } from "@/components/admin/courses/course-tabs";
+import { FeePreview } from "@/components/admin/courses/fee-preview";
 import { parseSyllabus } from "@/app/admin/courses/syllabus";
 import { IconTile, RecordIdentity } from "@/components/admin/locations/list-kit";
 import { withBasePath } from "@/lib/base-path";
@@ -25,11 +29,23 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   const user = await requireAdmin("courses.view");
   const { id } = await params;
   const [course, docTypes] = await Promise.all([orNotFound(getCourseAdmin(id)), studentDocumentTypes()]);
+  // Everything the public course page shows, including the fee already formatted for display.
+  // Pooled client, not a transaction client, so these may run together (see CLAUDE.md).
+  const [cms, mediaSlots] = await Promise.all([
+    getCourseCmsBundle(course.id),
+    db.course.findUniqueOrThrow({ where: { id: course.id }, select: { bannerImage: true, instructorImage: true, promoVideoUrl: true, videoThumbnail: true } }),
+  ]);
   const perms = { update: hasPermission(user, "courses.update"), delete: hasPermission(user, "courses.delete") };
   const syllabus = parseSyllabus(course.syllabus);
   const totalFee = course.courseFee + course.registrationFee + course.examFee + course.certificateFee;
   const appTotal = Object.values(course.stats.applicationsByStatus).reduce((a, b) => a + b, 0);
   const docName = (key: string) => docTypes.find((d) => d.key === key)?.name ?? key;
+  const countNodes = (list: typeof cms.curriculum): number => list.reduce((total, n) => total + 1 + countNodes(n.children), 0);
+  const curriculumCount = countNodes(cms.curriculum);
+  const effectiveOffer = cms.offers.find((o) => o.id === cms.effectiveOfferId) ?? null;
+  // The Media tab holds the four single slots as well as the two galleries, so both count here —
+  // otherwise a course with a banner set would still read "None yet".
+  const mediaCount = Object.values(mediaSlots).filter(Boolean).length + cms.gallery.length + cms.promotional.length;
 
   return (
     <div className="space-y-6">
@@ -84,6 +100,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         actions={<CourseHeaderActions course={{ id: course.id, code: course.code, name: course.name, status: course.status, batches: course._count.batches, applications: course._count.applications }} perms={perms} />}
       />
 
+      <CourseTabs courseId={course.id} />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-6">
         <StatsCard label="Centers offering" value={course.centers.length} icon={<Building2 className="h-5 w-5" />} tone="navy" />
@@ -94,8 +111,9 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         <StatsCard label="Certificates" value={course._count.certificates} icon={<Award className="h-5 w-5" />} tone="navy" />
       </div>
 
+      {/* min-w-0: one column below xl sizes to its widest card; without it the page scrolls sideways on phones. */}
       <div className="grid gap-4 xl:grid-cols-3">
-        <div className="space-y-4 xl:col-span-2">
+        <div className="min-w-0 space-y-4 xl:col-span-2">
           <Card>
             <CardHeader title="Course details" />
             <CardBody className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
@@ -194,7 +212,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           {course.image && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={withBasePath(course.image)} alt={course.name} className="aspect-[4/3] w-full rounded-card border border-line object-cover" />
@@ -251,6 +269,54 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                 </li>
               ))}
             </ul>
+          </Card>
+
+          <Card>
+            <CardHeader title="Course content" description="Everything the public course page shows, editable without a code change." />
+            <ul className="divide-y divide-line">
+              {[
+                { href: `/admin/courses/${course.id}/curriculum`, label: "Curriculum", icon: <ListTree className="h-4 w-4" />, count: curriculumCount, unit: "item" },
+                { href: `/admin/courses/${course.id}/offers`, label: "Offers", icon: <BadgePercent className="h-4 w-4" />, count: cms.offers.length, unit: "offer", note: effectiveOffer ? `${effectiveOffer.title} is active · not on the site yet` : undefined },
+                { href: `/admin/courses/${course.id}/faqs`, label: "FAQs", icon: <HelpCircle className="h-4 w-4" />, count: cms.faqs.length, unit: "question" },
+                { href: `/admin/courses/${course.id}/media`, label: "Media", icon: <Images className="h-4 w-4" />, count: mediaCount, unit: "item" },
+              ].map((row) => (
+                <li key={row.href}>
+                  <Link href={row.href} className="flex min-h-14 items-center justify-between gap-3 px-5 py-3 text-body-sm hover:bg-surface">
+                    <span className="flex items-center gap-2.5 font-medium text-navy">
+                      <span className="text-muted" aria-hidden>
+                        {row.icon}
+                      </span>
+                      {row.label}
+                    </span>
+                    <span className="text-right">
+                      <span className="block text-caption text-muted tabular-nums">{row.count === 0 ? "None yet" : `${row.count} ${row.unit}${row.count === 1 ? "" : "s"}`}</span>
+                      {row.note && <span className="block text-caption font-semibold text-success-dark">{row.note}</span>}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Public price"
+              description={
+                cms.feeFromPlan
+                  ? "From the fee plan on the Fees tab. Offers are not applied on the site yet."
+                  : cms.feePlan
+                    ? "The fee plan would read “No fee”, but this course bills fees, so the site shows what admission bills."
+                    : "No fee plan yet, so this is what admission bills from the course fees above."
+              }
+              action={
+                <Link href={`/admin/courses/${course.id}/fees`} className="text-caption font-semibold text-orange hover:underline">
+                  Edit
+                </Link>
+              }
+            />
+            <CardBody>
+              <FeePreview fee={cms.feePreview} offerTitle={null} className="border-0 bg-transparent p-0" />
+            </CardBody>
           </Card>
 
           <Card>
